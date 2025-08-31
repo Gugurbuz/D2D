@@ -9,8 +9,6 @@ import {
   Route as RouteIcon,
   Star,
   StarOff,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 /* ==== Tipler ==== */
@@ -226,7 +224,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         );
         const route1Km = (route1.distance as number) / 1000;
 
-        // 2) star + diğerleri için trip
+        // 2) star + diğerleri için trip (star ilk olacak şekilde)
         const tripSeed = [{ lat: star.lat, lng: star.lng }, ...others.map(c => ({ lat: c.lat, lng: c.lng, ref: c }))];
         const coords2 = tripSeed.map((p) => `${p.lng},${p.lat}`).join(";");
         const dataTrip2 = await osrmTrip(coords2);
@@ -269,7 +267,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     }
   };
 
-  // ⭐ değişince otomatik optimize et
+  // ⭐ değişince otomatik optimize et (ilk yıldızdan sonra)
   useEffect(() => {
     if (starredId !== null) {
       handleOptimize();
@@ -332,30 +330,21 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
               zIndexOffset={1000 - i}
               ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-              eventHandlers={{
-                click: () => {
-                  setSelectedId(c.id);
-                  const m = markerRefs.current[c.id];
-                  if (m) m.openPopup();
-                },
-              }}
+              eventHandlers={{ click: () => {
+                setSelectedId(c.id);
+                const m = markerRefs.current[c.id];
+                if (m) m.openPopup();
+              }}}
             >
               <Popup>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <b>{i + 1}. {c.name}</b>
-                    {starredId === c.id && (
-                      <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>
-                    )}
+                    {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
                   </div>
                   <div>{c.address}, {c.district}</div>
                   <div>Saat: {c.plannedTime}</div>
-                  <div>
-                    Tel:{" "}
-                    <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>
-                      {c.phone}
-                    </a>
-                  </div>
+                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
                 </div>
               </Popup>
             </Marker>
@@ -367,124 +356,102 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           )}
         </MapContainer>
 
-        {/* === SAĞ: Bar + Panel (BİRLİKTE kayan kapsayıcı) === */}
-        <div className="absolute top-4 right-4 bottom-4 z-20 flex items-stretch pointer-events-none">
-          {/* İç kapsayıcıyı kaydır: kapalıyken panel neredeyse tamamen dışarı çıkar,
-              sadece bar genişliği (1.5rem = w-6) kadar görünür kalsın */}
-          <div
-            className="flex h-full transition-transform duration-300 pointer-events-auto"
-            style={{
-              transform: panelOpen ? "translateX(0)" : "translateX(calc(100% - 1.5rem))",
-            }}
-            onTouchStart={onTouchStart}
-            onTouchEnd={onTouchEnd}
+        {/* SAĞ PANEL (bar + içerik birlikte kayar) */}
+        <div
+          className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
+            panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
+          } flex`}
+          onTouchStart={(e)=>{ onTouchStart(e); }}
+          onTouchEnd={(e)=>{ onTouchEnd(e); }}
+        >
+          {/* Toggle Bar (w-6) */}
+          <button
+            onClick={() => setPanelOpen((o) => !o)}
+            className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white"
+            title={panelOpen ? "Paneli kapat" : "Paneli aç"}
           >
-            {/* DİKEY BAR (w-6) - panelle birlikte hareket eder */}
-            <button
-              onClick={() => setPanelOpen((o) => !o)}
-              className="h-full w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex items-center justify-center text-white rounded-l-md shadow touch-manipulation relative select-none"
-              title={panelOpen ? "Ziyaret listesini gizle" : "Ziyaret listesini göster"}
-              aria-label={panelOpen ? "Paneli kapat" : "Paneli aç"}
-            >
-              {/* Ok ikonu */}
-              {panelOpen ? (
-                <ChevronRight className="w-4 h-4 absolute" />
-              ) : (
-                <ChevronLeft className="w-4 h-4 absolute" />
-              )}
-
-              {/* Kapalıyken dikey 'ZİYARET' yazısı */}
-              {!panelOpen && (
-                <span className="absolute left-1/2 -translate-x-1/2 rotate-90 whitespace-nowrap text-[10px] tracking-widest opacity-90">
-                  ZİYARET
-                </span>
-              )}
-            </button>
-
-            {/* PANEL */}
-            <div className="bg-white/90 rounded-r-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm h-full">
-              {/* Başlık */}
-              <div className="flex items-center gap-2">
-                <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-                <span className="font-semibold text-gray-700 text-base select-none">
-                  Ziyaret Sırası
-                </span>
+            {panelOpen ? (
+              <Minimize2 className="w-4 h-4 -rotate-90" />
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span>
+                <Minimize2 className="w-4 h-4 rotate-90" />
               </div>
+            )}
+          </button>
 
-              {/* Liste – tüm yükseklikte scroll */}
-              <div className="h-full overflow-auto pr-1">
-                {orderedCustomers.map((c, i) => {
-                  const selected = selectedId === c.id;
-                  const starred = starredId === c.id;
-                  return (
-                    <div
-                      key={c.id}
-                      id={`cust-row-${c.id}`}
-                      className={`flex items-center gap-2 p-2 rounded transition ${
-                        selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"
+          {/* Panel İçeriği */}
+          <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm h-full">
+            {/* Başlık */}
+            <div className="flex items-center gap-2">
+              <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+              <span className="font-semibold text-gray-700 text-base select-none">
+                Ziyaret Sırası
+              </span>
+            </div>
+
+            {/* ⭐ Açıklama üstte */}
+            <div className="text-[11px] text-gray-600">
+              ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar
+              en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
+            </div>
+
+            {/* Liste – sadece burası scroll olur */}
+            <div className="max-h-full overflow-auto pr-1">
+              {orderedCustomers.map((c, i) => {
+                const selected = selectedId === c.id;
+                const starred = starredId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    id={`cust-row-${c.id}`}
+                    className={`flex items-center gap-2 p-2 rounded transition ${
+                      selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"
+                    }`}
+                    onClick={() => {
+                      setSelectedId(c.id);
+                      if (mapRef.current) {
+                        mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+                      }
+                      const m = markerRefs.current[c.id];
+                      if (m) m.openPopup();
+                    }}
+                  >
+                    <span
+                      className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
+                        starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
                       }`}
-                      onClick={() => {
-                        setSelectedId(c.id);
-                        if (mapRef.current) {
-                          mapRef.current.setView(
-                            [c.lat, c.lng],
-                            Math.max(mapRef.current.getZoom(), 14),
-                            { animate: true }
-                          );
-                        }
-                        const m = markerRefs.current[c.id];
-                        if (m) m.openPopup();
+                      title={`${i + 1}. müşteri`}
+                    >
+                      {i + 1}
+                    </span>
+
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{c.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
+                      <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e)=>e.stopPropagation()}>
+                        {c.phone}
+                      </a>
+                    </div>
+
+                    <button
+                      className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
+                      title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStarredId(prev => prev === c.id ? null : c.id);
                       }}
                     >
-                      <span
-                        className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
-                          starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
-                        }`}
-                        title={`${i + 1}. müşteri`}
-                      >
-                        {i + 1}
-                      </span>
+                      {starred
+                        ? <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
+                        : <StarOff className="w-5 h-5 text-gray-500" />
+                      }
+                    </button>
 
-                      <div className="min-w-0">
-                        <div className="font-medium text-gray-900 truncate">{c.name}</div>
-                        <div className="text-xs text-gray-500 truncate">
-                          {c.address}, {c.district}
-                        </div>
-                        <a
-                          className="text-xs text-[#0099CB] underline"
-                          href={toTelHref(c.phone)}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {c.phone}
-                        </a>
-                      </div>
-
-                      <button
-                        className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
-                        title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setStarredId((prev) => (prev === c.id ? null : c.id));
-                        }}
-                      >
-                        {starred ? (
-                          <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
-                        ) : (
-                          <StarOff className="w-5 h-5 text-gray-500" />
-                        )}
-                      </button>
-
-                      <span className="text-xs text-gray-700 font-semibold">
-                        {c.plannedTime}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="text-[11px] text-gray-600">
-                ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
-              </div>
+                    <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -502,7 +469,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-/* Küçük yardımcı: tam ekran butonu (harita üst barda) */
+/* Küçük yardımcı: tam ekran butonu (üst barda) */
 const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
@@ -518,15 +485,7 @@ const FullscreenBtn: React.FC = () => {
       }}
       className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
     >
-      {isFs ? (
-        <>
-          <Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat
-        </>
-      ) : (
-        <>
-          <Maximize2 className="w-4 h-4" /> Tam Ekran
-        </>
-      )}
+      {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
     </button>
   );
 };
