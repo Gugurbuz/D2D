@@ -1,26 +1,3 @@
-// src/components/Navigation.tsx
-import React, { useEffect, useRef, useState } from "react";
-import {
-  Home,
-  Route as RouteIcon,
-  List,
-  BarChart3,
-  UserCheck,
-  Users,
-  Bell,
-  BellDot,
-} from "lucide-react";
-import { Role, Screen } from "../types";
-import { mockNotifications, AppNotification } from "../data/notifications";
-
-type Props = {
-  agentName: string;
-  role: Role;
-  currentScreen: Screen;
-  setCurrentScreen: (s: Screen) => void;
-  agentAvatarUrl?: string; // YENİ: foto url (opsiyonel)
-};
-
 // import'lar aynı
 
 const Navigation: React.FC<Props> = ({ agentName, role, currentScreen, setCurrentScreen, agentAvatarUrl }) => {
