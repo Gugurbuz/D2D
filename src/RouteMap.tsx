@@ -33,8 +33,8 @@ export type SalesRep = {
 type LatLng = [number, number];
 
 interface Props {
-  customers?: Customer[];    // verilmezse aşağıdaki Anadolu listesi kullanılır
-  salesRep?: SalesRep;       // verilmezse Maltepe merkezli default değer kullanılır
+  customers?: Customer[];    // verilmezse Anadolu listesi kullanılır
+  salesRep?: SalesRep;       // verilmezse Maltepe merkezli default
 }
 
 /* ==== Varsayılanlar (Anadolu Yakası – 22 müşteri) ==== */
@@ -45,13 +45,13 @@ const defaultSalesRep: SalesRep = {
 };
 
 const anadoluCustomers: Customer[] = [
-  { id: "1",  name: "Buse Aksoy",    address: "Bağdat Cd.  No:120", district: "Maltepe",    plannedTime: "09:00", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000001", consumption: "270 kWh/ay",  offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
-  { id: "2",  name: "Kaan Er",       address: "Alemdağ Cd. No:22",  district: "Ümraniye",  plannedTime: "09:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000002", consumption: "300 kWh/ay",  offerHistory: ["2024-08: %10 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
-  { id: "3",  name: "Canan Sezer",   address: "Finans Mrk. A1",     district: "Ataşehir",  plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"],  status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
-  { id: "4",  name: "Kübra Oral",    address: "İnönü Mh. No:18",    district: "Kadıköy",   plannedTime: "10:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000004", consumption: "310 kWh/ay",  offerHistory: ["2024-11: Sadakat indirimi"],  status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
-  { id: "5",  name: "Ayça Erden",    address: "Koşuyolu Cd. 7",     district: "Kadıköy",   plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"],       status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
-  { id: "6",  name: "Meral Kılıç",   address: "Çengelköy Sahil",    district: "Üsküdar",  plannedTime: "10:40", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000006", consumption: "260 kWh/ay",  offerHistory: ["2024-03: Hoş geldin"],        status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
-  { id: "7",  name: "Tuğçe Polat",   address: "Kısıklı Cd. 15",     district: "Üsküdar",  plannedTime: "11:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000007", consumption: "290 kWh/ay",  offerHistory: ["2024-12: Sadakat"],           status: "Bekliyor", estimatedDuration: "25 dk", distance: "10.8 km", lat: 41.0333, lng: 29.0672, phone: "0555 111 22 07" },
+  { id: "1",  name: "Buse Aksoy",    address: "Bağdat Cd.  No:120", district: "Maltepe",     plannedTime: "09:00", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000001", consumption: "270 kWh/ay",  offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
+  { id: "2",  name: "Kaan Er",       address: "Alemdağ Cd. No:22",  district: "Ümraniye",   plannedTime: "09:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000002", consumption: "300 kWh/ay",  offerHistory: ["2024-08: %10 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
+  { id: "3",  name: "Canan Sezer",   address: "Finans Mrk. A1",     district: "Ataşehir",   plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"],  status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
+  { id: "4",  name: "Kübra Oral",    address: "İnönü Mh. No:18",    district: "Kadıköy",    plannedTime: "10:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000004", consumption: "310 kWh/ay",  offerHistory: ["2024-11: Sadakat indirimi"],  status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
+  { id: "5",  name: "Ayça Erden",    address: "Koşuyolu Cd. 7",     district: "Kadıköy",    plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"],       status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
+  { id: "6",  name: "Meral Kılıç",   address: "Çengelköy Sahil",    district: "Üsküdar",   plannedTime: "10:40", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000006", consumption: "260 kWh/ay",  offerHistory: ["2024-03: Hoş geldin"],        status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
+  { id: "7",  name: "Tuğçe Polat",   address: "Kısıklı Cd. 15",     district: "Üsküdar",   plannedTime: "11:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000007", consumption: "290 kWh/ay",  offerHistory: ["2024-12: Sadakat"],           status: "Bekliyor", estimatedDuration: "25 dk", distance: "10.8 km", lat: 41.0333, lng: 29.0672, phone: "0555 111 22 07" },
   { id: "8",  name: "Selim Yurt",    address: "Atatürk Cd. No:5",   district: "Sancaktepe", plannedTime: "11:20", priority: "Orta",  tariff: "Mesken",  meterNumber: "210000008", consumption: "320 kWh/ay",  offerHistory: ["2025-03: Yeni teklif"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.2 km", lat: 41.0152, lng: 29.2316, phone: "0555 111 22 08" },
   { id: "9",  name: "Zeynep Koç",    address: "Sarıgazi Mh. 23",    district: "Sancaktepe", plannedTime: "11:40", priority: "Yüksek",tariff: "İş Yeri", meterNumber: "210000009", consumption: "1120 kWh/ay",offerHistory: ["2024-08: Turizm indirimi"],   status: "Bekliyor", estimatedDuration: "45 dk", distance: "16.1 km", lat: 41.0074, lng: 29.2447, phone: "0555 111 22 09" },
   { id: "10", name: "Yasin Ateş",    address: "Şerifali Mh. 4",     district: "Ümraniye",  plannedTime: "12:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000010", consumption: "310 kWh/ay",  offerHistory: ["2024-07: Sadakat"],           status: "Bekliyor", estimatedDuration: "30 dk", distance: "11.1 km", lat: 41.0179, lng: 29.1376, phone: "0555 111 22 10" },
@@ -77,15 +77,19 @@ const repIcon = new L.Icon({
   popupAnchor: [0, -28],
 });
 
-function numberIcon(n: number, highlight = false) {
+function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }) {
+  const highlight = !!opts?.highlight;
+  const starred = !!opts?.starred;
+  const bg = starred ? "#F5B301" : highlight ? "#FF6B00" : "#0099CB"; // ⭐ altın, seçili turuncu, normal mavi
+  const pulse = highlight ? "box-shadow:0 0 0 6px rgba(255,107,0,.15);" : "";
   return L.divIcon({
     className: "number-marker",
     html: `
       <div style="
         width:28px;height:28px;display:flex;align-items:center;justify-content:center;
         font-weight:800;font-size:12px;color:#fff;line-height:1;
-        background:${highlight ? "#FF6B00" : "#0099CB"};
-        border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);
+        background:${bg};
+        border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);${pulse}
         transform:${highlight ? "scale(1.14)" : "scale(1)"};
       ">
         ${n}
@@ -165,7 +169,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // OSRM Trip çağrısı helper
+  // OSRM Trip helper
   async function osrmTrip(coords: string) {
     const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
     const res = await fetch(url);
@@ -185,7 +189,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     return data;
   }
 
-  // Rota optimizasyonu
+  // Rota optimizasyonu (⭐ destekli)
   const handleOptimize = async () => {
     try {
       setLoading(true);
@@ -264,6 +268,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     }
   };
 
+  // ⭐ değişince otomatik optimize et
+  useEffect(() => {
+    // İlk mount'ta gereksiz çağrı yapmamak için: sadece yıldızlandıktan sonra tetikle
+    if (starredId !== null) {
+      handleOptimize();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [starredId]);
+
   useEffect(() => {
     setOrderedCustomers(baseCustomers);
   }, [baseCustomers]);
@@ -271,7 +284,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const center: LatLng = [rep.lat, rep.lng];
 
   return (
-    <div className="relative w-full" ref={wrapperRef}>
+    <div className="relative w-full">
       {/* Üst başlık + aksiyonlar */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-900 font-semibold">
@@ -289,9 +302,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           >
             {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
-          <button onClick={toggleFullscreen} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
-            {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
-          </button>
+          <FullscreenBtn />
         </div>
       </div>
 
@@ -316,16 +327,20 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             <Marker
               key={c.id}
               position={[c.lat, c.lng]}
-              icon={numberIcon(i + 1, selectedId === c.id)}
+              icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
               zIndexOffset={1000 - i}
               ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-              eventHandlers={{ click: () => highlightCustomer(c, i, true) }}
+              eventHandlers={{ click: () => {
+                setSelectedId(c.id);
+                const m = markerRefs.current[c.id];
+                if (m) m.openPopup();
+              }}}
             >
               <Popup>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <b>{i + 1}. {c.name}</b>
-                    {starredId === c.id && <span className="text-[#FF6B00] text-xs font-semibold">⭐ İlk Durak</span>}
+                    {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
                   </div>
                   <div>{c.address}, {c.district}</div>
                   <div>Saat: {c.plannedTime}</div>
@@ -344,8 +359,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         {/* SAĞ PANEL — swipe ile aç/kapa, kulakçık solda */}
         <div
           className={`absolute top-4 right-4 z-10 transition-transform duration-300 ${panelOpen ? "translate-x-0" : "translate-x-[85%]"}`}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
+          onTouchStart={(e)=>{ onTouchStart(e); }}
+          onTouchEnd={(e)=>{ onTouchEnd(e); }}
         >
           <div className="bg-white/90 rounded-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm">
             {/* Başlık */}
@@ -364,10 +379,17 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                     key={c.id}
                     id={`cust-row-${c.id}`}
                     className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
-                    onClick={() => highlightCustomer(c, i, true)}
+                    onClick={() => {
+                      setSelectedId(c.id);
+                      if (mapRef.current) {
+                        mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+                      }
+                      const m = markerRefs.current[c.id];
+                      if (m) m.openPopup();
+                    }}
                   >
                     <span
-                      className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"}`}
+                      className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"}`}
                       title={`${i + 1}. müşteri`}
                     >
                       {i + 1}
@@ -380,14 +402,17 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                     </div>
 
                     <button
-                      className={`ml-auto p-1.5 rounded-lg hover:bg-gray-100`}
+                      className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
                       title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
                       onClick={(e) => {
                         e.stopPropagation();
                         setStarredId(prev => prev === c.id ? null : c.id);
                       }}
                     >
-                      {starred ? <Star className="w-5 h-5 text-[#FF6B00] fill-[#FF6B00]" /> : <StarOff className="w-5 h-5 text-gray-500" />}
+                      {starred
+                        ? <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
+                        : <StarOff className="w-5 h-5 text-gray-500" />
+                      }
                     </button>
 
                     <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
@@ -396,9 +421,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               })}
             </div>
 
-            {/* İpucu */}
             <div className="text-[11px] text-gray-600">
-              ⭐ Bir müşteriyi işaretlersen, <b>Rotayı Optimize Et</b> ilk olarak o müşteriye gidecek şekilde planlanır.
+              ⭐ Bir müşteriyi işaretlersen, rota <b>rep → ⭐</b> ve ardından ⭐’dan sonrası en kısa şekilde planlanır. (Yıldızı değiştirince otomatik optimize edilir.)
             </div>
           </div>
 
@@ -425,6 +449,27 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         )}
       </div>
     </div>
+  );
+};
+
+/* Küçük yardımcı: tam ekran butonu (harita üst barda) */
+const FullscreenBtn: React.FC = () => {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+  return (
+    <button
+      onClick={async () => {
+        if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+        else await document.exitFullscreen();
+      }}
+      className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
+    >
+      {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
+    </button>
   );
 };
 
