@@ -10,7 +10,6 @@ type Props = {
   assignments: Record<string, string | undefined>;
   setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
   allReps: Rep[];
-  // ⬇️ eklendi
   setCurrentScreen: (s: Screen) => void;
 };
 
@@ -106,37 +105,58 @@ const AssignmentScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Liste */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-0 overflow-hidden">
-        <div className="grid grid-cols-6 gap-2 px-4 py-3 text-xs font-semibold text-gray-600 border-b">
-          <div>Seç</div>
-          <div>Müşteri</div>
-          <div>Adres</div>
-          <div>İlçe</div>
-          <div>Durum</div>
-          <div>Atanan</div>
-        </div>
+      {/* Tablo */}
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full table-auto">
+            <colgroup>
+              <col className="w-12" />                 {/* Seç */}
+              <col className="w-[18%]" />              {/* Müşteri */}
+              <col className="w-[40%]" />              {/* Adres - GENİŞ */}
+              <col className="w-[12%]" />              {/* İlçe */}
+              <col className="w-[12%]" />              {/* Durum */}
+              <col className="w-[16%]" />              {/* Atanan */}
+            </colgroup>
 
-        {filtered.map(c => {
-          const checked = !!localSelected[c.id];
-          const assignedTo = assignments[c.id];
-          return (
-            <div key={c.id} className="grid grid-cols-6 gap-2 px-4 py-3 items-center border-b last:border-b-0 hover:bg-gray-50">
-              <div>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))}
-                />
-              </div>
-              <div className="truncate">{c.name}</div>
-              <div className="truncate">{c.address}</div>
-              <div className="truncate">{c.district}</div>
-              <div><span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>{c.status}</span></div>
-              <div className="text-sm">{repName(assignedTo)}</div>
-            </div>
-          );
-        })}
+            <thead className="bg-gray-50 text-xs font-semibold text-gray-600">
+              <tr>
+                <th className="px-4 py-3 text-left">Seç</th>
+                <th className="px-4 py-3 text-left">Müşteri</th>
+                <th className="px-4 py-3 text-left">Adres</th>
+                <th className="px-4 py-3 text-left">İlçe</th>
+                <th className="px-4 py-3 text-left">Durum</th>
+                <th className="px-4 py-3 text-left">Atanan</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y">
+              {filtered.map(c => {
+                const checked = !!localSelected[c.id];
+                const assignedTo = assignments[c.id];
+                return (
+                  <tr key={c.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap truncate">{c.name}</td>
+                    <td className="px-4 py-3 truncate">{c.address}</td>
+                    <td className="px-4 py-3 whitespace-nowrap truncate">{c.district}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">{repName(assignedTo)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
