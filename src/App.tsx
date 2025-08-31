@@ -18,7 +18,7 @@ import VisitFlowScreen from './screens/VisitFlowScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
-
+import AssignmentMapScreen from './screens/AssignmentMapScreen';
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [role, setRole] = useState<Role>('rep');
