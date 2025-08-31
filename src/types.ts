@@ -1,16 +1,4 @@
 
-
-export type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' | 'Evde Yok' | null;
-
-export type Screen =
-  | 'login'
-  | 'dashboard'
-  | 'map'
-  | 'visitList'
-  | 'visitDetail'
-  | 'visitResult'
-  | 'reports'
-  | 'routeMap';
 // Satış Uzmanı arayüzü (artık bir ID'si var)
 export interface SalesRep {
   id: string;
