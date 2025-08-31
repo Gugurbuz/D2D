@@ -2,7 +2,8 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   User, MapPin, List, BarChart3, Home,
   Clock, CheckCircle, XCircle, AlertCircle,
-  Camera, Route, TrendingUp, Search, Mic, IdCard, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck
+  Camera, Route, TrendingUp, Search, Mic, IdCard, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck,
+  Bell, ClipboardPlus
 } from 'lucide-react';
 import RouteMap, { SalesRep, Customer } from './RouteMap';
 
