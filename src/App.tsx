@@ -274,30 +274,236 @@ function App() {
     </div>
   );
 
-  // DASHBOARD
-  if (currentScreen === 'dashboard') {
-    const completedVisits = customers.filter(c => c.status === 'Tamamlandı').length;
-    const remainingVisits = customers.filter(c => c.status === 'Bekliyor').length;
-    const totalVisits = customers.length;
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Ana Sayfa</h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Bugünkü Ziyaret</p><p className="text-3xl font-bold text-[#0099CB]">{totalVisits}</p></div><MapPin className="w-6 h-6 text-[#0099CB]" /></div></div>
-            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Tamamlanan</p><p className="text-3xl font-bold text-[#0099CB]">{completedVisits}</p></div><CheckCircle className="w-6 h-6 text-[#0099CB]" /></div></div>
-            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Kalan</p><p className="text-3xl font-bold text-[#0099CB]">{remainingVisits}</p></div><Clock className="w-6 h-6 text-[#0099CB]" /></div></div>
+// DASHBOARD (YENİ)
+if (currentScreen === 'dashboard') {
+  // --- KPI'lar ---
+  const planned = customers.length;
+  const onTheWay = customers.filter(c => c.status === 'Yolda').length;
+  const done = customers.filter(c => c.status === 'Tamamlandı').length;
+  const waiting = customers.filter(c => c.status === 'Bekliyor').length;
+  const conversionRate = planned ? Math.round((done / planned) * 100) : 0;
+  const estimatedRevenueTL = done * 19; // örnek
+
+  // --- Bugün listeleri ---
+  const byTime = [...customers].sort((a, b) => a.plannedTime.localeCompare(b.plannedTime));
+  const timelineItems = byTime.slice(0, 6); // soldaki zaman çizelgesi
+  const todayList = byTime.slice(0, 4);     // sağdaki "Bugünkü Ziyaretler"
+
+  const Chip = ({ children, tone = 'gray' as 'green' | 'yellow' | 'red' | 'blue' | 'gray' }) => {
+    const tones: Record<string, string> = {
+      green: 'bg-green-100 text-green-800 border-green-200',
+      yellow:'bg-yellow-100 text-yellow-800 border-yellow-200',
+      red:   'bg-red-100 text-red-800 border-red-200',
+      blue:  'bg-blue-100 text-blue-800 border-blue-200',
+      gray:  'bg-gray-100 text-gray-800 border-gray-200',
+    };
+    return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${tones[tone]}`}>{children}</span>;
+  };
+
+  const statusTone = (s: Customer['status']) =>
+    s === 'Tamamlandı' ? 'green' : s === 'Yolda' ? 'blue' : 'yellow';
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+
+      {/* Üst şerit: tarih, arama ve aksiyonlar */}
+      <div className="px-6 pt-6">
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-600 hidden md:block">
+            {new Date().toLocaleDateString('tr-TR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}{' '}
+            {new Date().toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' })}
           </div>
-          <div className="text-center">
-            <button onClick={() => setCurrentScreen('visitList')} className="bg-[#0099CB] text-white px-8 py-4 rounded-xl font-semibold">
-              Ziyaretleri Başlat
+
+          <div className="ml-auto relative w-full max-w-lg">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Müşteri, adres, ID ara"
+              className="block w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* KPI Kartları */}
+      <div className="px-6 py-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Toplam Ziyaret</div>
+          <div className="text-3xl font-bold text-gray-900">{planned}</div>
+          <div className="text-xs text-gray-500">Planlanan</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Yolda</div>
+          <div className="text-3xl font-bold text-gray-900">{onTheWay}</div>
+          <div className="text-xs text-gray-500">Anlık</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Tamamlandı</div>
+          <div className="text-3xl font-bold text-gray-900">{done}</div>
+          <div className="text-xs text-gray-500">Bugün</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Bekleyen</div>
+          <div className="text-3xl font-bold text-gray-900">{waiting}</div>
+          <div className="text-xs text-gray-500">Bugün</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Dönüşüm</div>
+          <div className="text-3xl font-bold text-gray-900">%{conversionRate}</div>
+          <div className="text-xs text-gray-500">Oran</div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="text-xs text-gray-500 mb-1">Tah. Gelir</div>
+          <div className="text-3xl font-bold text-gray-900">{estimatedRevenueTL} ₺</div>
+          <div className="text-xs text-gray-500">Bugün</div>
+        </div>
+      </div>
+
+      {/* Kısayollar kutusu */}
+      <div className="px-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="font-semibold text-gray-900">Hızlı İşlemler</div>
+            <div className="text-xs text-gray-500">Günün planına hızlı başla</div>
+          </div>
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+            <button
+              onClick={() => setCurrentScreen('visitList')}
+              className="rounded-xl border border-gray-200 hover:border-[#0099CB] hover:bg-[#0099CB]/5 p-3 text-left"
+            >
+              <div className="text-sm font-semibold text-gray-900">Ziyaretleri Başlat</div>
+              <div className="text-xs text-gray-600 mt-1">Listeden sırayla ilerle</div>
+            </button>
+            <button
+              onClick={() => setCurrentScreen('routeMap')}
+              className="rounded-xl border border-gray-200 hover:border-[#0099CB] hover:bg-[#0099CB]/5 p-3 text-left"
+            >
+              <div className="text-sm font-semibold text-gray-900">Rotayı Optimize Et</div>
+              <div className="text-xs text-gray-600 mt-1">Harita üzerinde en iyi sıra</div>
+            </button>
+            <button
+              onClick={() => alert('Check-in kaydedildi (simülasyon).')}
+              className="rounded-xl border border-gray-200 hover:border-[#0099CB] hover:bg-[#0099CB]/5 p-3 text-left"
+            >
+              <div className="text-sm font-semibold text-gray-900">Konum Check-in</div>
+              <div className="text-xs text-gray-600 mt-1">Mevcut konumdan giriş</div>
+            </button>
+            <button
+              onClick={() => alert('Veriler senkronize edildi (simülasyon).')}
+              className="rounded-xl border border-gray-200 hover:border-[#0099CB] hover:bg-[#0099CB]/5 p-3 text-left"
+            >
+              <div className="text-sm font-semibold text-gray-900">Senkronize Et</div>
+              <div className="text-xs text-gray-600 mt-1">Bulut ile eşitle</div>
             </button>
           </div>
         </div>
       </div>
-    );
-  }
+
+      {/* Ana iki kolon: Zaman Çizelgesi + Bugünkü Ziyaretler */}
+      <div className="px-6 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Sol: Günlük Zaman Çizelgesi */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-semibold text-gray-900">Günlük Zaman Çizelgesi</div>
+            <div className="text-xs text-gray-500">Bugün</div>
+          </div>
+
+          <div className="relative">
+            {/* Dikey çizgi */}
+            <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200 rounded-full" />
+            <div className="space-y-6 max-h-[420px] overflow-auto pr-2">
+              {timelineItems.map((c, idx) => (
+                <div key={c.id} className="relative pl-8">
+                  {/* Nokta */}
+                  <div className={`absolute left-1.5 top-1.5 w-3 h-3 rounded-full ring-4 ring-white ${c.status === 'Tamamlandı' ? 'bg-green-500' : c.status === 'Yolda' ? 'bg-blue-500' : 'bg-yellow-500'}`} />
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold text-gray-900">{c.name}</div>
+                      <div className="text-sm text-gray-600">{c.address} – {c.district}</div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Chip tone={statusTone(c.status)}>{c.status}</Chip>
+                        <Chip tone={c.priority === 'Yüksek' ? 'red' : c.priority === 'Orta' ? 'yellow' : 'green'}>
+                          {c.priority} Öncelik
+                        </Chip>
+                        <Chip tone="blue">{c.tariff === 'İş Yeri' ? 'B2B' : 'B2C'} – {c.tariff === 'İş Yeri' ? 'Sabit Fiyat' : 'Esnek'}</Chip>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0 pl-3">
+                      <div className="text-sm text-gray-900">{c.plannedTime}</div>
+                      <div className="text-xs text-gray-500">{c.distance}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Sağ: Bugünkü Ziyaretler */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-semibold text-gray-900">Bugünkü Ziyaretler</div>
+            <button
+              onClick={() => setCurrentScreen('visitList')}
+              className="text-xs text-[#0099CB] hover:underline"
+            >
+              Tamamını Gör
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {todayList.map((c) => (
+              <div key={c.id} className="bg-white border border-gray-200 hover:border-[#0099CB] rounded-xl p-3 flex items-start justify-between">
+                <div>
+                  <div className="font-medium text-gray-900">{c.name}</div>
+                  <div className="text-sm text-gray-600">{c.address} – {c.district}</div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Chip tone={statusTone(c.status)}>{c.status}</Chip>
+                    <Chip tone={c.priority === 'Yüksek' ? 'red' : c.priority === 'Orta' ? 'yellow' : 'green'}>
+                      {c.priority} Öncelik
+                    </Chip>
+                    <Chip tone="blue">{c.tariff === 'İş Yeri' ? 'B2B' : 'B2C'} – {c.tariff === 'İş Yeri' ? 'Sabit Fiyat' : 'Endeks'}</Chip>
+                  </div>
+                </div>
+                <div className="text-right shrink-0 pl-3">
+                  <div className="text-sm text-gray-900">{c.plannedTime}</div>
+                  <div className="text-xs text-gray-500">{c.distance}</div>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => { setSelectedCustomer(c); setCurrentScreen('visitDetail'); }}
+                      className="px-3 py-1.5 rounded-lg bg-[#0099CB] text-white text-xs"
+                    >
+                      Detay
+                    </button>
+                    {c.status === 'Bekliyor' && (
+                      <button
+                        onClick={() => {
+                          const updated = customers.map(x => x.id === c.id ? { ...x, status: 'Yolda' as const } : x);
+                          setCustomers(updated);
+                          setSelectedCustomer({ ...c, status: 'Yolda' });
+                          setCurrentScreen('visitFlow'); // direkt akışa da alabiliriz
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#F9C800] text-gray-900 text-xs"
+                      >
+                        Başlat
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
   // ZİYARET LİSTESİ
   if (currentScreen === 'visitList') {
