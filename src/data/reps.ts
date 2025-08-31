@@ -14,7 +14,7 @@ export const allReps: Rep[] = [
     name: 'Serkan Özkan',  
     lat: 40.9368, 
     lng: 29.1553, 
-    phone: '0555 000 00 01',
+    phone: '05079681648',
     color: '#0ea5e9',                  // Mavi
     fillColor: 'rgba(14,165,233,.18)'
   },
