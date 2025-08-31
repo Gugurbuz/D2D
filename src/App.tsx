@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-+import { User, MapPin, List, BarChart3, Home,
-+  Clock, CheckCircle, XCircle, AlertCircle,
-+  Camera, Route, TrendingUp, Search, Mic, BadgeCheck, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck
-+} from 'lucide-react';
+import { User, MapPin, List, BarChart3, Home,
+ Clock, CheckCircle, XCircle, AlertCircle,
+ Camera, Route, TrendingUp, Search, Mic, BadgeCheck, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck
+} from 'lucide-react';
 import RouteMap, { SalesRep, Customer } from './RouteMap';
 
 type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' | 'Evde Yok' | null;
