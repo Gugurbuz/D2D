@@ -13,6 +13,7 @@ import {
   Users,
   Info,
   Minimize2,
+  UserCheck,
 } from "lucide-react";
 import { Customer } from "../RouteMap";
 import { Rep } from "../types";
@@ -129,7 +130,7 @@ function repIconFor(rep: Rep) {
 }
 
 /* ------------------------------------------------
-   Çizim Kontrolü (alan tooltip’i kapalı — hatayı önler)
+   Çizim Kontrolü
 ------------------------------------------------ */
 const DrawControl: React.FC<{
   onPolygon: (poly: L.Polygon) => void;
@@ -146,7 +147,7 @@ const DrawControl: React.FC<{
       draw: {
         polygon: {
           allowIntersection: false,
-          showArea: false, // <<< önemli: eski “type is not defined” hatasını önler
+          showArea: false, // ölçüm tooltip kapalı — eski "type is not defined" hatasını önler
           metric: true,
           shapeOptions: { color: "#0099CB", weight: 2 },
         },
@@ -156,11 +157,7 @@ const DrawControl: React.FC<{
         circlemarker: false,
         marker: false,
       },
-      edit: {
-        featureGroup: fgRef.current,
-        edit: false,
-        remove: true,
-      },
+      edit: { featureGroup: fgRef.current, edit: false, remove: true },
     });
 
     map.addControl(drawControl as any);
@@ -183,9 +180,7 @@ const DrawControl: React.FC<{
       map.off(L.Draw.Event.CREATED, onCreated);
       map.off(L.Draw.Event.DELETED, onDeleted);
       map.removeControl(drawControl as any);
-      if (fgRef.current) {
-        map.removeLayer(fgRef.current);
-      }
+      if (fgRef.current) map.removeLayer(fgRef.current);
     };
   }, [map, onPolygon, onClear, fgRef]);
 
@@ -202,13 +197,12 @@ const AssignmentMapScreen: React.FC<Props> = ({
   allReps,
   onBack,
 }) => {
-  // sadece koordinatı olan rep’ler
   const reps = allReps.filter((r) => r.lat != null && r.lng != null);
   const mapCenter: LatLng = reps[0] ? [reps[0].lat as number, reps[0].lng as number] : [40.9368, 29.1553];
 
   const [selectedRepId, setSelectedRepId] = useState<string>(reps[0]?.id || "rep-1");
 
-  // sağ panel (geri getirildi)
+  // sağ panel
   const [panelOpen, setPanelOpen] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => (touchStartX.current = e.touches[0].clientX);
@@ -220,7 +214,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
     touchStartX.current = null;
   };
 
-  // çizilen çokgen & seçim
+  // poligon & seçim
   const polygonLayerRef = useRef<L.Polygon | null>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -234,6 +228,9 @@ const AssignmentMapScreen: React.FC<Props> = ({
   // harita & marker referansları
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
+
+  // mini toast
+  const [toast, setToast] = useState<string | null>(null);
 
   const selectedCustomers = useMemo(
     () => customers.filter((c) => selectedIds.includes(c.id)),
@@ -256,50 +253,50 @@ const AssignmentMapScreen: React.FC<Props> = ({
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // Çokgen çizildiğinde
+  // Çokgen çizildiğinde (OTOMATİK ATAMA YOK)
   const handlePolygonCreated = async (poly: L.Polygon) => {
-    // önceki poligonu kaldır
-    if (polygonLayerRef.current) {
-      polygonLayerRef.current.remove();
-    }
+    if (polygonLayerRef.current) polygonLayerRef.current.remove();
     polygonLayerRef.current = poly;
 
     const latlngs = (poly.getLatLngs()[0] as L.LatLng[]).map((p) => [p.lat, p.lng]) as LatLng[];
-
-    // poligon içindeki müşteriler
     const inside = customers.filter((c) => pointInPolygon([c.lat, c.lng], latlngs));
     const insideIds = inside.map((c) => c.id);
     setSelectedIds(insideIds);
 
-    // otomatik atama (seçili rep'e)
-    if (insideIds.length) {
-      setAssignments((prev) => {
-        const n = { ...prev };
-        insideIds.forEach((id) => (n[id] = selectedRepId));
-        return n;
-      });
-    }
-
-    // otomatik rota
+    // Yalnızca rota hesapla (otomatik atama KALDIRILDI)
     await computeRouteForSelection(inside, selectedRepId);
 
-    // panel açık kalsın ve ilk müşteriyi vurgula
     if (inside[0]) highlightCustomer(inside[0], true);
   };
 
-  // Manuel temizle
+  // Seçimi temizle
   const handleClear = () => {
     if (polygonLayerRef.current) {
       polygonLayerRef.current.remove();
       polygonLayerRef.current = null;
     }
-    if (featureGroupRef.current) {
-      featureGroupRef.current.clearLayers();
-    }
+    if (featureGroupRef.current) featureGroupRef.current.clearLayers();
     setSelectedIds([]);
     setSelectedId(null);
     setRouteCoords([]);
     setRouteKm(null);
+  };
+
+  // Seçilenleri ata (BUTON)
+  const handleAssignSelected = () => {
+    if (!selectedIds.length) {
+      setToast("Lütfen çokgenle en az bir müşteri seçin.");
+      setTimeout(() => setToast(null), 1800);
+      return;
+    }
+    setAssignments((prev) => {
+      const next = { ...prev };
+      selectedIds.forEach((id) => (next[id] = selectedRepId));
+      return next;
+    });
+    const repName = reps.find((r) => r.id === selectedRepId)?.name || selectedRepId;
+    setToast(`${selectedIds.length} müşteri “${repName}” için atandı.`);
+    setTimeout(() => setToast(null), 1800);
   };
 
   // Rota hesaplama (seçilenler için)
@@ -308,18 +305,15 @@ const AssignmentMapScreen: React.FC<Props> = ({
       setLoading(true);
       setRouteCoords([]);
       setRouteKm(null);
-
       if (!list.length) return;
 
       const rep =
         reps.find((r) => r.id === rid && r.lat != null && r.lng != null) ||
         reps.find((r) => r.lat != null && r.lng != null);
-
       if (!rep) return;
 
       const start: LatLng = [rep.lat as number, rep.lng as number];
 
-      // OSRM trip (rep + müşteriler)
       const coords = [start, ...list.map((c) => [c.lat, c.lng] as LatLng)]
         .map((p) => `${p[1]},${p[0]}`)
         .join(";");
@@ -331,7 +325,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
       setRouteCoords(latlngs);
       setRouteKm((data.trips[0].distance as number) / 1000);
     } catch {
-      // Fallback: sırayla haversine
       const rep =
         reps.find((r) => r.id === rid && r.lat != null && r.lng != null) ||
         reps.find((r) => r.lat != null && r.lng != null);
@@ -391,13 +384,25 @@ const AssignmentMapScreen: React.FC<Props> = ({
             <Ruler className="w-4 h-4" />
             <span>Rota: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b></span>
           </div>
+
+          <button
+            onClick={handleAssignSelected}
+            disabled={!selectedCustomers.length}
+            className={`px-3 py-2 rounded-lg inline-flex items-center gap-2 font-semibold ${
+              selectedCustomers.length ? "bg-[#0099CB] text-white hover:opacity-90" : "bg-gray-300 text-gray-600"
+            }`}
+            title="Seçili müşterileri bu satış uzmanına ata"
+          >
+            <UserCheck className="w-4 h-4" />
+            Seçilenleri Ata ({selectedCustomers.length || 0})
+          </button>
         </div>
       </div>
 
       {/* Harita + Sağ panel */}
       <div
         className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow"
-        onTouchStart={onTouchStart}
+        onTouchStart={(e)=>{ touchStartX.current = e.touches[0].clientX; }}
         onTouchEnd={onTouchEnd}
       >
         <MapContainer
@@ -433,21 +438,13 @@ const AssignmentMapScreen: React.FC<Props> = ({
                 key={c.id}
                 position={[c.lat, c.lng]}
                 icon={customerIcon(color, highlighted)}
-                ref={(ref: any) => {
-                  if (ref) markerRefs.current[c.id] = ref;
-                }}
-                eventHandlers={{
-                  click: () => {
-                    setSelectedId(c.id);
-                  },
-                }}
+                ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+                eventHandlers={{ click: () => setSelectedId(c.id) }}
               >
                 <Popup>
                   <div className="space-y-1">
                     <div className="font-semibold">{c.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {c.address}, {c.district}
-                    </div>
+                    <div className="text-sm text-gray-600">{c.address}, {c.district}</div>
                     <div className="text-sm">Saat: {c.plannedTime}</div>
                     <div className="text-sm">Tel: {c.phone}</div>
                     <div className="text-xs text-gray-500">
@@ -458,12 +455,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
                           : "—"}
                       </b>
                     </div>
-                    <button
-                      onClick={() => setAssignments((prev) => ({ ...prev, [c.id]: selectedRepId }))}
-                      className="mt-2 w-full px-3 py-1.5 rounded bg-[#0099CB] text-white text-xs"
-                    >
-                      Bu Müşteriyi Ata ({reps.find((r) => r.id === selectedRepId)?.name})
-                    </button>
                   </div>
                 </Popup>
               </Marker>
@@ -476,7 +467,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
           )}
         </MapContainer>
 
-        {/* SAĞ PANEL — seçilenler & açıklama (geri geldi) */}
+        {/* SAĞ PANEL — seçilenler & açıklama */}
         <div
           className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
             panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
@@ -506,16 +497,16 @@ const AssignmentMapScreen: React.FC<Props> = ({
               <span className="font-semibold text-gray-700 text-base select-none">Seçilenler</span>
             </div>
 
-            {/* Açıklama */}
+            {/* Açıklama (güncellendi) */}
             <div className="text-[11px] text-gray-600">
-              Çokgen aracı ile harita üzerinde bir alan çizdiğinizde, <b>alan içindeki müşteriler</b> seçtiğiniz
-              satış uzmanına otomatik atanır. Seçimi temizlemek için aşağıdaki butonu kullanabilirsiniz.
+              Harita üzerinde bir alan çizdiğinizde <b>müşteriler seçilir fakat otomatik atanmaz</b>.
+              Seçili satış uzmanına atamak için yukarıdaki <b>“Seçilenleri Ata”</b> butonunu kullanın.
+              Seçimi temizlemek için “Seçimi Temizle” tuşunu kullanabilirsiniz.
             </div>
 
             {/* Küçük özet */}
             <div className="text-xs text-gray-700">
-              Toplam seçilen müşteri: <b>{selectedCustomers.length}</b> • Tahmini rota:{" "}
-              <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
+              Toplam seçilen: <b>{selectedCustomers.length}</b> • Tahmini rota: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
             </div>
 
             {/* Liste – sadece burası scroll olur */}
@@ -554,17 +545,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
                           Saat: {c.plannedTime} • Tel: {c.phone}
                         </div>
                       </div>
-
-                      <button
-                        className="ml-auto px-2 py-1 rounded-lg hover:bg-gray-100 text-xs border"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAssignments((prev) => ({ ...prev, [c.id]: selectedRepId }));
-                        }}
-                        title="Seçili satış uzmanına ata"
-                      >
-                        Ata
-                      </button>
                     </div>
                   );
                 })
@@ -588,6 +568,15 @@ const AssignmentMapScreen: React.FC<Props> = ({
           </div>
         )}
       </div>
+
+      {/* Küçük Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg border px-4 py-3 text-sm text-gray-800">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
