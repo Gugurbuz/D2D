@@ -51,5 +51,15 @@ const Navigation: React.FC<Props> = ({ agentName, role, currentScreen, setCurren
     </div>
   );
 };
+{role === 'manager' && (
+  <button
+    onClick={() => setCurrentScreen('teamMap')}
+    className={`px-4 py-2 rounded-lg ${currentScreen === 'teamMap' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+    title="Ekip Haritası"
+    aria-label="Ekip Haritası"
+  >
+    <Users className="w-5 h-5" />
+  </button>
+)}
 
 export default Navigation;
