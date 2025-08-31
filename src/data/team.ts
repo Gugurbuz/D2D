@@ -18,7 +18,7 @@ export const teamReps: TeamRep[] = [
     phone: '0555 000 00 01', 
     lat: 40.9368, 
     lng: 29.1553, 
-    completedToday: 3, 
+    completedToday: 7, 
     totalToday: 6,
     color: '#0ea5e9',                  // Mavi
     fillColor: 'rgba(14,165,233,.18)'
