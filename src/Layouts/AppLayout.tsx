@@ -11,15 +11,21 @@ type Props = {
   children: React.ReactNode;
 };
 
-const AppLayout: React.FC<Props> = (p) => (
+const AppLayout: React.FC<Props> = ({
+  agentName,
+  role,
+  currentScreen,
+  setCurrentScreen,
+  children,
+}) => (
   <div className="min-h-screen bg-gray-50">
     <Navigation
-      agentName={p.agentName}
-      role={p.role}
-      currentScreen={p.currentScreen}
-      setCurrentScreen={p.setCurrentScreen}
+      agentName={agentName}
+      role={role}
+      currentScreen={currentScreen}
+      setCurrentScreen={setCurrentScreen}
     />
-    <div className="p-6">{p.children}</div>
+    <div className="p-6">{children}</div>
   </div>
 );
 
