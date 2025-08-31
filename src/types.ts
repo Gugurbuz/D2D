@@ -42,4 +42,12 @@ export type Screen =
   | 'assignment'
   | 'assignmentMap'; 
 
-export type Rep = { id: string; name: string };
+// src/types.ts
+export type Rep = {
+  id: string;
+  name: string;
+  lat: number;   // eklendi
+  lng: number;   // eklendi
+  phone?: string;
+};
+
