@@ -512,7 +512,7 @@ function App() {
 
             <h2 className="font-semibold text-gray-900">{agentName}</h2>
 
-            <p className="text-sm text-gray-600">Saha Temsilcisi</p>
+            <p className="text-sm text-gray-600">Saha Satış Uzmanı</p>
 
           </div>
 
