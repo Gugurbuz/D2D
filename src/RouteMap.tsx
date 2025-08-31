@@ -422,7 +422,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             </div>
 
             <div className="text-[11px] text-gray-600">
-            ⭐ Bir müşteriyi yıldızlarsan rota, satış uzmanından önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
+            ⭐ Bir müşteriyi yıldızlarsan rota, önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
             </div>
           </div>
 
