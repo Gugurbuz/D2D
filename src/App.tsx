@@ -229,7 +229,8 @@ function App() {
           </div>
           
           <button 
-            onClick={() => { setAgentName('Serkan Özkan'); setCurrentScreen('dashboard'); }}
+onClick={() => { setAgentName('Serkan Özkan'); setCurrentScreen('roleSelect'); }}
+          
             className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors"
           >
             Giriş Yap
