@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import AppLayout from './layouts/AppLayout';
 
-import { Role, Screen, VisitResult, Rep } from './types';
+import { Role, Screen } from './types';
 import { Customer } from './RouteMap';
 
 import { mockCustomers } from './data/mockCustomers';
@@ -26,17 +26,15 @@ function App() {
   const [role, setRole] = useState<Role>('rep');
   const [agentName, setAgentName] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [visitResult, setVisitResult] = useState<VisitResult>(null);
-  const [visitNotes, setVisitNotes] = useState('');
   const [filter, setFilter] = useState('Bugün');
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
 
-  // Atamalar (customerId -> repId)
+  // Atamalar: customerId -> repId
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
 
-  // Aktif rep ve görünür müşteri seti
+  // Aktif rep görünür set
   const currentRepId = role === 'rep' ? 'rep-1' : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
     if (role === 'manager') return true;
@@ -84,7 +82,7 @@ function App() {
     setCurrentScreen('visitFlow');
   };
 
-  // Ziyareti tamamla
+  // Ziyareti tamamla (VisitFlowScreen içinde kullanılacak)
   const handleCompleteVisit = (cust: Customer) => {
     setCustomers((prev) => prev.map((c) => (c.id === cust.id ? { ...cust } : c)));
     setSelectedCustomer({ ...cust });
