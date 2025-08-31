@@ -22,6 +22,7 @@ const salesRep: SalesRep = {
   lat: 40.9360,  // Maltepe civarı
   lng: 29.1500,
 };
+const [unreadCount, setUnreadCount] = useState<number>(3);
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
