@@ -239,7 +239,10 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 
   // Kamera başlatma
   const startCamera = async () => {
-    stopCamera();
+    // Önceki stream'i durdur
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
     setCameraError(null);
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -251,17 +254,37 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
   
   // Kamera durdurma
   const stopCamera = () => {
-    stream?.getTracks().forEach(track => track.stop());
-    setStream(null);
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+    }
   };
 
+  // --- !!! DEĞİŞİKLİK BURADA !!! ---
+  // DOKÜMANTASYON: Bu useEffect, stream state'i değiştiğinde çalışır.
+  // Stream'i video elementine bağlar ve tarayıcının otomatik oynatma
+  // politikalarını aşmak için .play() metodunu manuel olarak çağırır.
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const videoElement = videoRef.current;
+    if (videoElement && stream) {
+      videoElement.srcObject = stream;
+      
+      // Videoyu manuel olarak oynatmayı dene
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Video oynatma hatası:", error);
+          setCameraError("Kamera başlatıldı ancak video otomatik oynatılamadı.");
+        });
+      }
     }
-    // Bileşen kaldırıldığında kamerayı kapat
-    return () => stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+    // Cleanup fonksiyonu: Bileşen kaldırıldığında veya stream değiştiğinde kamerayı durdurur.
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
   }, [stream]);
 
   // FOTOĞRAF ÇEKME VE OCR SİMÜLASYONU
@@ -270,39 +293,28 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    // Fotoğrafı canvas'a çiz
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d')?.drawImage(video, 0, 0);
     const photoDataUrl = canvas.toDataURL('image/jpeg');
     dispatch({ type: 'SET_ID_PHOTO', payload: photoDataUrl });
 
-    // OCR simülasyonu
     dispatch({ type: 'SET_OCR_STATUS', payload: 'scanning' });
-    stopCamera(); // OCR işlenirken kamerayı durdur
+    stopCamera(); 
 
     setTimeout(() => {
-      // %80 ihtimalle başarılı, %20 ihtimalle başarısız olsun (simülasyon)
       if (Math.random() < 0.8) {
         dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
       } else {
         dispatch({ type: 'SET_OCR_STATUS', payload: 'error' });
-        dispatch({ type: 'SET_ID_PHOTO', payload: null }); // Hata durumunda fotoğrafı temizle
+        dispatch({ type: 'SET_ID_PHOTO', payload: null });
       }
-    }, 2500); // 2.5 saniye bekleme
+    }, 2500);
   };
 
-  // NFC OKUMA SİMÜLASYONU
+  // NFC OKUMA SİMÜLASYONU (Aynı kalıyor)
   const handleNfcRead = () => {
     dispatch({ type: 'SET_NFC_STATUS', payload: 'scanning' });
-    
-    // Web NFC API kontrolü ve kullanımı burada yapılmalı.
-    // if (!('NDEFReader' in window)) {
-    //   alert('Bu cihaz NFC desteklemiyor.');
-    //   dispatch({ type: 'SET_NFC_STATUS', payload: 'error' });
-    //   return;
-    // }
-    
     setTimeout(() => {
         dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
     }, 2000);
@@ -321,11 +333,22 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
             <div>
                 <p className="text-sm font-medium text-gray-700 mb-2">Kimlik Fotoğrafı</p>
                 <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-                    {stream && <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />}
-                    {/* KIMLIK KARTI KANVASI (OVERLAY) */}
+                    {/* --- !!! DEĞİŞİKLİK BURADA !!! --- */}
+                    {/* Koşullu render'ı sadece stream'e değil, stream'in aktif olup olmadığına göre yapalım */}
+                    <video 
+                        ref={videoRef} 
+                        className={`w-full h-full object-cover ${!stream ? 'hidden' : ''}`} 
+                        autoPlay 
+                        muted 
+                        playsInline 
+                    />
+                    
                     {stream && <div className="absolute inset-0 border-[3px] border-dashed border-white/70 m-4 rounded-xl pointer-events-none" />}
+                    
                     {!stream && state.idPhoto && <img src={state.idPhoto} alt="Çekilen Kimlik" className="w-full h-full object-contain" />}
-                    {!stream && !state.idPhoto && <div className="text-gray-400">Kamera kapalı</div>}
+                    
+                    {!stream && !state.idPhoto && <div className="text-gray-400 p-4 text-center">Kamera kapalı veya izin bekleniyor.</div>}
+                    
                     <canvas ref={canvasRef} className="hidden" />
                 </div>
                 {cameraError && <p className="text-red-600 text-sm mt-2">{cameraError}</p>}
@@ -336,6 +359,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
                             <Camera className="w-4 h-4" /> {stream ? 'Fotoğraf Çek ve Doğrula' : 'Kamerayı Başlat'}
                         </button>
                     )}
+                    {/* Diğer UI durumları aynı kalıyor... */}
                     {state.ocrStatus === 'scanning' && <div className="text-center p-2"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0099CB]" /> <p>Kimlik okunuyor...</p></div>}
                     {state.ocrStatus === 'success' && <div className="text-center p-2 text-green-600 font-semibold flex items-center justify-center gap-2"><CheckCircle className="w-5 h-5"/> Kimlik başarıyla okundu.</div>}
                     {state.ocrStatus === 'error' && (
@@ -348,7 +372,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
                 </div>
             </div>
 
-            {/* NFC Bölümü */}
+            {/* NFC Bölümü (Aynı kalıyor) */}
             <div className={`transition-opacity duration-500 ${state.ocrStatus === 'success' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                  <p className="text-sm font-medium text-gray-700 mb-2">Çipli Kimlik (NFC) Onayı</p>
                  <div className="p-4 border rounded-lg h-full flex flex-col justify-center items-center">
@@ -369,7 +393,6 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
     </div>
   );
 };
-
 // --- ADIM 3: Sözleşme ve İmza ---
 // DOKÜMANTASYON: Bu bileşen sözleşme önizlemesi, dijital imza ve SMS onayı adımlarını içerir.
 // İmza tuvali kodu basitleştirilerek buraya eklenebilir.
