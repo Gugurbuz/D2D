@@ -39,3 +39,18 @@ export interface Customer {
   phone: string;
   assignedRepId: string | null; // (null = atanmamış)
 }
+export type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' | 'Evde Yok' | null;
+export type Role = 'rep' | 'manager';
+export type Screen =
+  | 'login'
+  | 'roleSelect'
+  | 'dashboard'
+  | 'visitList'
+  | 'visitDetail'
+  | 'visitFlow'
+  | 'visitResult'
+  | 'reports'
+  | 'routeMap'
+  | 'assignment';
+
+export type Rep = { id: string; name: string };
