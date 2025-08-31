@@ -233,8 +233,7 @@ onClick={() => { setAgentName('Serkan Özkan'); setCurrentScreen('roleSelect'); 
           
             className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors"
           >
-
-            if (currentScreen === 'roleSelect') {
+if (currentScreen === 'roleSelect') {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg">
@@ -259,6 +258,7 @@ onClick={() => { setAgentName('Serkan Özkan'); setCurrentScreen('roleSelect'); 
     </div>
   );
 }
+            
             Giriş Yap
           </button>
         </div>
