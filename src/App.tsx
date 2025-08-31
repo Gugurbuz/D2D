@@ -240,39 +240,102 @@ function App() {
   }
 
   // ÜST NAVİGASYON
-  const Navigation = () => (
-    <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="w-10 h-10 bg-[#0099CB] rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-gray-900">{agentName}</h2>
-            <p className="text-sm text-gray-600">Saha Temsilcisi</p>
-          </div>
+const Navigation = () => (
+  <div className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3">
+    <div className="grid grid-cols-3 items-center">
+      {/* Sol: Kullanıcı ve ana sekmeler */}
+      <div className="flex items-center gap-3 md:gap-4">
+        <div className="w-10 h-10 bg-[#0099CB] rounded-full flex items-center justify-center shrink-0">
+          <User className="w-5 h-5 text-white" />
         </div>
-        <div className="flex space-x-2">
-          <button onClick={() => setCurrentScreen('dashboard')}
-                  className={`px-4 py-2 rounded-lg ${currentScreen === 'dashboard' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
+        <div className="hidden sm:block">
+          <h2 className="font-semibold text-gray-900 leading-tight">{agentName}</h2>
+          <p className="text-xs text-gray-600">Saha Temsilcisi</p>
+        </div>
+
+        {/* Ana sayfa/rota/liste/rapor kısayolları */}
+        <div className="ml-2 flex items-center gap-1">
+          <button
+            onClick={() => setCurrentScreen('dashboard')}
+            className={`p-2 rounded-lg ${currentScreen === 'dashboard' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+            title="Panel"
+          >
             <Home className="w-5 h-5" />
           </button>
-          <button onClick={() => setCurrentScreen('routeMap')}
-                  className={`px-4 py-2 rounded-lg ${currentScreen === 'routeMap' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
+          <button
+            onClick={() => setCurrentScreen('routeMap')}
+            className={`p-2 rounded-lg ${currentScreen === 'routeMap' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+            title="Rota"
+          >
             <Route className="w-5 h-5" />
           </button>
-          <button onClick={() => setCurrentScreen('visitList')}
-                  className={`px-4 py-2 rounded-lg ${currentScreen === 'visitList' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
+          <button
+            onClick={() => setCurrentScreen('visitList')}
+            className={`p-2 rounded-lg ${currentScreen === 'visitList' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+            title="Ziyaret Listesi"
+          >
             <List className="w-5 h-5" />
           </button>
-          <button onClick={() => setCurrentScreen('reports')}
-                  className={`px-4 py-2 rounded-lg ${currentScreen === 'reports' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
+          <button
+            onClick={() => setCurrentScreen('reports')}
+            className={`p-2 rounded-lg ${currentScreen === 'reports' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+            title="Raporlar"
+          >
             <BarChart3 className="w-5 h-5" />
           </button>
         </div>
       </div>
+
+      {/* Orta: Enerjisa logosu (tam ortada) */}
+      <div className="flex items-center justify-center">
+        <button
+          onClick={() => setCurrentScreen('dashboard')}
+          className="inline-flex items-center justify-center"
+          title="Ana sayfa"
+        >
+          <img
+            src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp"
+            alt="Enerjisa"
+            className="h-7 md:h-8 object-contain"
+            referrerPolicy="no-referrer"
+          />
+        </button>
+      </div>
+
+      {/* Sağ: Bildirim ve Yeni Görev Atama */}
+      <div className="flex items-center justify-end gap-2">
+        {/* Bildirimler */}
+        <button
+          onClick={() => {
+            // burada bir panel açabilir ya da sayı sıfırlayabilirsin
+            setUnreadCount(0);
+            alert('Bildirimler paneli (örnek).');
+          }}
+          className="relative p-2 rounded-lg hover:bg-gray-100"
+          aria-label="Bildirimler"
+          title="Bildirimler"
+        >
+          <Bell className="w-5 h-5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] leading-[18px] text-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+
+        {/* Yeni Görev Atama */}
+        <button
+          onClick={() => alert('Yeni görev atama formu (örnek).')}
+          className="p-2 rounded-lg hover:bg-gray-100"
+          aria-label="Yeni görev atama"
+          title="Yeni görev atama"
+        >
+          <ClipboardPlus className="w-5 h-5" />
+        </button>
+      </div>
     </div>
-  );
+  </div>
+);
 
  // DASHBOARD (YENİ)
 if (currentScreen === 'dashboard') {
