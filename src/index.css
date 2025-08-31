@@ -17,3 +17,8 @@ img, video, canvas { max-width: 100%; height: auto; }
 /* Kaydırılabilir nav / buton barı için scrollbar gizle */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.leaflet-container {
+  touch-action: pan-x pan-y;
+  will-change: transform;
+  backface-visibility: hidden;
+}
