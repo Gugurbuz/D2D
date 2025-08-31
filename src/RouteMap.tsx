@@ -3,7 +3,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  Route as RouteIcon,
+  Star,
+  StarOff,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 /* ==== Tipler ==== */
 export type Customer = {
@@ -63,7 +71,7 @@ const anadoluCustomers: Customer[] = [
   { id: "15", name: "Melih Uçar",    address: "Velibaba Mh. 10",   district: "Pendik",     plannedTime: "14:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000015", consumption: "1350 kWh/ay", offerHistory: ["2024-01: Endüstriyel tarife"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "12.0 km", lat: 40.9009, lng: 29.2312, phone: "0555 111 22 15" },
   { id: "16", name: "İpek Gür",      address: "Esenyalı Mh. 17",   district: "Pendik",     plannedTime: "14:30", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000016", consumption: "280 kWh/ay",  offerHistory: ["2023-12: E-devlet onay"],     status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.8 km", lat: 40.8784, lng: 29.2743, phone: "0555 111 22 16" },
   { id: "17", name: "Kerem Efe",     address: "Barbaros Mh. 5",    district: "Tuzla",      plannedTime: "15:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000017", consumption: "310 kWh/ay",  offerHistory: ["2023-11: Online randevu"],    status: "Bekliyor", estimatedDuration: "30 dk", distance: "19.2 km", lat: 40.8380, lng: 29.3033, phone: "0555 111 22 17" },
-  { id: "18", name: "Naz Acar",      address: "İstasyon Mh. 3",    district: "Tuzla",      plannedTime: "15:30", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000018", consumption: "920 kWh/ay",  offerHistory: ["2023-10: Ticari sabit"],      status: "Bekliyor", estimatedDuration: "40 dk", distance: "21.0 km", lat: 40.8228, lng: 29.3345, phone: "0555 111 22 18" },
+  { id: "18", name: "Naz Acar",      address: "İstasyon Mh. 3",    district: "Tuzla",      plannedTime: "15:30", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000018", consumption: "920 kWh/ay",  offerHistory: ["2023-10: Ticari sabit"],      status: "Bekliyor", estimatedDuration: "40 dk", distance: "21.0 km", lat: 40.8228, lng: 29.3345, phone:  "0555 111 22 18" },
   { id: "19", name: "Mina Eren",     address: "Acarlar Mh. 2",     district: "Beykoz",     plannedTime: "16:00", priority: "Yüksek", tariff: "Mesken",  meterNumber: "210000019", consumption: "290 kWh/ay",  offerHistory: ["2025-02: Özel teklif"],       status: "Bekliyor", estimatedDuration: "30 dk", distance: "24.2 km", lat: 41.1459, lng: 29.1111, phone: "0555 111 22 19" },
   { id: "20", name: "Efe Çınar",     address: "Şahinbey Cd. 9",    district: "Sultanbeyli",plannedTime: "16:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000020", consumption: "300 kWh/ay",  offerHistory: ["2024-05: %8 indirim"],        status: "Bekliyor", estimatedDuration: "25 dk", distance: "16.8 km", lat: 40.9677, lng: 29.2622, phone: "0555 111 22 20" },
   { id: "21", name: "Elif Aydın",    address: "Merkez Mh. 1",      district: "Çekmeköy",   plannedTime: "17:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000021", consumption: "1120 kWh/ay", offerHistory: ["2024-08: Esnek paket"],     status: "Bekliyor", estimatedDuration: "45 dk", distance: "18.1 km", lat: 41.0546, lng: 29.2013, phone: "0555 111 22 21" },
@@ -127,15 +135,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [starredId, setStarredId] = useState<string | null>(null); // ⭐ ilk durak
 
-  // Sağ panel (bar ile aç/kapa + swipe)
+  // Sağ panel (bar + liste birlikte kayar) + dokunmatik swipe
   const [panelOpen, setPanelOpen] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current == null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (dx > 50) setPanelOpen(true);   // sağa kaydır → aç
-    if (dx < -50) setPanelOpen(false); // sola kaydır → kapat
+    if (dx > 50) setPanelOpen(true);   // sağa kaydır → AÇ
+    if (dx < -50) setPanelOpen(false); // sola kaydır → KAPAT
     touchStartX.current = null;
   };
 
@@ -156,7 +164,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // OSRM Trip helper
+  // OSRM helpers
   async function osrmTrip(coords: string) {
     const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
     const res = await fetch(url);
@@ -165,7 +173,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
     return data;
   }
-  // OSRM Route (iki nokta arası)
   async function osrmRoute(from: LatLng, to: LatLng) {
     const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
     const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
@@ -199,7 +206,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         const sortedCustomers = orderedByTrip.filter(p => p.kind === "cust").map(p => (p as any).ref as Customer);
         setOrderedCustomers(sortedCustomers);
 
-        const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
         setRouteCoords(latlngs);
         setRouteKm((data.trips[0].distance as number) / 1000);
 
@@ -209,13 +218,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         const star = baseCustomers.find(c => c.id === starredId)!;
         const others = baseCustomers.filter(c => c.id !== starredId);
 
-        // 1) rep → star tek rota
+        // 1) rep → star
         const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
         const route1 = dataRoute.routes[0];
-        const route1Coords: LatLng[] = route1.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const route1Coords: LatLng[] = route1.geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
         const route1Km = (route1.distance as number) / 1000;
 
-        // 2) star + diğerleri için trip (star ilk olacak şekilde)
+        // 2) star + diğerleri için trip
         const tripSeed = [{ lat: star.lat, lng: star.lng }, ...others.map(c => ({ lat: c.lat, lng: c.lng, ref: c }))];
         const coords2 = tripSeed.map((p) => `${p.lng},${p.lat}`).join(";");
         const dataTrip2 = await osrmTrip(coords2);
@@ -230,7 +241,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         );
         setOrderedCustomers(sortedCustomers);
 
-        const restCoords: LatLng[] = dataTrip2.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const restCoords: LatLng[] = dataTrip2.trips[0].geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
+
         // Birleştir: route1 (rep→star) + rest (star→…)
         const merged: LatLng[] = route1Coords.concat(restCoords.slice(1)); // star noktasını çiftlememek için slice(1)
         setRouteCoords(merged);
@@ -284,7 +298,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           <button
             onClick={handleOptimize}
             disabled={loading}
-            className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`}
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
+            }`}
           >
             {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
@@ -316,21 +332,30 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
               zIndexOffset={1000 - i}
               ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-              eventHandlers={{ click: () => {
-                setSelectedId(c.id);
-                const m = markerRefs.current[c.id];
-                if (m) m.openPopup();
-              }}}
+              eventHandlers={{
+                click: () => {
+                  setSelectedId(c.id);
+                  const m = markerRefs.current[c.id];
+                  if (m) m.openPopup();
+                },
+              }}
             >
               <Popup>
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <b>{i + 1}. {c.name}</b>
-                    {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
+                    {starredId === c.id && (
+                      <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>
+                    )}
                   </div>
                   <div>{c.address}, {c.district}</div>
                   <div>Saat: {c.plannedTime}</div>
-                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
+                  <div>
+                    Tel:{" "}
+                    <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>
+                      {c.phone}
+                    </a>
+                  </div>
                 </div>
               </Popup>
             </Marker>
@@ -342,33 +367,48 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           )}
         </MapContainer>
 
-        {/* === Sağ kenarda DAİMA GÖRÜNÜR DİKEY BAR + Kayan PANEL === */}
-        <div className="absolute top-4 right-4 bottom-4 z-20 flex items-stretch">
-          {/* Dikey BAR (her zaman görünür) */}
-          <button
-            onClick={() => setPanelOpen(o => !o)}
-            className="h-full w-4 md:w-[14px] bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex items-center justify-center text-white rounded-l-md shadow touch-manipulation"
-            title={panelOpen ? "Ziyaret listesini gizle" : "Ziyaret listesini göster"}
-            aria-label={panelOpen ? "Paneli kapat" : "Paneli aç"}
-          >
-            {panelOpen ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
-
-          {/* Panel içeriği (barın yanında; sadece içerik kayar) */}
+        {/* === SAĞ: Bar + Panel (BİRLİKTE kayan kapsayıcı) === */}
+        <div className="absolute top-4 right-4 bottom-4 z-20 flex items-stretch pointer-events-none">
+          {/* İç kapsayıcıyı kaydır: kapalıyken panel neredeyse tamamen dışarı çıkar,
+              sadece bar genişliği (1.5rem = w-6) kadar görünür kalsın */}
           <div
-            className={`transition-transform duration-300 ${panelOpen ? "translate-x-0" : "translate-x-full"}`}
+            className="flex h-full transition-transform duration-300 pointer-events-auto"
+            style={{
+              transform: panelOpen ? "translateX(0)" : "translateX(calc(100% - 1.5rem))",
+            }}
             onTouchStart={onTouchStart}
             onTouchEnd={onTouchEnd}
           >
+            {/* DİKEY BAR (w-6) - panelle birlikte hareket eder */}
+            <button
+              onClick={() => setPanelOpen((o) => !o)}
+              className="h-full w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex items-center justify-center text-white rounded-l-md shadow touch-manipulation relative select-none"
+              title={panelOpen ? "Ziyaret listesini gizle" : "Ziyaret listesini göster"}
+              aria-label={panelOpen ? "Paneli kapat" : "Paneli aç"}
+            >
+              {/* Ok ikonu */}
+              {panelOpen ? (
+                <ChevronRight className="w-4 h-4 absolute" />
+              ) : (
+                <ChevronLeft className="w-4 h-4 absolute" />
+              )}
+
+              {/* Kapalıyken dikey 'ZİYARET' yazısı */}
+              {!panelOpen && (
+                <span className="absolute left-1/2 -translate-x-1/2 rotate-90 whitespace-nowrap text-[10px] tracking-widest opacity-90">
+                  ZİYARET
+                </span>
+              )}
+            </button>
+
+            {/* PANEL */}
             <div className="bg-white/90 rounded-r-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm h-full">
               {/* Başlık */}
               <div className="flex items-center gap-2">
                 <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-                <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
+                <span className="font-semibold text-gray-700 text-base select-none">
+                  Ziyaret Sırası
+                </span>
               </div>
 
               {/* Liste – tüm yükseklikte scroll */}
@@ -380,18 +420,26 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                     <div
                       key={c.id}
                       id={`cust-row-${c.id}`}
-                      className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
+                      className={`flex items-center gap-2 p-2 rounded transition ${
+                        selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"
+                      }`}
                       onClick={() => {
                         setSelectedId(c.id);
                         if (mapRef.current) {
-                          mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+                          mapRef.current.setView(
+                            [c.lat, c.lng],
+                            Math.max(mapRef.current.getZoom(), 14),
+                            { animate: true }
+                          );
                         }
                         const m = markerRefs.current[c.id];
                         if (m) m.openPopup();
                       }}
                     >
                       <span
-                        className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"}`}
+                        className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
+                          starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
+                        }`}
                         title={`${i + 1}. müşteri`}
                       >
                         {i + 1}
@@ -399,8 +447,16 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
                       <div className="min-w-0">
                         <div className="font-medium text-gray-900 truncate">{c.name}</div>
-                        <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
-                        <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e)=>e.stopPropagation()}>{c.phone}</a>
+                        <div className="text-xs text-gray-500 truncate">
+                          {c.address}, {c.district}
+                        </div>
+                        <a
+                          className="text-xs text-[#0099CB] underline"
+                          href={toTelHref(c.phone)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {c.phone}
+                        </a>
                       </div>
 
                       <button
@@ -408,16 +464,19 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                         title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setStarredId(prev => prev === c.id ? null : c.id);
+                          setStarredId((prev) => (prev === c.id ? null : c.id));
                         }}
                       >
-                        {starred
-                          ? <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
-                          : <StarOff className="w-5 h-5 text-gray-500" />
-                        }
+                        {starred ? (
+                          <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
+                        ) : (
+                          <StarOff className="w-5 h-5 text-gray-500" />
+                        )}
                       </button>
 
-                      <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+                      <span className="text-xs text-gray-700 font-semibold">
+                        {c.plannedTime}
+                      </span>
                     </div>
                   );
                 })}
@@ -459,7 +518,15 @@ const FullscreenBtn: React.FC = () => {
       }}
       className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
     >
-      {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
+      {isFs ? (
+        <>
+          <Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat
+        </>
+      ) : (
+        <>
+          <Maximize2 className="w-4 h-4" /> Tam Ekran
+        </>
+      )}
     </button>
   );
 };
