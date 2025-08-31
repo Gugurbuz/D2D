@@ -276,7 +276,7 @@ if (currentScreen === 'roleSelect') {
           </div>
           <div>
             <h2 className="font-semibold text-gray-900">{agentName}</h2>
-            <p className="text-sm text-gray-600">Saha Temsilcisi</p>
+     <p className="text-sm text-gray-600">{role === 'manager' ? 'Saha Yöneticisi' : 'Saha Temsilcisi'}</p>
           </div>
         </div>
         <div className="flex space-x-2">
