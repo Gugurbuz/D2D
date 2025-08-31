@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff } from "lucide-react";
+import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff, ChevronLeft, ChevronRight } from "lucide-react";
 
 /* ==== Tipler ==== */
 export type Customer = {
@@ -126,7 +126,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [starredId, setStarredId] = useState<string | null>(null); // ⭐ ilk durak
 
-  // Sağ panel (swipe ile aç/kapa; kulakçık var)
+  // Sağ panel (swipe ile aç/kapa)
   const [panelOpen, setPanelOpen] = useState(true);
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
@@ -341,7 +341,29 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           )}
         </MapContainer>
 
-        {/* SAĞ PANEL — swipe ile aç/kapa, kulakçık solda */}
+        {/* === Dikey KULP (BAR) — her zaman görünür, büyük dokunma alanı === */}
+        <div className="absolute top-4 right-4 z-20 h-[560px] flex items-stretch pointer-events-none">
+          <button
+            onClick={() => setPanelOpen(o => !o)}
+            className="pointer-events-auto h-full w-8 md:w-9 bg-white/95 border border-gray-200 rounded-l-xl shadow hover:bg-gray-50 active:scale-[0.99] flex flex-col items-center justify-center gap-2 touch-manipulation"
+            title={panelOpen ? "Ziyaret listesini gizle" : "Ziyaret listesini göster"}
+            aria-label={panelOpen ? "Paneli kapat" : "Paneli aç"}
+          >
+            {panelOpen ? (
+              <>
+                <ChevronRight className="w-5 h-5 text-gray-600" />
+                <span className="text-[10px] text-gray-600 leading-none">Kapat</span>
+              </>
+            ) : (
+              <>
+                <ChevronLeft className="w-5 h-5 text-gray-600" />
+                <span className="text-[10px] text-gray-600 leading-none">Aç</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* SAĞ PANEL — swipe ile aç/kapa */}
         <div
           className={`absolute top-4 right-4 z-10 transition-transform duration-300 ${panelOpen ? "translate-x-0" : "translate-x-[85%]"}`}
           onTouchStart={(e)=>{ onTouchStart(e); }}
@@ -352,13 +374,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             <div className="flex items-center gap-2">
               <RouteIcon className="w-5 h-5 text-[#0099CB]" />
               <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
-              <button
-                onClick={() => setPanelOpen((o) => !o)}
-                className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
-                title={panelOpen ? "Paneli kapat" : "Paneli aç"}
-              >
-                {panelOpen ? <Minimize2 className="w-4 h-4 -rotate-90" /> : <Maximize2 className="w-4 h-4 -rotate-90" />}
-              </button>
             </div>
 
             {/* Liste – sadece burası scroll olur */}
@@ -417,18 +432,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               ⭐ Bir müşteriyi yıldızlarsan rota, önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
             </div>
           </div>
-
-          {/* Kapalıyken görünen kulakçık (panel sağda → kulakçık SOLDA) */}
-          {!panelOpen && (
-            <button
-              onClick={() => setPanelOpen(true)}
-              className="absolute top-1/2 -left-3 -translate-y-1/2 bg-white/90 border border-gray-200 rounded-full p-1 shadow"
-              aria-label="Paneli aç"
-              title="Paneli açmak için dokun"
-            >
-              <Minimize2 className="w-4 h-4 text-gray-700 -rotate-90" />
-            </button>
-          )}
         </div>
 
         {/* Loading */}
