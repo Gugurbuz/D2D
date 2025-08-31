@@ -30,6 +30,63 @@ function repIconFor(rep: Rep) { const bg = REP_COLORS[rep.id] || "#111827"; retu
 function customerIcon(color: string, highlighted = false) { const ring = highlighted ? "box-shadow:0 0 0 6px rgba(0,0,0,.08);" : ""; return L.divIcon({ className: "cust-marker", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);${ring}"></div>`, iconSize: [22, 22], iconAnchor: [11, 22], popupAnchor: [0, -18], }); }
 function convexHull(points: LatLng[]): LatLng[] { if (points.length < 3) return points.slice(); const pts = points.slice().sort((a, b) => (a[1] === b[1] ? a[0] - b[0] : a[1] - b[1])); const cross = (o: LatLng, a: LatLng, b: LatLng) => (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]); const lower: LatLng[] = []; for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); } const upper: LatLng[] = []; for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); } upper.pop(); lower.pop(); return lower.concat(upper); }
 
+
+// DÜZELTME: DrawControl bileşeni ana bileşenin DIŞINA taşındı.
+const DrawControl = ({ onPolygonCreated, onDeleted }: { onPolygonCreated: (layer: L.Polygon) => void, onDeleted: () => void }) => {
+    const map = useMap();
+    const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
+    const drawnPolygonRef = useRef<L.Polygon | null>(null);
+
+    useEffect(() => {
+        const drawnItems = new L.FeatureGroup();
+        drawnItemsRef.current = drawnItems;
+        map.addLayer(drawnItems);
+
+        const drawControl = new (L as any).Control.Draw({
+            draw: {
+                polygon: { allowIntersection: false, showArea: false, drawError: { color: "#ff0000", message: "Hatalı çizim" } },
+                rectangle: false, circle: false, circlemarker: false, marker: false, polyline: false,
+            },
+            edit: { featureGroup: drawnItems, edit: false, remove: true },
+        });
+
+        map.addControl(drawControl);
+
+        const handleCreated = (e: any) => {
+            const newLayer = e.layer as L.Polygon;
+
+            if (drawnPolygonRef.current && drawnItemsRef.current) {
+                drawnItemsRef.current.removeLayer(drawnPolygonRef.current);
+            }
+            if (drawnItemsRef.current) {
+                drawnItemsRef.current.addLayer(newLayer);
+                drawnPolygonRef.current = newLayer;
+            }
+            onPolygonCreated(newLayer);
+        };
+        
+        const handleDeleted = () => {
+            drawnPolygonRef.current = null;
+            onDeleted();
+        };
+
+        map.on((L as any).Draw.Event.CREATED, handleCreated);
+        map.on((L as any).Draw.Event.DELETED, handleDeleted);
+
+        return () => {
+            map.removeControl(drawControl);
+            if (map.hasLayer(drawnItems)) {
+                map.removeLayer(drawnItems);
+            }
+            map.off((L as any).Draw.Event.CREATED, handleCreated);
+            map.off((L as any).Draw.Event.DELETED, handleDeleted);
+        };
+    }, [map, onPolygonCreated, onDeleted]);
+
+    return null;
+};
+
+
 const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssignments, allReps: reps, onBack }) => {
     const mapCenter: LatLng = [40.9368, 29.1553];
     const [selectedRepId, setSelectedRepId] = useState<string>(reps[0]?.id || "rep-1");
@@ -39,13 +96,8 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     const [loading, setLoading] = useState(false);
     const [panelOpen, setPanelOpen] = useState(true);
     const [toast, setToast] = useState<string | null>(null);
-
-    const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
     const [regions, setRegions] = useState<Record<string, LatLng[]>>({});
     
-    // DÜZELTME: Çizilen poligonun referansını tutmak için yeni bir ref.
-    const drawnPolygonRef = useRef<L.Polygon | null>(null);
-
     useEffect(() => {
         const selectedCustomers = customers.filter((c) => selectedIds.includes(c.id));
         if (selectedCustomers.length > 0) {
@@ -58,13 +110,10 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
 
     const colorForCustomer = (c: Customer) => REP_COLORS[assignments[c.id] || "_default"] || REP_COLORS._default;
 
+    // DÜZELTME: Çizim mantığı artık DrawControl'den geldiği için
+    // handleClearSelection sadece state'i temizleyecek. Çizimi silme işi DrawControl'de.
     const handleClearSelection = useCallback(() => {
         setSelectedIds([]);
-        if (drawnItemsRef.current) {
-            drawnItemsRef.current.clearLayers();
-        }
-        // DÜZELTME: Çizim temizlendiğinde poligon referansını da temizle.
-        drawnPolygonRef.current = null;
     }, []);
 
     const handleAssignSelected = () => {
@@ -75,14 +124,14 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         }
         setAssignments((prev) => {
             const next = { ...prev };
-            selectedIds.forEach((id) => {
-                next[id] = selectedRepId;
-            });
+            selectedIds.forEach((id) => { next[id] = selectedRepId; });
             return next;
         });
         setToast(`${selectedIds.length} müşteri ${reps.find(r => r.id === selectedRepId)?.name}'a atandı.`);
         setTimeout(() => setToast(null), 2000);
-        handleClearSelection();
+        // Atama sonrası seçimi temizle. Bu, DrawControl'deki onDeleted'ı tetiklemeyecek, sadece state'i temizleyecek.
+        // Poligon, yeni çizim yapılana kadar kalabilir veya temizlenebilir. Şimdilik temizlemeyelim ki kullanıcı neyi atadığını görsün.
+        setSelectedIds([]);
     };
     
     const handleToggleSelection = (customerId: string) => {
@@ -112,65 +161,13 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             setLoading(false);
         }
     };
-
-    const DrawControl = () => {
-        const map = useMap();
-
-        useEffect(() => {
-            if (!map || drawnItemsRef.current) return;
-
-            const drawnItems = new L.FeatureGroup();
-            drawnItemsRef.current = drawnItems;
-            map.addLayer(drawnItems);
-
-            const drawControl = new (L as any).Control.Draw({
-                draw: { rectangle: false, circle: false, circlemarker: false, marker: false, polyline: false,
-                    polygon: { allowIntersection: false, showArea: false, drawError: { color: "#ff0000", message: "Hatalı çizim" } },
-                },
-                edit: { featureGroup: drawnItems, edit: false, remove: true },
-            });
-
-            map.addControl(drawControl);
-
-            const onCreated = (e: any) => {
-                const newLayer = e.layer as L.Polygon;
-
-                // DÜZELTME: "Önce temizle, sonra ekle" yerine "önce ekle, sonra eskiyi sil" mantığı
-                if (drawnPolygonRef.current && drawnItemsRef.current) {
-                    drawnItemsRef.current.removeLayer(drawnPolygonRef.current);
-                }
-                
-                if (drawnItemsRef.current) {
-                    drawnItemsRef.current.addLayer(newLayer);
-                    drawnPolygonRef.current = newLayer; // Yeni poligonun referansını sakla
-                }
-
-                const latlngs = (newLayer.getLatLngs()[0] as L.LatLng[]).map(p => [p.lat, p.lng]) as LatLng[];
-                const insideIds = customers.filter(c => pointInPolygon([c.lat, c.lng], latlngs)).map(c => c.id);
-                setSelectedIds(insideIds);
-            };
-
-            const onDeleted = () => {
-                handleClearSelection();
-            };
-
-            map.on((L as any).Draw.Event.CREATED, onCreated);
-            map.on((L as any).Draw.Event.DELETED, onDeleted);
-
-            return () => {
-                map.removeControl(drawControl);
-                if (map.hasLayer(drawnItems)) {
-                    map.removeLayer(drawnItems);
-                }
-                drawnItemsRef.current = null;
-                drawnPolygonRef.current = null;
-                map.off((L as any).Draw.Event.CREATED, onCreated);
-                map.off((L as any).Draw.Event.DELETED, onDeleted);
-            };
-        }, [map, handleClearSelection]); // useCallback kullandığımız için handleClearSelection'ı eklemek güvenli
-
-        return null;
-    };
+    
+    // DÜZELTME: Poligon oluşturulduğunda çalışacak yeni handler fonksiyonu.
+    const handlePolygonCreated = useCallback((layer: L.Polygon) => {
+        const latlngs = (layer.getLatLngs()[0] as L.LatLng[]).map(p => [p.lat, p.lng]) as LatLng[];
+        const insideIds = customers.filter(c => pointInPolygon([c.lat, c.lng], latlngs)).map(c => c.id);
+        setSelectedIds(insideIds);
+    }, [customers]);
     
     const handleOptimize = async () => { const K = reps.length || 1; if (!K) return; const target = Math.ceil(customers.length / K); let centroids: LatLng[] = reps.map((r) => [r.lat, r.lng]); const pts: LatLng[] = customers.map((c) => [c.lat, c.lng]); let assign: number[] = new Array(customers.length).fill(-1); const iter = 8; for (let t = 0; t < iter; t++) { const buckets: number[][] = Array.from({ length: K }, () => []); pts.forEach((p, i) => { const order = centroids.map((c, k) => ({ k, d: haversineKm(p, c) })).sort((a, b) => a.d - b.d); let chosen = order[0].k; for (const cand of order) { if (buckets[cand.k].length < target) { chosen = cand.k; break; } } buckets[chosen].push(i); assign[i] = chosen; }); centroids = buckets.map((idxs, k) => { if (idxs.length === 0) return centroids[k]; const s = idxs.reduce((acc, i) => [acc[0] + pts[i][0], acc[1] + pts[i][1]], [0, 0] as LatLng); return [s[0] / idxs.length, s[1] / idxs.length] as LatLng; }); } const next: Record<string, string> = {}; customers.forEach((c, i) => { const repId = reps[assign[i]]?.id || reps[0].id; next[c.id] = repId; }); setAssignments((prev) => ({ ...prev, ...next })); const perRepPoints: Record<string, LatLng[]> = {}; reps.forEach((r) => (perRepPoints[r.id] = [])); customers.forEach((c, i) => { const rid = next[c.id]!; perRepPoints[rid].push([c.lat, c.lng]); }); const hulls: Record<string, LatLng[]> = {}; reps.forEach((r) => { const pts = perRepPoints[r.id]; hulls[r.id] = pts.length ? convexHull(pts.map((p) => [p[0], p[1]])) : []; }); setRegions(hulls); setToast("Otomatik atama tamamlandı."); setTimeout(() => setToast(null), 2000); };
     
@@ -197,7 +194,9 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
                 <MapContainer center={mapCenter as LatLngExpression} zoom={13} style={{ height: "100%", width: "100%" }} className="z-0">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-                    <DrawControl />
+                    
+                    {/* DÜZELTME: DrawControl artık dışarıdan çağrılıyor ve props alıyor */}
+                    <DrawControl onPolygonCreated={handlePolygonCreated} onDeleted={handleClearSelection} />
 
                     {reps.map((r) => { const hull = regions[r.id]; return hull && hull.length >= 3 ? ( <Polygon key={`poly-${r.id}`} positions={hull as unknown as LatLngExpression[]} pathOptions={{ color: REP_COLORS[r.id] || "#444", fillColor: REP_FILLS[r.id] || "rgba(0,0,0,.1)", fillOpacity: 0.6, weight: 2 }} /> ) : null; })}
                     
@@ -269,7 +268,9 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                                 <button onClick={handleAssignSelected} className="w-full px-4 py-2 rounded-lg bg-green-600 text-white font-semibold inline-flex items-center justify-center gap-2 hover:bg-green-700 transition-colors">
                                     <CheckCircle2 className="w-5 h-5" /> {selectedIds.length} Müşteriyi Ata
                                 </button>
-                                <button onClick={handleClearSelection} className="w-full px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors">
+                                {/* DÜZELTME: `handleClearSelection` artık sadece state'i temizleyecek. 
+                                    Çizimi haritadan kaldırmak için haritadaki Sil butonunu kullanın. */}
+                                <button onClick={() => setSelectedIds([])} className="w-full px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors">
                                     <Trash2 className="w-4 h-4" /> Seçimi Temizle
                                 </button>
                             </div>
