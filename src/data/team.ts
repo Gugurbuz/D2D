@@ -15,7 +15,7 @@ export const teamReps: TeamRep[] = [
   { 
     id: 'rep-1', 
     name: 'Serkan Özkan',
-    phone: '0555 000 00 01', 
+    phone: '05079681648', 
     lat: 40.9368, 
     lng: 29.1553, 
     completedToday: 7, 
