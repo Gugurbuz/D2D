@@ -39,6 +39,7 @@ export type Screen =
   | 'visitResult'
   | 'reports'
   | 'routeMap'
-  | 'assignment';
+  | 'assignment'
+  | 'assignmentMap'; 
 
 export type Rep = { id: string; name: string };
