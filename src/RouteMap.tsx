@@ -64,7 +64,7 @@ const anadoluCustomers: Customer[] = [
   { id: "17", name: "Kerem Efe",     address: "Barbaros Mh. 5",     district: "Tuzla",     plannedTime: "15:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000017", consumption: "310 kWh/ay",  offerHistory: ["2023-11: Online randevu"],    status: "Bekliyor", estimatedDuration: "30 dk", distance: "19.2 km", lat: 40.8380, lng: 29.3033, phone: "0555 111 22 17" },
   { id: "18", name: "Naz Acar",      address: "İstasyon Mh. 3",     district: "Tuzla",     plannedTime: "15:30", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000018", consumption: "920 kWh/ay",  offerHistory: ["2023-10: Ticari sabit"],      status: "Bekliyor", estimatedDuration: "40 dk", distance: "21.0 km", lat: 40.8228, lng: 29.3345, phone: "0555 111 22 18" },
   { id: "19", name: "Mina Eren",     address: "Acarlar Mh. 2",      district: "Beykoz",    plannedTime: "16:00", priority: "Yüksek", tariff: "Mesken",  meterNumber: "210000019", consumption: "290 kWh/ay",  offerHistory: ["2025-02: Özel teklif"],       status: "Bekliyor", estimatedDuration: "30 dk", distance: "24.2 km", lat: 41.1459, lng: 29.1111, phone: "0555 111 22 19" },
-  { id: "20", name: "Efe Çınar",     address: "Şahinbey Cd. 9",     district: "Sultanbeyli", plannedTime: "16:30", priority: "Orta", tariff: "Mesken", meterNumber: "210000020", consumption: "300 kWh/ay",  offerHistory: ["2024-05: %8 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "16.8 km", lat: 40.9677, lng: 29.2622, phone: "0555 111 22 20" },
+  { id: "20", name: "Efe Çınar",     address: "Şahinbey Cd. 9",     district: "Sultanbeyli", plannedTime: "16:30", priority: "Orta", tariff: "Mesken", meterNumber: "210000020", consumption: "300 kWh/ay",  offerHistory: ["2024-05: %8 indirim"],        status: "Bekliyor", estimatedDuration: "25 dk", distance: "16.8 km", lat: 40.9677, lng: 29.2622, phone: "0555 111 22 20" },
   { id: "21", name: "Elif Aydın",    address: "Merkez Mh. 1",       district: "Çekmeköy",  plannedTime: "17:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000021", consumption: "1120 kWh/ay", offerHistory: ["2024-08: Esnek paket"],     status: "Bekliyor", estimatedDuration: "45 dk", distance: "18.1 km", lat: 41.0546, lng: 29.2013, phone: "0555 111 22 21" },
   { id: "22", name: "Onur Demirel",  address: "Çamlık Mh. 6",       district: "Çekmeköy",  plannedTime: "17:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000022", consumption: "330 kWh/ay",  offerHistory: ["2024-05: Otomatik ödeme"],    status: "Bekliyor", estimatedDuration: "25 dk", distance: "19.0 km", lat: 41.0466, lng: 29.2233, phone: "0555 111 22 22" },
 ];
@@ -140,20 +140,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
-
-  // Fullscreen
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [isFs, setIsFs] = useState(false);
-  useEffect(() => {
-    const h = () => setIsFs(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", h);
-    return () => document.removeEventListener("fullscreenchange", h);
-  }, []);
-  const toggleFullscreen = async () => {
-    const el = wrapperRef.current; if (!el) return;
-    if (!document.fullscreenElement) await el.requestFullscreen();
-    else await document.exitFullscreen();
-  };
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
@@ -253,7 +239,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       }
     } catch (e) {
       console.error(e);
-      // OSRM yoksa: basit fallback
+      // OSRM olmazsa: basit fallback
       const seq: LatLng[] = (() => {
         const startList = starredId
           ? [baseCustomers.find(c => c.id === starredId)!, ...baseCustomers.filter(c => c.id !== starredId)]
@@ -270,7 +256,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   // ⭐ değişince otomatik optimize et
   useEffect(() => {
-    // İlk mount'ta gereksiz çağrı yapmamak için: sadece yıldızlandıktan sonra tetikle
     if (starredId !== null) {
       handleOptimize();
     }
@@ -367,6 +352,13 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             <div className="flex items-center gap-2">
               <RouteIcon className="w-5 h-5 text-[#0099CB]" />
               <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
+              <button
+                onClick={() => setPanelOpen((o) => !o)}
+                className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
+                title={panelOpen ? "Paneli kapat" : "Paneli aç"}
+              >
+                {panelOpen ? <Minimize2 className="w-4 h-4 -rotate-90" /> : <Maximize2 className="w-4 h-4 -rotate-90" />}
+              </button>
             </div>
 
             {/* Liste – sadece burası scroll olur */}
@@ -422,7 +414,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             </div>
 
             <div className="text-[11px] text-gray-600">
-            ⭐ Bir müşteriyi yıldızlarsan rota, önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
+              ⭐ Bir müşteriyi yıldızlarsan rota, önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
             </div>
           </div>
 
