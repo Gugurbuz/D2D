@@ -1,11 +1,11 @@
+// src/App.tsx
 import React, { useState } from 'react';
-import Navigation from './components/Navigation';
-import { Role, Screen, VisitResult, Rep } from './types';
-import { Customer, SalesRep as MapSalesRep } from './RouteMap';
+import AppLayout from './layouts/AppLayout';
+
+import { Role, Screen, VisitResult } from './types';
+import { Customer } from './RouteMap'; // Customer tipi burada tanımlıysa bırak
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
-import { Users } from 'lucide-react';
-import TeamMapScreen from './screens/TeamMapScreen';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
@@ -17,7 +17,7 @@ import VisitDetailScreen from './screens/VisitDetailScreen';
 import VisitFlowScreen from './screens/VisitFlowScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
-
+import TeamMapScreen from './screens/TeamMapScreen';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -33,7 +33,7 @@ function App() {
 
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
 
-  // Aktif rep görünür set
+  // Aktif rep → görünür set
   const currentRepId = role === 'rep' ? 'rep-1' : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
     if (role === 'manager') return true;
@@ -47,9 +47,15 @@ function App() {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
       const recognition = new SpeechRecognition();
-      recognition.lang = 'tr-TR'; recognition.continuous = false; recognition.interimResults = false;
+      recognition.lang = 'tr-TR';
+      recognition.continuous = false;
+      recognition.interimResults = false;
       recognition.onstart = () => setIsListening(true);
-      recognition.onresult = (event: any) => { const transcript = event.results[0][0].transcript; setSearchQuery(transcript); setIsListening(false); };
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setSearchQuery(transcript);
+        setIsListening(false);
+      };
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
       recognition.start();
@@ -59,11 +65,14 @@ function App() {
   };
 
   // Login
-  const handleLogin = () => { setAgentName('Serkan Özkan'); setCurrentScreen('roleSelect'); };
+  const handleLogin = () => {
+    setAgentName('Serkan Özkan');
+    setCurrentScreen('roleSelect');
+  };
 
-  // Ziyaret başlangıcı
+  // Ziyareti başlat
   const handleStartVisit = (customer: Customer) => {
-    const updated = customers.map(c => c.id === customer.id ? { ...c, status: 'Yolda' as const } : c);
+    const updated = customers.map(c => (c.id === customer.id ? { ...c, status: 'Yolda' as const } : c));
     setCustomers(updated);
     setSelectedCustomer({ ...customer, status: 'Yolda' });
     setCurrentScreen('visitFlow');
@@ -71,30 +80,45 @@ function App() {
 
   // Ziyareti tamamla
   const handleCompleteVisit = (cust: Customer) => {
-    setCustomers(prev => prev.map(c => c.id === cust.id ? { ...cust } : c));
+    setCustomers(prev => prev.map(c => (c.id === cust.id ? { ...cust } : c)));
     setSelectedCustomer({ ...cust });
+    setCurrentScreen('visitList');
   };
-  if (currentScreen === 'teamMap' && role === 'manager') {
+
+  // Giriş & Rol seçim ekranları layout’suz
+  if (currentScreen === 'login') {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
+  if (currentScreen === 'roleSelect') {
+    return (
+      <RoleSelectScreen
+        onSelect={(r) => {
+          setRole(r);
+          setCurrentScreen('dashboard');
+        }}
+      />
+    );
+  }
+
+  // Diğer tüm ekranlar AppLayout içinde
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <div className="p-6">
+    <AppLayout
+      agentName={agentName}
+      role={role}
+      currentScreen={currentScreen}
+      setCurrentScreen={setCurrentScreen}
+    >
+      {currentScreen === 'teamMap' && role === 'manager' && (
         <TeamMapScreen />
-      </div>
-    </div>
-  );
-}
-
-  // Ekran switch
-  if (currentScreen === 'login') return <LoginScreen onLogin={handleLogin} />;
-  if (currentScreen === 'roleSelect') return <RoleSelectScreen onSelect={(r) => { setRole(r); setCurrentScreen('dashboard'); }} />;
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation agentName={agentName} role={role} currentScreen={currentScreen} setCurrentScreen={setCurrentScreen} />
+      )}
 
       {currentScreen === 'assignment' && role === 'manager' && (
-        <AssignmentScreen customers={customers} assignments={assignments} setAssignments={setAssignments} allReps={allReps} />
+        <AssignmentScreen
+          customers={customers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          allReps={allReps}
+        />
       )}
 
       {currentScreen === 'dashboard' && (
@@ -110,25 +134,28 @@ function App() {
       {currentScreen === 'visitList' && (
         <VisitListScreen
           customers={visibleCustomers}
-          filter={filter} setFilter={setFilter}
-          searchQuery={searchQuery} setSearchQuery={setSearchQuery}
-          isListening={isListening} onMicClick={handleSpeechToText}
-          assignments={assignments} allReps={allReps}
-          onDetail={(c) => { setSelectedCustomer(c); setCurrentScreen('visitDetail'); }}
+          filter={filter}
+          setFilter={setFilter}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isListening={isListening}
+          onMicClick={handleSpeechToText}
+          assignments={assignments}
+          allReps={allReps}
+          onDetail={(c) => {
+            setSelectedCustomer(c);
+            setCurrentScreen('visitDetail');
+          }}
           onStart={handleStartVisit}
         />
       )}
 
       {currentScreen === 'visitDetail' && selectedCustomer && (
-        <>
-          <div className="min-h-screen">
-            <VisitDetailScreen
-              customer={selectedCustomer}
-              onBack={() => setCurrentScreen('visitList')}
-              onStartVisit={handleStartVisit}
-            />
-          </div>
-        </>
+        <VisitDetailScreen
+          customer={selectedCustomer}
+          onBack={() => setCurrentScreen('visitList')}
+          onStartVisit={handleStartVisit}
+        />
       )}
 
       {currentScreen === 'visitFlow' && selectedCustomer && (
@@ -139,14 +166,12 @@ function App() {
         />
       )}
 
-      {currentScreen === 'reports' && (
-        <ReportsScreen customers={visibleCustomers} />
-      )}
+      {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
 
       {currentScreen === 'routeMap' && (
         <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
       )}
-    </div>
+    </AppLayout>
   );
 }
 
