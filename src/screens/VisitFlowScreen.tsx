@@ -1,5 +1,5 @@
 // src/screens/VisitFlowScreen.tsx
-import React, from 'react';
+import React, { useReducer, useState, useRef, useEffect } from 'react';
 
 // İkonları import etmeye devam ediyoruz
 import {
