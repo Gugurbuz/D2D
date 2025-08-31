@@ -1,5 +1,9 @@
+// src/screens/VisitFlowScreen.tsx
 import React, { useEffect, useRef, useState } from 'react';
-import { IdCard, Camera, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck, CheckCircle } from 'lucide-react';
+import {
+  IdCard, Camera, Smartphone, FileText, PenLine, Send,
+  ChevronRight, ShieldCheck, CheckCircle
+} from 'lucide-react';
 import { Customer } from '../RouteMap';
 
 type Props = {
@@ -13,18 +17,27 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
   const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || '');
   const [flowSmsSent, setFlowSmsSent] = useState(false);
   const [flowContractAccepted, setFlowContractAccepted] = useState(false);
+
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Kamera state
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [nfcChecked, setNfcChecked] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [usingBack, setUsingBack] = useState(true);
 
-  // İmza çizimi
+  const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+  const isSecure = window.isSecureContext || window.location.protocol === 'https:' || isLocalhost;
+
+  // --- İMZA CANVAS ---
   useEffect(() => {
     const canvas = signatureCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     let drawing = false;
+
     const getPos = (e: any, c: HTMLCanvasElement) => {
       const rect = c.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -42,31 +55,54 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
     };
   }, [flowStep]);
 
-  // Kamera
-  useEffect(() => {
-    const enable = async () => {
-      if (flowStep === 2 && !stream) {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({ video: true });
-          setStream(s);
-        } catch {}
-      }
-    };
-    enable();
-    return () => { if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); } };
-  }, [flowStep]);
+  // --- KAMERA: Başlat / Durdur ---
+  const startCamera = async (back = true) => {
+    setCameraError(null);
+    try {
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: back ? { ideal: 'environment' } : { ideal: 'user' }
+        },
+        audio: false
+      } as any;
+      const s = await navigator.mediaDevices.getUserMedia(constraints);
+      setStream(s);
+      setUsingBack(back);
+    } catch (err: any) {
+      setCameraError(`${err?.name || 'Hata'}: ${err?.message || 'Kamera başlatılamadı'}`);
+    }
+  };
 
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      setStream(null);
+    }
+  };
+
+  // stream'i <video>'ya bağla
   useEffect(() => {
-    if (videoRef.current && stream) {
-      (videoRef.current as any).srcObject = stream;
-      videoRef.current.play().catch(() => {});
+    const v = videoRef.current;
+    if (v && stream) {
+      v.srcObject = stream as any;
+      // iOS Safari için: muted + playsInline + autoplay
+      v.muted = true;
+      v.playsInline = true;
+      // play() user gesture gerektirebilir ama muted+playsInline genelde yeterli
+      v.play().catch(() => {/* sessizce yut */});
     }
   }, [stream]);
+
+  // Adımdan çıkarken kamerayı kapat
+  useEffect(() => {
+    if (flowStep !== 2) stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowStep]);
 
   const StepIndicator = () => (
     <div className="flex items-center gap-2 mb-4">
       {[1,2,3,4].map(n => (
-        <div key={n} className={`h-2 rounded-full ${flowStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{width: 56}} />
+        <div key={n} className={`h-2 rounded-full ${flowStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{ width: 56 }} />
       ))}
     </div>
   );
@@ -84,7 +120,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
       </div>
       <StepIndicator />
 
-      {/* 1 */}
+      {/* ADIM 1 */}
       {flowStep === 1 && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -106,24 +142,83 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
         </div>
       )}
 
-      {/* 2 */}
+      {/* ADIM 2: Kimlik Doğrulama */}
       {flowStep === 2 && (
         <div className="bg-white rounded-xl shadow-sm p-6">
+          {!isSecure && (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 text-sm">
+              Mobilde kamerayı açmak için HTTPS gerekir. Hızlı çözüm:
+              <b> ngrok</b>/<b>Cloudflare Tunnel</b> ile 5173 portunu tünelleyin veya
+              Vite’i HTTPS ile çalıştırın (örn. <code>vite --https --host</code> ve yerel sertifika).
+            </div>
+          )}
+
           <div className="flex items-center gap-3 mb-4">
             <Camera className="w-5 h-5 text-[#0099CB]" />
             <h3 className="text-lg font-semibold">Kimlik Doğrulama</h3>
           </div>
+
           <div className="grid md:grid-cols-2 gap-6 items-start">
+            {/* Kamera */}
             <div>
               <p className="text-sm text-gray-600 mb-2">Kamera Önizleme</p>
               <div className="aspect-video bg-black/5 rounded-lg overflow-hidden flex items-center justify-center">
-                {stream ? <video ref={videoRef} className="w-full h-full object-cover" /> : <div className="text-gray-500 text-sm p-6 text-center">Kamera açılamadı. Tarayıcı izinlerini kontrol edin.</div>}
+                {stream ? (
+                  <video
+                    ref={videoRef}
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    muted
+                    playsInline
+                    controls={false}
+                    // iOS PIP engelle:
+                    disablePictureInPicture
+                  />
+                ) : (
+                  <div className="text-gray-500 text-sm p-6 text-center">
+                    Kamera başlatılmadı.
+                    <div className="mt-2">
+                      <button
+                        onClick={() => startCamera(true)}
+                        className="px-4 py-2 bg-[#0099CB] text-white rounded-lg"
+                      >
+                        Kamerayı Başlat (Arka)
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div className="mt-3 flex gap-2">
-                <button onClick={() => alert('Fotoğraf çekildi (simülasyon).')} className="px-4 py-2 bg-[#0099CB] text-white rounded-lg">Fotoğraf Çek</button>
-                <button onClick={() => alert('Kimlik OCR işlendi (simülasyon).')} className="px-4 py-2 bg-white border rounded-lg">OCR İşle</button>
+                <button
+                  onClick={() => (stream ? stopCamera() : startCamera(usingBack))}
+                  className="px-4 py-2 bg-white border rounded-lg"
+                >
+                  {stream ? 'Kamerayı Durdur' : 'Kamerayı Başlat'}
+                </button>
+                <button
+                  onClick={() => { stopCamera(); startCamera(!usingBack); }}
+                  className="px-4 py-2 bg-white border rounded-lg"
+                >
+                  Ön/Arka Değiştir
+                </button>
+                <button onClick={() => alert('Fotoğraf çekildi (simülasyon).')} className="px-4 py-2 bg-[#0099CB] text-white rounded-lg">
+                  Fotoğraf Çek
+                </button>
+                <button onClick={() => alert('Kimlik OCR işlendi (simülasyon).')} className="px-4 py-2 bg-white border rounded-lg">
+                  OCR İşle
+                </button>
               </div>
+
+              {cameraError && (
+                <div className="mt-2 text-sm text-red-600">
+                  {cameraError}
+                  {cameraError.includes('NotAllowedError') && ' — Tarayıcı izinlerini kontrol edin.'}
+                </div>
+              )}
             </div>
+
+            {/* NFC */}
             <div>
               <p className="text-sm text-gray-600 mb-2">NFC Kimlik Okuma</p>
               <div className="p-4 border rounded-lg">
@@ -131,25 +226,38 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
                   <Smartphone className="w-4 h-4 text-[#0099CB]" />
                   <span>Telefonu kimliğe yaklaştırın</span>
                 </div>
-                <button onClick={() => setNfcChecked(true)} className={`px-4 py-2 rounded-lg ${nfcChecked ? 'bg-green-600 text-white' : 'bg-[#F9C800] text-gray-900'}`}>
+                <button
+                  onClick={() => setNfcChecked(true)}
+                  className={`px-4 py-2 rounded-lg ${nfcChecked ? 'bg-green-600 text-white' : 'bg-[#F9C800] text-gray-900'}`}
+                >
                   {nfcChecked ? 'NFC Başarılı' : 'NFC Okut'}
                 </button>
-                <p className="text-xs text-gray-500 mt-2">Not: Tarayıcı NFC API desteklemiyorsa bu adım simüle edilir.</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Not: Tarayıcı NFC API desteklemiyorsa bu adım simüle edilir.
+                </p>
               </div>
+
               <div className="mt-4">
                 <label className="text-sm text-gray-600">Doğrulama Notu</label>
                 <textarea className="w-full mt-1 p-2 border rounded-lg" rows={3} placeholder="Kimlik bilgileri kontrol notları..." />
               </div>
             </div>
           </div>
+
           <div className="mt-6 flex justify-between">
             <button onClick={() => setFlowStep(1)} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-            <button onClick={() => setFlowStep(3)} disabled={!nfcChecked} className={`px-6 py-3 rounded-lg ${nfcChecked ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}>Devam</button>
+            <button
+              onClick={() => setFlowStep(3)}
+              disabled={!nfcChecked}
+              className={`px-6 py-3 rounded-lg ${nfcChecked ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}
+            >
+              Devam
+            </button>
           </div>
         </div>
       )}
 
-      {/* 3 */}
+      {/* ADIM 3 */}
       {flowStep === 3 && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-3 mb-4">
@@ -172,10 +280,22 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
               <div className="border rounded-lg p-2">
                 <canvas ref={signatureCanvasRef} width={520} height={180} className="w-full h-[180px] bg-white rounded" />
                 <div className="mt-2 flex gap-2">
-                  <button onClick={() => { const c = signatureCanvasRef.current; if (!c) return; const ctx = c.getContext('2d'); if (!ctx) return; ctx.clearRect(0,0,c.width,c.height); }} className="px-3 py-2 bg-white border rounded-lg">Temizle</button>
-                  <button onClick={() => alert('İmza kaydedildi (simülasyon).')} className="px-3 py-2 bg-[#0099CB] text-white rounded-lg">İmzayı Kaydet</button>
+                  <button
+                    onClick={() => {
+                      const c = signatureCanvasRef.current; if (!c) return;
+                      const ctx = c.getContext('2d'); if (!ctx) return;
+                      ctx.clearRect(0, 0, c.width, c.height);
+                    }}
+                    className="px-3 py-2 bg-white border rounded-lg"
+                  >
+                    Temizle
+                  </button>
+                  <button onClick={() => alert('İmza kaydedildi (simülasyon).')} className="px-3 py-2 bg-[#0099CB] text-white rounded-lg">
+                    İmzayı Kaydet
+                  </button>
                 </div>
               </div>
+
               <div className="mt-6">
                 <p className="text-sm text-gray-600 mb-2 flex items-center gap-2"><Send className="w-4 h-4" /> SMS ile Onay</p>
                 <div className="flex gap-2">
@@ -186,14 +306,21 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
               </div>
             </div>
           </div>
+
           <div className="mt-6 flex justify-between">
             <button onClick={() => setFlowStep(2)} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-            <button onClick={() => setFlowStep(4)} disabled={!flowContractAccepted} className={`px-6 py-3 rounded-lg ${flowContractAccepted ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}>Devam</button>
+            <button
+              onClick={() => setFlowStep(4)}
+              disabled={!flowContractAccepted}
+              className={`px-6 py-3 rounded-lg ${flowContractAccepted ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}
+            >
+              Devam
+            </button>
           </div>
         </div>
       )}
 
-      {/* 4 */}
+      {/* ADIM 4 */}
       {flowStep === 4 && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-3 mb-4">
