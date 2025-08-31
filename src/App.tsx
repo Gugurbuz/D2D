@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Navigation from './components/Navigation';
 import { Role, Screen, VisitResult, Rep } from './types';
 import { Customer, SalesRep as MapSalesRep } from './RouteMap';
+import { mockCustomers } from './data/mockCustomers';
+import { allReps, salesRepForMap } from './data/reps';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
