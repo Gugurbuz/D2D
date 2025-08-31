@@ -1,43 +1,55 @@
-import React, { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
-import { Rep } from '../types';
-import { getStatusColor } from '../utils/ui';
+// src/screens/AssignmentScreen.tsx
+import React, { useMemo, useState } from 'react';
+import { Search, Route as RouteIcon } from 'lucide-react';
 import { Customer } from '../RouteMap';
+import { Rep, Screen } from '../types';
+import { getStatusColor } from '../utils/ui';
 
 type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
   setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
   allReps: Rep[];
+  // ⬇️ eklendi
+  setCurrentScreen: (s: Screen) => void;
 };
 
-const AssignmentScreen: React.FC<Props> = ({ customers, assignments, setAssignments, allReps }) => {
-  // EKRANA ÖZEL STATE’LER BU BİLEŞENİN ÜST SEVİYESİNDE
+const AssignmentScreen: React.FC<Props> = ({
+  customers,
+  assignments,
+  setAssignments,
+  allReps,
+  setCurrentScreen,
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [localSelected, setLocalSelected] = useState<Record<string, boolean>>({});
   const [selectedRep, setSelectedRep] = useState<string>(allReps[0]?.id || '');
 
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    return q
-      ? customers.filter(c =>
-          c.name.toLowerCase().includes(q) ||
-          c.address.toLowerCase().includes(q) ||
-          c.district.toLowerCase().includes(q))
-      : customers;
+    if (!q) return customers;
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.address.toLowerCase().includes(q) ||
+        c.district.toLowerCase().includes(q)
+    );
   }, [customers, searchQuery]);
 
   const toggleAll = (v: boolean) => {
     const next: Record<string, boolean> = {};
-    filtered.forEach(c => { next[c.id] = v; });
+    filtered.forEach((c) => { next[c.id] = v; });
     setLocalSelected(next);
   };
 
-  const selectedIds = Object.entries(localSelected).filter(([, v]) => v).map(([k]) => k);
+  const selectedIds = Object.entries(localSelected)
+    .filter(([, v]) => v)
+    .map(([k]) => k);
 
   const handleAssign = () => {
     if (!selectedRep) { alert('Lütfen bir satış uzmanı seçiniz.'); return; }
     if (selectedIds.length === 0) { alert('Lütfen en az bir müşteri seçiniz.'); return; }
+
     setAssignments(prev => {
       const next = { ...prev };
       selectedIds.forEach(id => { next[id] = selectedRep; });
@@ -52,7 +64,17 @@ const AssignmentScreen: React.FC<Props> = ({ customers, assignments, setAssignme
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Görev Atama</h1>
-        <div className="text-sm text-gray-600">Toplam müşteri: <b>{customers.length}</b></div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentScreen('assignmentMap')}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"
+            title="Haritadan Ata"
+          >
+            <RouteIcon className="w-4 h-4" />
+            Haritadan Ata
+          </button>
+        </div>
       </div>
 
       {/* Arama & Rep seçimi */}
@@ -68,9 +90,14 @@ const AssignmentScreen: React.FC<Props> = ({ customers, assignments, setAssignme
             className="block w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
           />
         </div>
+
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">Satış Uzmanı:</span>
-          <select value={selectedRep} onChange={e => setSelectedRep(e.target.value)} className="border rounded-lg px-3 py-2">
+          <select
+            value={selectedRep}
+            onChange={e => setSelectedRep(e.target.value)}
+            className="border rounded-lg px-3 py-2"
+          >
             {allReps.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
           <button onClick={() => toggleAll(true)} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50">Tümünü Seç</button>
@@ -82,7 +109,12 @@ const AssignmentScreen: React.FC<Props> = ({ customers, assignments, setAssignme
       {/* Liste */}
       <div className="bg-white rounded-2xl border border-gray-200 p-0 overflow-hidden">
         <div className="grid grid-cols-6 gap-2 px-4 py-3 text-xs font-semibold text-gray-600 border-b">
-          <div>Seç</div><div>Müşteri</div><div>Adres</div><div>İlçe</div><div>Durum</div><div>Atanan</div>
+          <div>Seç</div>
+          <div>Müşteri</div>
+          <div>Adres</div>
+          <div>İlçe</div>
+          <div>Durum</div>
+          <div>Atanan</div>
         </div>
 
         {filtered.map(c => {
@@ -90,7 +122,13 @@ const AssignmentScreen: React.FC<Props> = ({ customers, assignments, setAssignme
           const assignedTo = assignments[c.id];
           return (
             <div key={c.id} className="grid grid-cols-6 gap-2 px-4 py-3 items-center border-b last:border-b-0 hover:bg-gray-50">
-              <div><input type="checkbox" checked={checked} onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))} /></div>
+              <div>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+              </div>
               <div className="truncate">{c.name}</div>
               <div className="truncate">{c.address}</div>
               <div className="truncate">{c.district}</div>
