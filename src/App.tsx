@@ -307,7 +307,26 @@ if (currentScreen === 'roleSelect') {
       </div>
     </div>
   );
-
+// GÖREV ATAMA (yönetici)
+if (currentScreen === 'assignment' && role === 'manager') {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="p-6">
+        <AssignMap
+          customers={customers}
+          reps={salesReps}
+          onAssign={(selectedIds, repId) => {
+            setCustomers(prev =>
+              prev.map(c => selectedIds.has(c.id) ? { ...c, assignedRepId: repId } : c)
+            );
+            alert(`${selectedIds.size} müşteri atandı.`);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
  // DASHBOARD (YENİ)
 if (currentScreen === 'dashboard') {
   // --- KPI'lar ---
