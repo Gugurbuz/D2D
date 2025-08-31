@@ -60,7 +60,8 @@ const AssignmentScreen: React.FC<Props> = ({
   const repName = (rid?: string) => allReps.find(r => r.id === rid)?.name || '—';
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    // Tam genişlik + kenar pedini küçült
+    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Görev Atama</h1>
 
@@ -105,20 +106,21 @@ const AssignmentScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Tablo + Scroll */}
-      <div className="bg-white rounded-2xl border border-gray-200">
-        {/* Yatay scroll: */}
+      {/* Full-bleed tablo (yan boşlukları da kullan) */}
+      <div className="bg-white border border-gray-200 rounded-2xl">
+        {/* Yatay kaydırma kabı: ekrana sığmadığında devreye girer */}
         <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable' }}>
-          {/* Dikey scroll: görünüm yüksekliğini taşırsa */}
-          <div className="max-h-[65vh] overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
-            <table className="min-w-[1100px] table-auto">
+          {/* Dikey kaydırma kabı: yüksekliği aşınca kaydır */}
+          <div className="max-h-[75vh] overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+            {/* Geniş ekranlarda tam otur, dar ekranlarda en az genişlik */}
+            <table className="w-full min-w-[1000px] xl:min-w-full table-auto">
               <colgroup>
-                <col className="w-12" />           {/* Seç */}
-                <col className="w-[18%]" />        {/* Müşteri */}
-                <col className="w-[42%]" />        {/* Adres */}
-                <col className="w-[12%]" />        {/* İlçe */}
-                <col className="w-[12%]" />        {/* Durum */}
-                <col className="w-[16%]" />        {/* Atanan */}
+                <col className="w-12" />                       {/* Seç */}
+                <col className="w-[16%] md:w-[18%] xl:w-[18%]" />  {/* Müşteri */}
+                <col className="w-[44%] md:w-[42%] xl:w-[50%]" />  {/* Adres - geniş */}
+                <col className="w-[10%] md:w-[12%]" />             {/* İlçe */}
+                <col className="w-[10%] md:w-[12%]" />             {/* Durum */}
+                <col className="w-[14%] md:w-[16%]" />             {/* Atanan */}
               </colgroup>
 
               <thead className="text-xs font-semibold text-gray-600">
@@ -150,7 +152,8 @@ const AssignmentScreen: React.FC<Props> = ({
                         />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap truncate">{c.name}</td>
-                      <td className="px-4 py-3 break-words">{c.address}</td>
+                      {/* Adres: geniş + taşanları güzel kır */}
+                      <td className="px-4 py-3 whitespace-normal break-words">{c.address}</td>
                       <td className="px-4 py-3 whitespace-nowrap truncate">{c.district}</td>
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>
