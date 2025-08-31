@@ -1,208 +1,545 @@
-// src/screens/AssignmentMapScreen.tsx
-import React, { useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, FeatureGroup, CircleMarker } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
-import L, { LatLng } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import 'leaflet-draw/dist/leaflet.draw.css';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import L, { LatLngExpression } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import "leaflet-draw/dist/leaflet.draw.css";
+// @ts-ignore - types opsiyonel
+import "leaflet-draw";
+import {
+  ArrowLeft,
+  Route as RouteIcon,
+  Ruler,
+  UserCheck,
+  Users,
+  CheckCircle2,
+  XCircle,
+  Info,
+} from "lucide-react";
+import { Customer } from "../RouteMap";
+import { Rep } from "../types";
+import { allReps } from "../data/reps";
 
-import marker2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-import { Customer } from '../RouteMap';
-import { Rep } from '../types';
-import { ArrowLeft, Check } from 'lucide-react';
-
-// leaflet default marker fix (vite)
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: marker2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
-
+/* ------------------------------------------------
+   Tipler & Props
+------------------------------------------------ */
 type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
-  setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
+  setAssignments: React.Dispatch<
+    React.SetStateAction<Record<string, string | undefined>>
+  >;
   allReps: Rep[];
   onBack: () => void;
 };
 
-type LatLngTuple = [number, number];
+/* ------------------------------------------------
+   Ufak yardımcılar
+------------------------------------------------ */
+type LatLng = [number, number];
 
-// basit ray-casting point-in-polygon
-function pointInPolygon(point: LatLngTuple, vs: LatLngTuple[]) {
-  const x = point[1]; // lng
-  const y = point[0]; // lat
+const fmtKm = (km: number | null) =>
+  km == null
+    ? "—"
+    : new Intl.NumberFormat("tr-TR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
+      }).format(km) + " km";
+
+/** Basit point-in-polygon (ray casting) */
+function pointInPolygon(point: LatLng, polygon: LatLng[]): boolean {
+  const [x, y] = point;
   let inside = false;
-  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-    const xi = vs[i][1], yi = vs[i][0];
-    const xj = vs[j][1], yj = vs[j][0];
-    const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / ((yj - yi) || 1e-12) + xi);
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    const intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-12) + xi;
     if (intersect) inside = !inside;
   }
   return inside;
 }
 
+/** Haversine fallback */
+function haversineKm(a: LatLng, b: LatLng) {
+  const R = 6371;
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
+  const lat1 = (a[0] * Math.PI) / 180;
+  const lat2 = (b[0] * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/** OSRM helpers */
+async function osrmTrip(coords: string) {
+  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM trip error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
+  return data;
+}
+
+async function osrmRoute(from: LatLng, to: LatLng) {
+  const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM route error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("Route not found");
+  return data;
+}
+
+/* ------------------------------------------------
+   Marker stilleri (rep rengine göre customer marker)
+------------------------------------------------ */
+const REP_COLORS: Record<string, string> = {
+  "rep-1": "#0ea5e9", // mavi
+  "rep-2": "#22c55e", // yeşil
+  "rep-3": "#f97316", // turuncu
+  _default: "#9ca3af", // gri (atanmamış)
+};
+
+function customerIcon(color: string, highlighted = false) {
+  const ring = highlighted ? "box-shadow:0 0 0 6px rgba(0,0,0,.08);" : "";
+  return L.divIcon({
+    className: "cust-marker",
+    html: `
+      <div style="
+        width:22px;height:22px;border-radius:50%;
+        background:${color};border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,.25);${ring}
+      "></div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -18],
+  });
+}
+
+const repIcon = L.divIcon({
+  className: "rep-marker",
+  html: `
+    <div style="
+      display:flex;align-items:center;justify-content:center;
+      width:28px;height:28px;border-radius:50%;
+      background:#111827;color:#fff;border:2px solid #fff;
+      font-weight:700;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.25);
+    ">R</div>
+  `,
+  iconSize: [28, 28],
+  iconAnchor: [14, 28],
+  popupAnchor: [0, -22],
+});
+
+/* ------------------------------------------------
+   Ana Bileşen
+------------------------------------------------ */
 const AssignmentMapScreen: React.FC<Props> = ({
   customers,
   assignments,
   setAssignments,
-  allReps,
+  allReps: reps,
   onBack,
 }) => {
-  const [selectedRep, setSelectedRep] = useState<string>(allReps[0]?.id || '');
-  const [polygon, setPolygon] = useState<LatLngTuple[] | null>(null);
-  const featureGroupRef = useRef<L.FeatureGroup>(null);
+  const mapCenter: LatLng = [40.9368, 29.1553]; // Maltepe civarı
+  const [selectedRepId, setSelectedRepId] = useState<string>(reps[0]?.id || "rep-1");
 
-  const center: LatLngTuple = useMemo(() => {
-    // kaba ortalama (İstanbul - Maltepe default olabilir)
-    if (customers.length === 0) return [40.9368, 29.1553];
-    const lat = customers.reduce((a, c) => a + c.lat, 0) / customers.length;
-    const lng = customers.reduce((a, c) => a + c.lng, 0) / customers.length;
-    return [lat, lng];
-  }, [customers]);
+  // çizilen çokgen
+  const polygonLayerRef = useRef<L.Polygon | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const selectedCustomers = useMemo(() => {
-    if (!polygon) return [];
-    return customers.filter(c => pointInPolygon([c.lat, c.lng], polygon));
-  }, [customers, polygon]);
+  // rota
+  const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
+  const [routeKm, setRouteKm] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleAssignSelected = () => {
-    if (!selectedRep) { alert('Lütfen bir satış uzmanı seçiniz.'); return; }
-    if (selectedCustomers.length === 0) { alert('Çizilen alan içinde müşteri bulunamadı.'); return; }
+  // özet modal
+  const [showSummary, setShowSummary] = useState(false);
+  const [summaryRows, setSummaryRows] = useState<
+    { repId: string; repName: string; count: number; km: number | null }[]
+  >([]);
 
-    setAssignments(prev => {
-      const next = { ...prev };
-      selectedCustomers.forEach(c => { next[c.id] = selectedRep; });
-      return next;
-    });
-    alert(`${selectedCustomers.length} müşteri atandı.`);
+  // toast
+  const [toast, setToast] = useState<string | null>(null);
+
+  const selectedCustomers = useMemo(
+    () => customers.filter((c) => selectedIds.includes(c.id)),
+    [customers, selectedIds]
+  );
+
+  // mevcut atamalara göre marker rengi
+  const colorForCustomer = (c: Customer) => {
+    const rid = assignments[c.id];
+    return REP_COLORS[rid || "_default"] || REP_COLORS._default;
   };
 
-  const onCreated = (e: any) => {
-    // yalnız tek şekil kalsın
-    const fg = featureGroupRef.current;
-    if (fg) {
-      fg.eachLayer((layer: any) => {
-        if (layer !== e.layer) fg.removeLayer(layer);
+  // Çokgen çizildiğinde
+  const handlePolygonCreated = async (poly: L.Polygon) => {
+    // Öncekini kaldır
+    if (polygonLayerRef.current) {
+      polygonLayerRef.current.remove();
+    }
+    polygonLayerRef.current = poly;
+
+    const latlngs = (poly.getLatLngs()[0] as L.LatLng[]).map((p) => [p.lat, p.lng]) as LatLng[];
+
+    // poligon içindeki müşteriler
+    const inside = customers.filter((c) => pointInPolygon([c.lat, c.lng], latlngs));
+    const insideIds = inside.map((c) => c.id);
+    setSelectedIds(insideIds);
+
+    // otomatik atama (seçili rep'e)
+    if (insideIds.length) {
+      setAssignments((prev) => {
+        const n = { ...prev };
+        insideIds.forEach((id) => (n[id] = selectedRepId));
+        return n;
       });
     }
-    // polygon/rectangle düğümlerini al
-    const layer = e.layer;
-    let latlngs: LatLng[] | LatLng[][] = layer.getLatLngs();
-    // rectangle/polygon ring → düz diziye indir
-    const flat: LatLngTuple[] = Array.isArray(latlngs[0])
-      ? (latlngs[0] as LatLng[]).map((p) => [p.lat, p.lng])
-      : (latlngs as LatLng[]).map((p) => [p.lat, p.lng]);
 
-    setPolygon(flat);
+    // otomatik rota: rep konumu -> poligon müşterileri (OSRM)
+    await computeRouteForSelection(inside, selectedRepId);
   };
 
-  const onDeleted = () => {
-    setPolygon(null);
+  // Rota hesaplama (seçilenler için)
+  const computeRouteForSelection = async (list: Customer[], rid: string) => {
+    try {
+      setLoading(true);
+      setRouteCoords([]);
+      setRouteKm(null);
+
+      if (!list.length) return;
+
+      const rep = reps.find((r) => r.id === rid) || allReps[0];
+      const start: LatLng = [rep.lat, rep.lng];
+
+      // OSRM trip (rep + müşteriler)
+      const coords = [start, ...list.map((c) => [c.lat, c.lng] as LatLng)]
+        .map((p) => `${p[1]},${p[0]}`)
+        .join(";");
+
+      const data = await osrmTrip(coords);
+      const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
+        ([lng, lat]: [number, number]) => [lat, lng]
+      );
+      setRouteCoords(latlngs);
+      setRouteKm((data.trips[0].distance as number) / 1000);
+    } catch (e) {
+      // Fallback: sırayla haversine
+      const rep = reps.find((r) => r.id === rid) || allReps[0];
+      const seq = [[rep.lat, rep.lng] as LatLng, ...list.map((c) => [c.lat, c.lng] as LatLng)];
+      let acc = 0;
+      for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
+      setRouteCoords(seq);
+      setRouteKm(acc);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Rota Özeti (tüm mevcut atamalar için rep bazlı)
+  const buildSummary = async () => {
+    setShowSummary(true);
+    const rows: { repId: string; repName: string; count: number; km: number | null }[] = [];
+
+    for (const r of reps) {
+      const list = customers.filter((c) => assignments[c.id] === r.id);
+      if (!list.length) {
+        rows.push({ repId: r.id, repName: r.name, count: 0, km: 0 });
+        continue;
+      }
+      // OSRM ile km
+      let km: number | null = null;
+      try {
+        const coords = [[r.lat, r.lng] as LatLng, ...list.map((c) => [c.lat, c.lng] as LatLng)]
+          .map((p) => `${p[1]},${p[0]}`)
+          .join(";");
+        const data = await osrmTrip(coords);
+        km = (data.trips[0].distance as number) / 1000;
+      } catch {
+        // fallback haversine
+        const seq = [[r.lat, r.lng] as LatLng, ...list.map((c) => [c.lat, c.lng] as LatLng)];
+        let acc = 0;
+        for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
+        km = acc;
+      }
+      rows.push({ repId: r.id, repName: r.name, count: list.length, km });
+    }
+    setSummaryRows(rows);
+  };
+
+  // Draw control ekle
+  const DrawControl = () => {
+    const map = useMap();
+    useEffect(() => {
+      // polygon + delete
+      const drawControl = new L.Control.Draw({
+        draw: {
+          rectangle: false,
+          circle: false,
+          circlemarker: false,
+          marker: false,
+          polyline: false,
+          polygon: {
+            allowIntersection: false,
+            showArea: true,
+            drawError: { color: "#ff0000", message: "<strong>Hata:</strong> Çokgen kendiyle kesişemez" },
+          },
+        },
+        edit: {
+          featureGroup: new L.FeatureGroup(), // sadece oluşturulan polygon için
+          edit: false,
+          remove: true,
+        },
+      });
+
+      map.addControl(drawControl as any);
+
+      // created
+      map.on(L.Draw.Event.CREATED, (e: any) => {
+        const layer = e.layer as L.Polygon;
+        map.addLayer(layer);
+        handlePolygonCreated(layer);
+      });
+
+      // deleted → temizle
+      map.on(L.Draw.Event.DELETED, (_e: any) => {
+        polygonLayerRef.current = null;
+        setSelectedIds([]);
+        setRouteCoords([]);
+        setRouteKm(null);
+      });
+
+      return () => {
+        map.removeControl(drawControl as any);
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [map, customers, selectedRepId, reps, assignments]);
+
+    return null;
   };
 
   return (
-    <div className="p-6">
-      {/* üst bar */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
+    <div className="p-4">
+      {/* Üst bar */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-gray-900 font-semibold">
+          <button
+            onClick={onBack}
+            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
+          >
             <ArrowLeft className="w-4 h-4" />
             Geri
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Haritadan Atama</h1>
+          <div className="flex items-center gap-2 ml-2">
+            <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+            Haritadan Görev Atama
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-700">Satış Uzmanı:</span>
-          <select
-            value={selectedRep}
-            onChange={(e) => setSelectedRep(e.target.value)}
-            className="border rounded-lg px-3 py-2"
-          >
-            {allReps.map((r) => (
-              <option key={r.id} value={r.id}>{r.name}</option>
-            ))}
-          </select>
+          <div className="text-sm text-gray-700 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            <span>Satış Uzmanı:</span>
+            <select
+              value={selectedRepId}
+              onChange={(e) => setSelectedRepId(e.target.value)}
+              className="border rounded-lg px-2 py-1"
+            >
+              {reps.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="text-sm text-gray-700 flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            <span>
+              Seçilen: <b>{selectedIds.length}</b>
+            </span>
+          </div>
+
+          <div className="text-sm text-gray-700 flex items-center gap-2">
+            <Ruler className="w-4 h-4" />
+            <span>
+              Rota: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
+            </span>
+          </div>
 
           <button
-            onClick={handleAssignSelected}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold"
+            onClick={buildSummary}
+            className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90"
           >
-            <Check className="w-4 h-4" />
-            Seçili Alanı Ata ({selectedCustomers.length})
+            Rota Özeti
           </button>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        {/* Harita */}
-        <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow">
-          <MapContainer center={center} zoom={12} style={{ height: '100%', width: '100%' }}>
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <FeatureGroup ref={featureGroupRef as any}>
-              <EditControl
-                position="topleft"
-                onCreated={onCreated}
-                onDeleted={onDeleted}
-                draw={{
-                  polyline: false,
-                  circle: false,
-                  circlemarker: false,
-                  marker: false,
-                  // polygon & rectangle aktif
-                }}
-              />
-            </FeatureGroup>
+      {/* Harita */}
+      <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
+        <MapContainer
+          center={mapCenter as LatLngExpression}
+          zoom={13}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution="&copy; OpenStreetMap"
+          />
+          <DrawControl />
 
-            {/* Müşteriler */}
-            {customers.map((c) => {
-              const isSel = polygon ? pointInPolygon([c.lat, c.lng], polygon) : false;
-              return (
-                <CircleMarker
-                  key={c.id}
-                  center={[c.lat, c.lng]}
-                  radius={isSel ? 9 : 6}
-                  pathOptions={{ color: isSel ? '#FF6B00' : '#0099CB', weight: 2, fillOpacity: 0.8 }}
-                >
-                  <Popup>
-                    <div className="space-y-1">
-                      <div className="font-semibold">{c.name}</div>
-                      <div className="text-sm">{c.address}, {c.district}</div>
-                      <div className="text-sm">Saat: {c.plannedTime}</div>
-                      <div className="text-sm">Tel: {c.phone}</div>
-                    </div>
-                  </Popup>
-                </CircleMarker>
-              );
-            })}
-          </MapContainer>
-        </div>
-
-        {/* Sağ özet panel */}
-        <div className="bg-white rounded-2xl border p-4 h-[560px] overflow-auto">
-          <div className="font-semibold text-gray-900 mb-2">Seçilen Müşteriler</div>
-          <div className="text-sm text-gray-600 mb-3">
-            Çizdiğin alan içinde kalan müşteriler aşağıda listelenir. “Seçili Alanı Ata” ile {allReps.find(r=>r.id===selectedRep)?.name}’e atanır.
-          </div>
-          {selectedCustomers.length === 0 ? (
-            <div className="text-gray-500 text-sm">Henüz seçim yok.</div>
-          ) : (
-            <div className="space-y-2">
-              {selectedCustomers.map((c) => (
-                <div key={c.id} className="p-2 rounded-lg border hover:bg-gray-50">
-                  <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-gray-600">{c.address}, {c.district}</div>
-                  <div className="text-xs text-gray-600">Saat: {c.plannedTime} • Tel: {c.phone}</div>
+          {/* Rep Marker'ları */}
+          {reps.map((r) => (
+            <Marker key={r.id} position={[r.lat, r.lng]} icon={repIcon}>
+              <Popup>
+                <div className="space-y-1">
+                  <b>{r.name}</b>
+                  <div>ID: {r.id}</div>
                 </div>
-              ))}
-            </div>
+              </Popup>
+            </Marker>
+          ))}
+
+          {/* Müşteri Marker'ları (atanan renkle) */}
+          {customers.map((c) => {
+            const color = colorForCustomer(c);
+            const highlighted = selectedIds.includes(c.id);
+            return (
+              <Marker
+                key={c.id}
+                position={[c.lat, c.lng]}
+                icon={customerIcon(color, highlighted)}
+              >
+                <Popup>
+                  <div className="space-y-1">
+                    <div className="font-semibold">{c.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {c.address}, {c.district}
+                    </div>
+                    <div className="text-sm">Saat: {c.plannedTime}</div>
+                    <div className="text-sm">Tel: {c.phone}</div>
+                    <div className="text-xs text-gray-500">
+                      Atanan:{" "}
+                      <b>
+                        {assignments[c.id]
+                          ? reps.find((r) => r.id === assignments[c.id])?.name || assignments[c.id]
+                          : "—"}
+                      </b>
+                    </div>
+                    <button
+                      onClick={() =>
+                        setAssignments((prev) => ({ ...prev, [c.id]: selectedRepId }))
+                      }
+                      className="mt-2 w-full px-3 py-1.5 rounded bg-[#0099CB] text-white text-xs"
+                    >
+                      Bu Müşteriyi Ata ({reps.find((r) => r.id === selectedRepId)?.name})
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+
+          {/* Rota çizgisi (seçilen çokgen için) */}
+          {routeCoords.length > 0 && (
+            <Polyline positions={routeCoords as LatLngExpression[]} pathOptions={{ color: "#0099CB", weight: 7 }} />
           )}
-        </div>
+        </MapContainer>
+
+        {/* Loading Overlay */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700">
+              Rota Hesaplanıyor…
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Alt bilgi */}
+      <div className="mt-2 text-xs text-gray-600">
+        Çokgen aracı ile bir alan çizdiğinizde, alan içindeki müşteriler seçtiğiniz satış
+        uzmanına otomatik atanır ve rota hesaplanır.
+      </div>
+
+      {/* Özet Modal */}
+      {showSummary && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl">
+            <div className="px-5 py-4 border-b flex items-center justify-between">
+              <div className="font-semibold text-gray-900 flex items-center gap-2">
+                <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+                Rota Özeti
+              </div>
+              <button
+                className="p-2 rounded-lg hover:bg-gray-100"
+                onClick={() => setShowSummary(false)}
+                aria-label="Kapat"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-600">
+                      <th className="py-2">Satış Uzmanı</th>
+                      <th className="py-2">Atanan Müşteri</th>
+                      <th className="py-2">Toplam Yol</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryRows.map((row) => (
+                      <tr key={row.repId} className="border-t">
+                        <td className="py-2">{row.repName}</td>
+                        <td className="py-2">{row.count}</td>
+                        <td className="py-2">{fmtKm(row.km)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-5 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setShowSummary(false)}
+                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                >
+                  Devam Et
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSummary(false);
+                    setToast("Görev atamaları tamamlandı.");
+                    setTimeout(() => setToast(null), 2500);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white inline-flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Tamamla
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-white rounded-xl shadow-lg border px-4 py-3 text-sm text-gray-800">
+            {toast}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
