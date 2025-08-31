@@ -10,11 +10,28 @@ type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' | 'Evde
 type Screen = 'login' | 'dashboard' | 'visitList' | 'visitDetail' | 'visitResult' | 'reports' | 'routeMap';
 
 export const mockCustomers: Customer[] = [
-  { id: '1',  name: 'Mehmet Yılmaz', address: 'Kadıköy – Bahariye Cd.', district: 'Kadıköy', plannedTime: '09:00', priority: 'Yüksek', tariff: 'Mesken',   meterNumber: '100000001', consumption: '290 kWh/ay', offerHistory: ['Şubat 2025: %12 indirim', 'Ekim 2024: Sadakat teklifi'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '0.8 km',  lat: 40.9916, lng: 29.0250, phone: '0555 111 22 01' },
-  { id: '2',  name: 'Ayşe Demir',    address: 'Üsküdar – Çengelköy',    district: 'Üsküdar', plannedTime: '09:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000002', consumption: '320 kWh/ay', offerHistory: ['Mart 2025: Yeni müşteri teklifi'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '1.3 km',  lat: 41.0255, lng: 29.0653, phone: '0555 111 22 02' },
-  { id: '3',  name: 'Ali Kaya',      address: 'Beşiktaş – Barbaros Blv.', district: 'Beşiktaş', plannedTime: '10:00', priority: 'Düşük', tariff: 'İş Yeri', meterNumber: '100000003', consumption: '880 kWh/ay', offerHistory: ['Ocak 2025: İş yeri sabit fiyat', 'Kasım 2024: %18 indirim'], status: 'Bekliyor', estimatedDuration: '40 dk', distance: '2.1 km',  lat: 41.0430, lng: 29.0070, phone: '0555 111 22 03' },
-  { id: '4',  name: 'Zeynep Koç',    address: 'Levent – Büyükdere Cd.', district: 'Beşiktaş', plannedTime: '10:30', priority: 'Yüksek', tariff: 'İş Yeri', meterNumber: '100000004', consumption: '1250 kWh/ay', offerHistory: ['Aralık 2024: Kurumsal tarife önerisi'], status: 'Bekliyor', estimatedDuration: '45 dk', distance: '3.0 km',  lat: 41.0800, lng: 29.0119, phone: '0555 111 22 04' },
-  // ... kalanları aynen koruyup phone eklemeye devam edebilirsin
+  { id: '1',  name: 'Mehmet Yılmaz', address: 'Kadıköy – Bahariye Cd.',           district: 'Kadıköy',      plannedTime: '09:00', priority: 'Yüksek', tariff: 'Mesken',   meterNumber: '100000001', consumption: '290 kWh/ay',  offerHistory: ['Şubat 2025: %12 indirim', 'Ekim 2024: Sadakat teklifi'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '0.8 km',  lat: 40.9916, lng: 29.0250, phone: '0555 111 22 01' },
+  { id: '2',  name: 'Ayşe Demir',    address: 'Üsküdar – Çengelköy',              district: 'Üsküdar',     plannedTime: '09:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000002', consumption: '320 kWh/ay',  offerHistory: ['Mart 2025: Yeni müşteri teklifi'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '1.3 km',  lat: 41.0255, lng: 29.0653, phone: '0555 111 22 02' },
+  { id: '3',  name: 'Ali Kaya',      address: 'Beşiktaş – Barbaros Blv.',         district: 'Beşiktaş',    plannedTime: '10:00', priority: 'Düşük',  tariff: 'İş Yeri',  meterNumber: '100000003', consumption: '880 kWh/ay',  offerHistory: ['Ocak 2025: İş yeri sabit fiyat', 'Kasım 2024: %18 indirim'], status: 'Bekliyor', estimatedDuration: '40 dk', distance: '2.1 km',  lat: 41.0430, lng: 29.0070, phone: '0555 111 22 03' },
+  { id: '4',  name: 'Zeynep Koç',    address: 'Levent – Büyükdere Cd.',           district: 'Beşiktaş',    plannedTime: '10:30', priority: 'Yüksek', tariff: 'İş Yeri',  meterNumber: '100000004', consumption: '1250 kWh/ay', offerHistory: ['Aralık 2024: Kurumsal tarife önerisi'], status: 'Bekliyor', estimatedDuration: '45 dk', distance: '3.0 km',  lat: 41.0800, lng: 29.0119, phone: '0555 111 22 04' },
+  { id: '5',  name: 'Hakan Şahin',   address: 'Maslak – Ayazağa',                  district: 'Sarıyer',     plannedTime: '11:00', priority: 'Orta',   tariff: 'İş Yeri',  meterNumber: '100000005', consumption: '980 kWh/ay',  offerHistory: ['Kasım 2024: %10 indirim'], status: 'Bekliyor', estimatedDuration: '35 dk', distance: '3.8 km',  lat: 41.1086, lng: 29.0202, phone: '0555 111 22 05' },
+  { id: '6',  name: 'Selin Arslan',  address: 'Sarıyer – Merkez',                  district: 'Sarıyer',     plannedTime: '11:30', priority: 'Düşük',  tariff: 'Mesken',   meterNumber: '100000006', consumption: '270 kWh/ay',  offerHistory: ['Eylül 2024: Online başvuru'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '5.2 km',  lat: 41.1685, lng: 29.0550, phone: '0555 111 22 06' },
+  { id: '7',  name: 'Burak Çetin',   address: 'Beyoğlu – İstiklal Cd.',            district: 'Beyoğlu',     plannedTime: '12:00', priority: 'Orta',   tariff: 'İş Yeri',  meterNumber: '100000007', consumption: '760 kWh/ay',  offerHistory: ['Ekim 2024: POS kampanyası'], status: 'Bekliyor', estimatedDuration: '40 dk', distance: '4.6 km',  lat: 41.0369, lng: 28.9850, phone: '0555 111 22 07' },
+  { id: '8',  name: 'Elif Aydın',    address: 'Fatih – Sultanahmet',               district: 'Fatih',       plannedTime: '12:30', priority: 'Yüksek', tariff: 'İş Yeri',  meterNumber: '100000008', consumption: '1120 kWh/ay', offerHistory: ['Ağustos 2024: Turizm sezonu indirimi'], status: 'Bekliyor', estimatedDuration: '45 dk', distance: '5.8 km',  lat: 41.0086, lng: 28.9802, phone: '0555 111 22 08' },
+  { id: '9',  name: 'Mert Öz',       address: 'Zeytinburnu – Sahil',               district: 'Zeytinburnu', plannedTime: '13:00', priority: 'Düşük',  tariff: 'Mesken',   meterNumber: '100000009', consumption: '240 kWh/ay',  offerHistory: ['Temmuz 2024: E-bildirge'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '7.4 km',  lat: 40.9929, lng: 28.9154, phone: '0555 111 22 09' },
+  { id: '10', name: 'Gamze Yıldız',  address: 'Bakırköy – İncirli',                district: 'Bakırköy',    plannedTime: '13:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000010', consumption: '310 kWh/ay',  offerHistory: ['Haziran 2024: Sadakat indirimi'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '8.1 km',  lat: 40.9781, lng: 28.8724, phone: '0555 111 22 10' },
+  { id: '11', name: 'Onur Demirel',  address: 'Bahçelievler – Şirinevler',         district: 'Bahçelievler',plannedTime: '14:00', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000011', consumption: '330 kWh/ay',  offerHistory: ['Mayıs 2024: Otomatik ödeme teklifi'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '9.0 km',  lat: 41.0007, lng: 28.8598, phone: '0555 111 22 11' },
+  { id: '12', name: 'Derya Kılıç',   address: 'Bayrampaşa – Forum İstanbul',       district: 'Bayrampaşa',  plannedTime: '14:30', priority: 'Düşük',  tariff: 'İş Yeri',  meterNumber: '100000012', consumption: '900 kWh/ay',  offerHistory: ['Nisan 2024: Alışveriş merkezi tarifesi'], status: 'Bekliyor', estimatedDuration: '35 dk', distance: '7.8 km',  lat: 41.0425, lng: 28.9063, phone: '0555 111 22 12' },
+  { id: '13', name: 'Volkan Taş',    address: 'Eyüpsultan – Pierre Loti',          district: 'Eyüpsultan',  plannedTime: '15:00', priority: 'Düşük',  tariff: 'Mesken',   meterNumber: '100000013', consumption: '260 kWh/ay',  offerHistory: ['Mart 2024: Hoş geldin teklifi'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '9.6 km',  lat: 41.0493, lng: 28.9395, phone: '0555 111 22 13' },
+  { id: '14', name: 'Seda Karaca',   address: 'Başakşehir – Kent Meydanı',         district: 'Başakşehir',  plannedTime: '15:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000014', consumption: '300 kWh/ay',  offerHistory: ['Şubat 2024: Kombi kampanyası'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '16.2 km', lat: 41.0931, lng: 28.8020, phone: '0555 111 22 14' },
+  { id: '15', name: 'Emre Uçar',     address: 'Küçükçekmece – Halkalı',            district: 'Küçükçekmece',plannedTime: '16:00', priority: 'Yüksek', tariff: 'İş Yeri',  meterNumber: '100000015', consumption: '1350 kWh/ay', offerHistory: ['Ocak 2024: Endüstriyel tarife'], status: 'Bekliyor', estimatedDuration: '50 dk', distance: '14.7 km', lat: 41.0049, lng: 28.7776, phone: '0555 111 22 15' },
+  { id: '16', name: 'İpek Gür',      address: 'Avcılar – Merkez',                  district: 'Avcılar',     plannedTime: '16:30', priority: 'Düşük',  tariff: 'Mesken',   meterNumber: '100000016', consumption: '280 kWh/ay',  offerHistory: ['Aralık 2023: E-devlet onayı'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '18.8 km', lat: 40.9799, lng: 28.7181, phone: '0555 111 22 16' },
+  { id: '17', name: 'Kerem Efe',     address: 'Beylikdüzü – Yaşam Vadisi',         district: 'Beylikdüzü',  plannedTime: '17:00', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000017', consumption: '310 kWh/ay',  offerHistory: ['Kasım 2023: Online randevu'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '22.5 km', lat: 40.9823, lng: 28.6417, phone: '0555 111 22 17' },
+  { id: '18', name: 'Naz Acar',      address: 'Esenyurt – Cumhuriyet Mah.',        district: 'Esenyurt',    plannedTime: '17:30', priority: 'Yüksek', tariff: 'İş Yeri',  meterNumber: '100000018', consumption: '920 kWh/ay',  offerHistory: ['Ekim 2023: Ticari sabit fiyat'], status: 'Bekliyor', estimatedDuration: '40 dk', distance: '20.9 km', lat: 41.0349, lng: 28.6647, phone: '0555 111 22 18' },
+  { id: '19', name: 'Canan Sezer',   address: 'Ataşehir – Finans Merkezi',         district: 'Ataşehir',    plannedTime: '18:00', priority: 'Yüksek', tariff: 'İş Yeri',  meterNumber: '100000019', consumption: '1400 kWh/ay', offerHistory: ['Eylül 2024: Kurumsal teklif'], status: 'Bekliyor', estimatedDuration: '50 dk', distance: '9.9 km',  lat: 40.9923, lng: 29.1274, phone: '0555 111 22 19' },
+  { id: '20', name: 'Kaan Er',       address: 'Ümraniye – Alemdağ Cd.',            district: 'Ümraniye',    plannedTime: '18:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000020', consumption: '300 kWh/ay',  offerHistory: ['Ağustos 2024: %10 indirim'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '9.6 km',  lat: 41.0165, lng: 29.1248, phone: '0555 111 22 20' },
+  { id: '21', name: 'Buse Aksoy',    address: 'Maltepe – Bağdat Cd.',              district: 'Maltepe',     plannedTime: '19:00', priority: 'Düşük',  tariff: 'Mesken',   meterNumber: '100000021', consumption: '270 kWh/ay',  offerHistory: ['Temmuz 2024: Dijital sözleşme'], status: 'Bekliyor', estimatedDuration: '25 dk', distance: '14.3 km', lat: 40.9360, lng: 29.1569, phone: '0555 111 22 21' },
+  { id: '22', name: 'Tolga Kurt',    address: 'Kartal – Sahil Yolu',               district: 'Kartal',      plannedTime: '19:30', priority: 'Orta',   tariff: 'Mesken',   meterNumber: '100000022', consumption: '295 kWh/ay',  offerHistory: ['Haziran 2024: Sadakat paketi'], status: 'Bekliyor', estimatedDuration: '30 dk', distance: '18.2 km', lat: 40.9075, lng: 29.1947, phone: '0555 111 22 22' },
 ];
 
 const salesRep: SalesRep = {
@@ -93,20 +110,53 @@ function App() {
   const remainingVisits = customers.filter(c => c.status === 'Bekliyor').length;
   const totalVisits = customers.length;
 
-  // Login
+  // LOGIN — eski logo ve arka plan URL'leriyle
   if (currentScreen === 'login') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+      <div 
+        className="min-h-screen flex items-center justify-center p-4 bg-center bg-no-repeat" 
+        style={{ 
+          backgroundImage: "url('https://media.licdn.com/dms/image/v2/D5616AQHsvGxmt8b1Uw/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1677791208243?e=2147483647&v=beta&t=qA9Q6QbX_9_4mzs5WWUedPvF6UFm4z_YTSbSLs9RMNM')",
+          backgroundSize: "contain",
+          backgroundColor: "#f5f5f5"
+        }}
+      >
+        <div className="bg-white bg-opacity-90 rounded-2xl shadow-xl p-8 w-full max-w-md">
           <div className="text-center mb-8">
+            <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
+              <img 
+                src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp" 
+                alt="Enerjisa Logo" 
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">EnerjiSaHa</h1>
             <p className="text-gray-600">D2D Satış Uygulaması</p>
           </div>
+          
           <div className="space-y-4 mb-6">
-            <input className="w-full px-4 py-3 border rounded-lg" placeholder="Kullanıcı adı" />
-            <input type="password" className="w-full px-4 py-3 border rounded-lg" placeholder="Şifre" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Kullanıcı Adı</label>
+              <input 
+                type="text" 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+                placeholder="Kullanıcı adınızı girin"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+              <input 
+                type="password" 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+                placeholder="Şifrenizi girin"
+              />
+            </div>
           </div>
-          <button onClick={handleLogin} className="w-full bg-[#0099CB] text-white py-3 rounded-lg font-medium">
+          
+          <button 
+            onClick={handleLogin}
+            className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors"
+          >
             Giriş Yap
           </button>
         </div>
@@ -114,7 +164,7 @@ function App() {
     );
   }
 
-  // Üst Navigasyon
+  // ÜST NAVİGASYON
   const Navigation = () => (
     <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -149,7 +199,7 @@ function App() {
     </div>
   );
 
-  // Dashboard
+  // DASHBOARD
   if (currentScreen === 'dashboard') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -157,33 +207,9 @@ function App() {
         <div className="p-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-6">Ana Sayfa</h1>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Bugünkü Ziyaret</p>
-                  <p className="text-3xl font-bold text-[#0099CB]">{totalVisits}</p>
-                </div>
-                <MapPin className="w-6 h-6 text-[#0099CB]" />
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Tamamlanan</p>
-                  <p className="text-3xl font-bold text-[#0099CB]">{completedVisits}</p>
-                </div>
-                <CheckCircle className="w-6 h-6 text-[#0099CB]" />
-              </div>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Kalan</p>
-                  <p className="text-3xl font-bold text-[#0099CB]">{remainingVisits}</p>
-                </div>
-                <Clock className="w-6 h-6 text-[#0099CB]" />
-              </div>
-            </div>
+            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Bugünkü Ziyaret</p><p className="text-3xl font-bold text-[#0099CB]">{totalVisits}</p></div><MapPin className="w-6 h-6 text-[#0099CB]" /></div></div>
+            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Tamamlanan</p><p className="text-3xl font-bold text-[#0099CB]">{completedVisits}</p></div><CheckCircle className="w-6 h-6 text-[#0099CB]" /></div></div>
+            <div className="bg-white rounded-xl shadow-sm p-6"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-600">Kalan</p><p className="text-3xl font-bold text-[#0099CB]">{remainingVisits}</p></div><Clock className="w-6 h-6 text-[#0099CB]" /></div></div>
           </div>
           <div className="text-center">
             <button onClick={() => setCurrentScreen('visitList')} className="bg-[#0099CB] text-white px-8 py-4 rounded-xl font-semibold">
@@ -195,7 +221,7 @@ function App() {
     );
   }
 
-  // Ziyaret Listesi
+  // ZİYARET LİSTESİ
   if (currentScreen === 'visitList') {
     let filtered = customers;
     if (filter === 'Tamamlandı') filtered = filtered.filter(c => c.status === 'Tamamlandı');
@@ -279,7 +305,7 @@ function App() {
     );
   }
 
-  // Ziyaret Detayı
+  // ZİYARET DETAY
   if (currentScreen === 'visitDetail' && selectedCustomer) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -330,7 +356,7 @@ function App() {
     );
   }
 
-  // Gün Sonu Raporu
+  // GÜN SONU RAPORU
   if (currentScreen === 'reports') {
     const salesCount = customers.filter(c => c.status === 'Tamamlandı').length;
     const salesRate = totalVisits ? Math.round((salesCount / totalVisits) * 100) : 0;
@@ -364,7 +390,7 @@ function App() {
     );
   }
 
-  // Rota Haritası (üst menü dahil!)
+  // ROTA HARİTASI — Üst menü dâhil
   if (currentScreen === 'routeMap') {
     return (
       <div className="min-h-screen bg-gray-50">
