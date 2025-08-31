@@ -1,4 +1,4 @@
-// 1. ADIM: Yeniden çekme ikonu (RefreshCw) eklendi
+import React, { useState, useEffect, useRef } from 'react';
 import { User, MapPin, List, BarChart3, Home,
   Clock, CheckCircle, XCircle, AlertCircle,
   Camera, Route, TrendingUp, Search, Mic, BadgeCheck, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck, RefreshCw
