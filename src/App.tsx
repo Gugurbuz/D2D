@@ -296,6 +296,13 @@ if (currentScreen === 'roleSelect') {
                   className={`px-4 py-2 rounded-lg ${currentScreen === 'reports' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
             <BarChart3 className="w-5 h-5" />
           </button>
+             {role === 'manager' && (
++          <button onClick={() => setCurrentScreen('assignment')}
++                  className={`px-4 py-2 rounded-lg ${currentScreen === 'assignment' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
++            {/* görev atama */}
++            <span className="text-sm font-medium">Atama</span>
++          </button>
++        )}
         </div>
       </div>
     </div>
