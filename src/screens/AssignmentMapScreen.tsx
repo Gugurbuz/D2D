@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 // @ts-ignore
 import "leaflet-draw";
+import { Delaunay } from "d3-delaunay";
 import {
   ArrowLeft,
   Route as RouteIcon,
@@ -23,9 +24,7 @@ import { Rep } from "../types";
 type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
-  setAssignments: React.Dispatch<
-    React.SetStateAction<Record<string, string | undefined>>
-  >;
+  setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
   allReps: Rep[];
   onBack: () => void;
 };
@@ -71,6 +70,7 @@ async function osrmTrip(coords: string) {
   return data;
 }
 
+/* ---- Renkler ---- */
 const REP_COLORS: Record<string, string> = {
   "rep-1": "#0ea5e9", // mavi
   "rep-2": "#22c55e", // yeşil
@@ -84,6 +84,7 @@ const REP_FILLS: Record<string, string> = {
   _default: "rgba(156,163,175,.18)",
 };
 
+/* ---- UI helpers ---- */
 function initials(name: string) {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase();
@@ -124,24 +125,45 @@ function customerIcon(color: string, highlighted = false) {
   });
 }
 
-/* ---- Konveks Hull (Monotone Chain) ---- */
-function convexHull(points: LatLng[]): LatLng[] {
-  if (points.length < 3) return points.slice();
-  const pts = points.slice().sort((a, b) => (a[1] === b[1] ? a[0] - b[0] : a[1] - b[1])); // sort by lng then lat
-  const cross = (o: LatLng, a: LatLng, b: LatLng) => (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]);
-  const lower: LatLng[] = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: LatLng[] = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    const p = pts[i];
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
-    upper.push(p);
-  }
-  upper.pop(); lower.pop();
-  return lower.concat(upper);
+/* ------------------------------------------------
+   Voronoi: rep konumlarından non-overlapping bölgeler
+------------------------------------------------ */
+type BoundsRect = [number, number, number, number]; // [minLng, minLat, maxLng, maxLat]
+
+function useMapBoundsRect(): BoundsRect | null {
+  const map = useMap();
+  const [rect, setRect] = useState<BoundsRect | null>(null);
+  useEffect(() => {
+    const apply = () => {
+      const b = map.getBounds();
+      setRect([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]);
+    };
+    apply();
+    map.on("moveend zoomend", apply);
+    return () => {
+      map.off("moveend zoomend", apply);
+    };
+  }, [map]);
+  return rect;
+}
+
+function useVoronoiPolygons(reps: Rep[], rect: BoundsRect | null) {
+  return useMemo(() => {
+    if (!rect || reps.length === 0) return {} as Record<string, LatLng[]>;
+    const pts = reps.map((r) => [r.lng, r.lat]); // [x=lng, y=lat]
+    const delaunay = Delaunay.from(pts as [number, number][]);
+    const vor = delaunay.voronoi(rect);
+    const polys: Record<string, LatLng[]> = {};
+    reps.forEach((r, i) => {
+      const poly = vor.cellPolygon(i) as [number, number][] | null;
+      if (poly && poly.length) {
+        polys[r.id] = poly.map(([x, y]) => [y, x]); // [lat,lng]
+      } else {
+        polys[r.id] = [];
+      }
+    });
+    return polys;
+  }, [reps, rect]);
 }
 
 /* ------------------------------------------------
@@ -164,21 +186,31 @@ const AssignmentMapScreen: React.FC<Props> = ({
   const [panelOpen, setPanelOpen] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
 
-  // çizim için featureGroup (Leaflet.Draw fix)
+  // Draw (stabil) — FeatureGroup gerekir
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null);
   const polygonLayerRef = useRef<L.Polygon | null>(null);
 
-  // optimize (auto-assign) sonucu alanlar
-  const [regions, setRegions] = useState<Record<string, LatLng[]>>({}); // repId -> hull LatLng[]
+  // Voronoi için görünür harita sınırı
+  const MapBoundsWatcher: React.FC = () => {
+    const rect = useMapBoundsRect();
+    useEffect(() => {
+      setBounds(rect);
+    }, [rect]);
+    return null;
+  };
+  const [bounds, setBounds] = useState<BoundsRect | null>(null);
+  const voronoiPolys = useVoronoiPolygons(reps, bounds);
 
+  // seçim listesini hesapla
   const selectedCustomers = useMemo(
     () => customers.filter((c) => selectedIds.includes(c.id)),
     [customers, selectedIds]
   );
 
-  const colorForCustomer = (c: Customer) => REP_COLORS[assignments[c.id] || "_default"] || REP_COLORS._default;
+  const colorForCustomer = (c: Customer) =>
+    REP_COLORS[assignments[c.id] || "_default"] || REP_COLORS._default;
 
-  /* ---- POLİGON: Created handler ---- */
+  /* ---- POLİGON OLUŞTURULDU ---- */
   const handlePolygonCreated = async (poly: L.Polygon) => {
     if (polygonLayerRef.current && drawnItemsRef.current) {
       drawnItemsRef.current.removeLayer(polygonLayerRef.current);
@@ -190,7 +222,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
     const inside = customers.filter((c) => pointInPolygon([c.lat, c.lng], latlngs));
     const insideIds = inside.map((c) => c.id);
     setSelectedIds(insideIds);
-
     await computeRouteForSelection(inside);
   };
 
@@ -200,13 +231,10 @@ const AssignmentMapScreen: React.FC<Props> = ({
       setLoading(true);
       setRouteCoords([]); setRouteKm(null);
       if (!list.length) return;
-
       const rep = reps.find((r) => r.id === selectedRepId) || reps[0];
       const start: LatLng = [rep.lat, rep.lng];
-
       const coords = [start, ...list.map((c) => [c.lat, c.lng] as LatLng)]
         .map((p) => `${p[1]},${p[0]}`).join(";");
-
       const data = await osrmTrip(coords);
       const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
         ([lng, lat]: [number, number]) => [lat, lng]
@@ -214,7 +242,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
       setRouteCoords(latlngs);
       setRouteKm((data.trips[0].distance as number) / 1000);
     } catch {
-      // fallback
       const rep = reps.find((r) => r.id === selectedRepId) || reps[0];
       const seq = [[rep.lat, rep.lng] as LatLng, ...list.map((c) => [c.lat, c.lng] as LatLng)];
       let acc = 0; for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
@@ -239,7 +266,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
           circlemarker: false,
           marker: false,
           polyline: false,
-          // showArea:true bazı sürümlerde "type is not defined" hatası üretebiliyor → false
+          // showArea:true bazı sürümlerde "type is not defined" hatası yarattığı için kapattık
           polygon: { allowIntersection: false, showArea: false, drawError: { color: "#ff0000", message: "Hatalı çizim" } },
         },
         edit: {
@@ -267,78 +294,55 @@ const AssignmentMapScreen: React.FC<Props> = ({
         map.removeLayer(drawn);
         drawnItemsRef.current = null;
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [map, customers, selectedRepId]);
 
     return null;
   };
 
-  /* ---- OPTİMİZE ET: Kapasiteli K-Means benzeri auto-assign ---- */
+  /* ---- OPTIMIZE ET: Kapasiteli yakın-merkez dağıtımı ----
+     - Atamaları yapar (yaklaşık eşit sayıda, yakınlığa göre).
+     - Bölgeler: rep konumlarının Voronoi hücreleri (asla kesişmez).
+  --------------------------------------------------------- */
   const handleOptimize = async () => {
-    // kapasiteli atama (müşteri sayısı / rep sayısı ~ eşit)
     const K = reps.length || 1;
     if (!K) return;
-
     const target = Math.ceil(customers.length / K);
-    // centroidler: rep konumları
-    let centroids: LatLng[] = reps.map((r) => [r.lat, r.lng]);
 
-    // müşterilerin koordinat listesi
+    // rep merkezleri
+    const centers: LatLng[] = reps.map((r) => [r.lat, r.lng]);
     const pts: LatLng[] = customers.map((c) => [c.lat, c.lng]);
 
-    // atamalar: her iterasyonda rep index
     let assign: number[] = new Array(customers.length).fill(-1);
 
-    const iter = 8;
+    // basit kapasiteli en-yakın atama + hafif dengeleme turu
+    const iter = 6;
     for (let t = 0; t < iter; t++) {
-      // boş kümeler
       const buckets: number[][] = Array.from({ length: K }, () => []);
-
-      // en yakın centroid + kapasite kontrolü
       pts.forEach((p, i) => {
-        const order = centroids
-          .map((c, k) => ({ k, d: haversineKm(p, c) }))
-          .sort((a, b) => a.d - b.d);
-
+        const order = centers.map((c, k) => ({ k, d: haversineKm(p, c) })).sort((a, b) => a.d - b.d);
         let chosen = order[0].k;
-        // kapasite doluysa sıradaki en yakın
         for (const cand of order) {
           if (buckets[cand.k].length < target) { chosen = cand.k; break; }
         }
         buckets[chosen].push(i);
         assign[i] = chosen;
       });
-
-      // centroidleri güncelle (müşteri ortalaması)
-      centroids = buckets.map((idxs, k) => {
-        if (idxs.length === 0) return centroids[k];
-        const s = idxs.reduce((acc, i) => [acc[0] + pts[i][0], acc[1] + pts[i][1]], [0, 0] as LatLng);
-        return [s[0] / idxs.length, s[1] / idxs.length] as LatLng;
-      });
+      // merkezleri hafifçe güncelle (atanan müşterilerin ortalaması)
+      for (let k = 0; k < K; k++) {
+        const idxs = buckets[k];
+        if (idxs.length) {
+          const sum = idxs.reduce((acc, i) => [acc[0] + pts[i][0], acc[1] + pts[i][1]], [0, 0] as LatLng);
+          centers[k] = [sum[0] / idxs.length, sum[1] / idxs.length];
+        }
+      }
     }
 
-    // Sonuç: assignments güncelle
     const next: Record<string, string> = {};
     customers.forEach((c, i) => {
       const repId = reps[assign[i]]?.id || reps[0].id;
       next[c.id] = repId;
     });
     setAssignments((prev) => ({ ...prev, ...next }));
-
-    // Bölge hull’larını çiz
-    const perRepPoints: Record<string, LatLng[]> = {};
-    reps.forEach((r) => (perRepPoints[r.id] = []));
-    customers.forEach((c, i) => {
-      const rid = next[c.id]!;
-      perRepPoints[rid].push([c.lat, c.lng]);
-    });
-
-    const hulls: Record<string, LatLng[]> = {};
-    reps.forEach((r) => {
-      const pts = perRepPoints[r.id];
-      hulls[r.id] = pts.length ? convexHull(pts.map((p) => [p[0], p[1]])) : [];
-    });
-    setRegions(hulls);
 
     setToast("Optimize atama tamamlandı.");
     setTimeout(() => setToast(null), 2000);
@@ -349,10 +353,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
       {/* Üst bar */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-900 font-semibold">
-          <button
-            onClick={onBack}
-            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
-          >
+          <button onClick={onBack} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
             <ArrowLeft className="w-4 h-4" />
             Geri
           </button>
@@ -370,8 +371,13 @@ const AssignmentMapScreen: React.FC<Props> = ({
               value={selectedRepId}
               onChange={(e) => {
                 setSelectedRepId(e.target.value);
-                // rep değişince seçime göre rota yenile
-                if (selectedCustomers.length) computeRouteForSelection(selectedCustomers);
+                if (selectedCustomers.length) {
+                  // rep değişince seçime göre rota tazele
+                  (async () => {
+                    const list = customers.filter((c) => selectedIds.includes(c.id));
+                    await computeRouteForSelection(list);
+                  })();
+                }
               }}
               className="border rounded-lg px-2 py-1"
             >
@@ -391,11 +397,10 @@ const AssignmentMapScreen: React.FC<Props> = ({
             <span>Rota: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b></span>
           </div>
 
-          {/* OPTİMİZE ET */}
           <button
             onClick={handleOptimize}
             className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90"
-            title="Müşterileri ekip arasında en dengeli şekilde dağıt"
+            title="Müşterileri ekip arasında dengeli dağıt"
           >
             Optimize Et
           </button>
@@ -407,15 +412,21 @@ const AssignmentMapScreen: React.FC<Props> = ({
         <MapContainer center={mapCenter as LatLngExpression} zoom={13} style={{ height: "100%", width: "100%" }} className="z-0">
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
           <DrawControl />
+          <MapBoundsWatcher />
 
-          {/* Rep bölgeleri (optimize sonrası) */}
+          {/* Voronoi bölgeler: non-overlapping */}
           {reps.map((r) => {
-            const hull = regions[r.id];
-            return hull && hull.length >= 3 ? (
+            const poly = voronoiPolys[r.id];
+            return poly && poly.length >= 3 ? (
               <Polygon
-                key={`poly-${r.id}`}
-                positions={hull as unknown as LatLngExpression[]}
-                pathOptions={{ color: REP_COLORS[r.id] || "#444", fillColor: REP_FILLS[r.id] || "rgba(0,0,0,.1)", fillOpacity: 0.6, weight: 2 }}
+                key={`vor-${r.id}`}
+                positions={poly as unknown as LatLngExpression[]}
+                pathOptions={{
+                  color: REP_COLORS[r.id] || "#444",
+                  fillColor: REP_FILLS[r.id] || "rgba(0,0,0,.1)",
+                  fillOpacity: 0.55,
+                  weight: 2,
+                }}
               />
             ) : null;
           })}
@@ -473,13 +484,12 @@ const AssignmentMapScreen: React.FC<Props> = ({
           )}
         </MapContainer>
 
-        {/* SAĞ PANEL */}
+        {/* SAĞ PANEL (Seçilenler) */}
         <div
           className={`absolute top-4 right-0 bottom-4 z-[1000] transition-transform duration-300 ${
             panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
           } flex`}
         >
-          {/* Toggle Bar */}
           <button
             onClick={() => setPanelOpen((o) => !o)}
             className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white"
@@ -495,7 +505,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
             )}
           </button>
 
-          {/* Panel İçeriği */}
           <div className="bg-white/95 backdrop-blur rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm h-full">
             <div className="flex items-center justify-between">
               <div className="font-semibold text-gray-700 text-base select-none">Seçilenler</div>
@@ -507,8 +516,8 @@ const AssignmentMapScreen: React.FC<Props> = ({
               <div>Seçilen Müşteri: <b>{selectedIds.length}</b></div>
               <div>Rota (tahmini): <b className="text-[#0099CB]">{fmtKm(routeKm)}</b></div>
               <div className="mt-1 text-[11px]">
-                Not: Çokgenle seçim yapın veya popup’tan <b>Seçime Ekle</b> deyin. Atama için popup’taki <b>Bu Müşteriyi Ata</b> butonunu
-                ya da üstteki <b>Optimize Et</b> ile otomatik dağıtımı kullanın.
+                Çokgenle seçim yapın veya popup’tan <b>Seçime Ekle</b> deyin. Atama için popup’taki <b>Bu Müşteriyi Ata</b> butonunu
+                ya da üstteki <b>Optimize Et</b> ile otomatik dağıtımı kullanın. Bölgeler Voronoi tabanlıdır ve <b>kesişmez</b>.
               </div>
             </div>
 
@@ -521,7 +530,9 @@ const AssignmentMapScreen: React.FC<Props> = ({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-medium text-gray-900 text-sm">{c.name}</div>
-                      <div className="text-xs text-gray-600 truncate max-w-[200px]">{c.address}, {c.district}</div>
+                      <div className="text-xs text-gray-600 truncate max-w-[200px]">
+                        {c.address}, {c.district}
+                      </div>
                       <div className="text-xs text-gray-500">Tel: {c.phone}</div>
                     </div>
                     <button
@@ -539,7 +550,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Loading */}
         {loading && (
           <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-[900]">
             <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700">
@@ -550,8 +560,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
       </div>
 
       <div className="mt-2 text-xs text-gray-600">
-        Poligon çizimi düzeltildi. Çokgen çizip müşterileri seçebilir, tek tek atayabilir ya da <b>Optimize Et</b> ile
-        eşit ve çakışmayan bölgelere otomatik dağıtabilirsiniz.
+        Bölgeler artık <b>Voronoi</b> ile çiziliyor ve <b>kesişmez</b>. “Optimize Et” müşteri dağılımını dengeler; çokgenle seçim + tek tek atama ve rota hesapları aynen çalışır.
       </div>
 
       {toast && (
