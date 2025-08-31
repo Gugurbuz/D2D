@@ -1,9 +1,10 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Route as RouteIcon } from "lucide-react";
 
+/* ==== Tipler ==== */
 export type Customer = {
   id: string;
   name: string;
@@ -32,10 +33,43 @@ export type SalesRep = {
 type LatLng = [number, number];
 
 interface Props {
-  customers: Customer[];
-  salesRep: SalesRep;
+  customers?: Customer[];    // verilmezse aşağıdaki Anadolu listesi kullanılır
+  salesRep?: SalesRep;       // verilmezse Maltepe merkezli default değer kullanılır
 }
 
+/* ==== Varsayılanlar (Anadolu Yakası – 22 müşteri) ==== */
+const defaultSalesRep: SalesRep = {
+  name: "Satış Uzmanı",
+  lat: 40.9368, // Maltepe merkez
+  lng: 29.1553,
+};
+
+const anadoluCustomers: Customer[] = [
+  { id: "1",  name: "Buse Aksoy",    address: "Bağdat Cd.  No:120", district: "Maltepe",    plannedTime: "09:00", priority: "Düşük", tariff: "Mesken", meterNumber: "210000001", consumption: "270 kWh/ay", offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
+  { id: "2",  name: "Kaan Er",       address: "Alemdağ Cd. No:22",  district: "Ümraniye",  plannedTime: "09:20", priority: "Orta",   tariff: "Mesken", meterNumber: "210000002", consumption: "300 kWh/ay", offerHistory: ["2024-08: %10 indirim"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
+  { id: "3",  name: "Canan Sezer",   address: "Finans Mrk. A1",     district: "Ataşehir",  plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
+  { id: "4",  name: "Kübra Oral",    address: "İnönü Mh. No:18",    district: "Kadıköy",   plannedTime: "10:00", priority: "Orta",   tariff: "Mesken", meterNumber: "210000004", consumption: "310 kWh/ay", offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
+  { id: "5",  name: "Ayça Erden",    address: "Koşuyolu Cd. 7",     district: "Kadıköy",   plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"], status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
+  { id: "6",  name: "Meral Kılıç",   address: "Çengelköy Sahil",    district: "Üsküdar",  plannedTime: "10:40", priority: "Düşük",  tariff: "Mesken", meterNumber: "210000006", consumption: "260 kWh/ay", offerHistory: ["2024-03: Hoş geldin"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
+  { id: "7",  name: "Tuğçe Polat",   address: "Kısıklı Cd. 15",     district: "Üsküdar",  plannedTime: "11:00", priority: "Orta",   tariff: "Mesken", meterNumber: "210000007", consumption: "290 kWh/ay", offerHistory: ["2024-12: Sadakat"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "10.8 km", lat: 41.0333, lng: 29.0672, phone: "0555 111 22 07" },
+  { id: "8",  name: "Selim Yurt",    address: "Atatürk Cd. No:5",   district: "Sancaktepe", plannedTime: "11:20", priority: "Orta",  tariff: "Mesken", meterNumber: "210000008", consumption: "320 kWh/ay", offerHistory: ["2025-03: Yeni teklif"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.2 km", lat: 41.0152, lng: 29.2316, phone: "0555 111 22 08" },
+  { id: "9",  name: "Zeynep Koç",    address: "Sarıgazi Mh. 23",    district: "Sancaktepe", plannedTime: "11:40", priority: "Yüksek",tariff: "İş Yeri", meterNumber: "210000009", consumption: "1120 kWh/ay",offerHistory: ["2024-08: Turizm indirimi"], status: "Bekliyor", estimatedDuration: "45 dk", distance: "16.1 km", lat: 41.0074, lng: 29.2447, phone: "0555 111 22 09" },
+  { id: "10", name: "Yasin Ateş",    address: "Şerifali Mh. 4",     district: "Ümraniye",  plannedTime: "12:00", priority: "Orta",   tariff: "Mesken", meterNumber: "210000010", consumption: "310 kWh/ay", offerHistory: ["2024-07: Sadakat"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "11.1 km", lat: 41.0179, lng: 29.1376, phone: "0555 111 22 10" },
+  { id: "11", name: "Derya Kılıç",   address: "Küçükyalı Sahil",    district: "Maltepe",   plannedTime: "12:20", priority: "Düşük",  tariff: "İş Yeri", meterNumber: "210000011", consumption: "900 kWh/ay", offerHistory: ["2024-04: AVM tarifesi"], status: "Bekliyor", estimatedDuration: "35 dk", distance: "2.2 km",  lat: 40.9488, lng: 29.1444, phone: "0555 111 22 11" },
+  { id: "12", name: "Gizem Acar",    address: "İdealtepe No:11",    district: "Maltepe",   plannedTime: "12:40", priority: "Orta",   tariff: "Mesken", meterNumber: "210000012", consumption: "295 kWh/ay", offerHistory: ["2025-01: Paket"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "3.0 km",  lat: 40.9497, lng: 29.1228, phone: "0555 111 22 12" },
+  { id: "13", name: "Seda Karaca",   address: "Başak Cd. No:2",     district: "Kartal",    plannedTime: "13:10", priority: "Orta",   tariff: "Mesken", meterNumber: "210000013", consumption: "300 kWh/ay", offerHistory: ["2024-02: Kombi kampanya"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "6.2 km",  lat: 40.9127, lng: 29.2137, phone: "0555 111 22 13" },
+  { id: "14", name: "Tolga Kurt",    address: "Sahil Yolu No:88",   district: "Kartal",    plannedTime: "13:30", priority: "Orta",   tariff: "Mesken", meterNumber: "210000014", consumption: "295 kWh/ay", offerHistory: ["2024-06: Sadakat paketi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.5 km",  lat: 40.9075, lng: 29.1947, phone: "0555 111 22 14" },
+  { id: "15", name: "Melih Uçar",    address: "Velibaba Mh. 10",    district: "Pendik",    plannedTime: "14:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000015", consumption: "1350 kWh/ay",offerHistory: ["2024-01: Endüstriyel tarife"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "12.0 km", lat: 40.9009, lng: 29.2312, phone: "0555 111 22 15" },
+  { id: "16", name: "İpek Gür",      address: "Esenyalı Mh. 17",    district: "Pendik",    plannedTime: "14:30", priority: "Düşük",  tariff: "Mesken", meterNumber: "210000016", consumption: "280 kWh/ay", offerHistory: ["2023-12: E-devlet onay"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.8 km", lat: 40.8784, lng: 29.2743, phone: "0555 111 22 16" },
+  { id: "17", name: "Kerem Efe",     address: "Barbaros Mh. 5",     district: "Tuzla",     plannedTime: "15:00", priority: "Orta",   tariff: "Mesken", meterNumber: "210000017", consumption: "310 kWh/ay", offerHistory: ["2023-11: Online randevu"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "19.2 km", lat: 40.8380, lng: 29.3033, phone: "0555 111 22 17" },
+  { id: "18", name: "Naz Acar",      address: "İstasyon Mh. 3",     district: "Tuzla",     plannedTime: "15:30", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000018", consumption: "920 kWh/ay",  offerHistory: ["2023-10: Ticari sabit"], status: "Bekliyor", estimatedDuration: "40 dk", distance: "21.0 km", lat: 40.8228, lng: 29.3345, phone: "0555 111 22 18" },
+  { id: "19", name: "Mina Eren",     address: "Acarlar Mh. 2",      district: "Beykoz",    plannedTime: "16:00", priority: "Yüksek", tariff: "Mesken", meterNumber: "210000019", consumption: "290 kWh/ay", offerHistory: ["2025-02: Özel teklif"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "24.2 km", lat: 41.1459, lng: 29.1111, phone: "0555 111 22 19" },
+  { id: "20", name: "Efe Çınar",     address: "Şahinbey Cd. 9",     district: "Sultanbeyli", plannedTime: "16:30", priority: "Orta", tariff: "Mesken", meterNumber: "210000020", consumption: "300 kWh/ay", offerHistory: ["2024-05: %8 indirim"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "16.8 km", lat: 40.9677, lng: 29.2622, phone: "0555 111 22 20" },
+  { id: "21", name: "Elif Aydın",    address: "Merkez Mh. 1",       district: "Çekmeköy",  plannedTime: "17:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000021", consumption: "1120 kWh/ay",offerHistory: ["2024-08: Esnek paket"], status: "Bekliyor", estimatedDuration: "45 dk", distance: "18.1 km", lat: 41.0546, lng: 29.2013, phone: "0555 111 22 21" },
+  { id: "22", name: "Onur Demirel",  address: "Çamlık Mh. 6",       district: "Çekmeköy",  plannedTime: "17:30", priority: "Orta",   tariff: "Mesken", meterNumber: "210000022", consumption: "330 kWh/ay", offerHistory: ["2024-05: Otomatik ödeme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "19.0 km", lat: 41.0466, lng: 29.2233, phone: "0555 111 22 22" },
+];
+
+/* ==== İkonlar ==== */
 const repIcon = new L.Icon({
   iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491",
   iconSize: [32, 32],
@@ -52,7 +86,7 @@ function numberIcon(n: number, highlight = false) {
         font-weight:800;font-size:12px;color:#fff;line-height:1;
         background:${highlight ? "#FF6B00" : "#0099CB"};
         border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);
-        transform:${highlight ? "scale(1.12)" : "scale(1)"};
+        transform:${highlight ? "scale(1.14)" : "scale(1)"};
       ">
         ${n}
       </div>
@@ -63,6 +97,7 @@ function numberIcon(n: number, highlight = false) {
   });
 }
 
+/* ==== Yardımcılar ==== */
 function haversineKm(a: LatLng, b: LatLng) {
   const R = 6371;
   const dLat = ((b[0] - a[0]) * Math.PI) / 180;
@@ -72,37 +107,68 @@ function haversineKm(a: LatLng, b: LatLng) {
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
-
 const fmtKm = (km: number | null) =>
   km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
+/* ==== Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
-  const center: LatLng = [salesRep.lat, salesRep.lng];
+  const rep = salesRep || defaultSalesRep;
+  const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
 
-  const [orderedCustomers, setOrderedCustomers] = useState(customers);
+  const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [listOpen, setListOpen] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const mapRef = useRef<L.Map | null>(null);
+  // Sol panel (swipe ile aç/kapa; kulakçık var, "listeyi kapat" butonu YOK)
+  const [panelOpen, setPanelOpen] = useState(true);
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx < -50) setPanelOpen(false);
+    if (dx > 50) setPanelOpen(true);
+    touchStartX.current = null;
+  };
+
   const markerRefs = useRef<Record<string, L.Marker>>({});
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
 
+  // Fullscreen (koruduk – istersen kaldırabilirsin)
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [isFs, setIsFs] = useState(false);
   useEffect(() => {
-    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFsChange);
-    return () => document.removeEventListener('fullscreenchange', onFsChange);
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
   }, []);
+  const toggleFullscreen = async () => {
+    const el = wrapperRef.current; if (!el) return;
+    if (!document.fullscreenElement) await el.requestFullscreen();
+    else await document.exitFullscreen();
+  };
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
+  // Marker/list karşılıklı vurgu
+  const highlightCustomer = (c: Customer, i: number, pan = true) => {
+    setSelectedId(c.id);
+    const m = markerRefs.current[c.id];
+    if (pan && mapRef.current) {
+      mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+    }
+    if (m) m.openPopup();
+    const row = document.getElementById(`cust-row-${c.id}`);
+    if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
+
+  // Rota optimizasyonu — satış uzmanından BAŞLAT
   const handleOptimize = async () => {
     const tripPoints = [
-      { kind: "rep" as const, lat: salesRep.lat, lng: salesRep.lng },
-      ...customers.map(c => ({ kind: "cust" as const, lat: c.lat, lng: c.lng, ref: c })),
+      { kind: "rep" as const, lat: rep.lat, lng: rep.lng },
+      ...baseCustomers.map(c => ({ kind: "cust" as const, lat: c.lat, lng: c.lng, ref: c })),
     ];
     const coords = tripPoints.map(p => `${p.lng},${p.lat}`).join(";");
     const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
@@ -114,153 +180,173 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       const data = await res.json();
       if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
 
+      // Sıralama
       const orderedByTrip = data.waypoints
         .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
         .sort((a: any, b: any) => a.order - b.order)
         .map((x: any) => tripPoints[x.inputIdx]);
 
-      const sortedCustomers = orderedByTrip.filter(p => p.kind === "cust").map(p => (p as any).ref);
+      const sortedCustomers = orderedByTrip.filter(p => p.kind === "cust").map(p => (p as any).ref as Customer);
       setOrderedCustomers(sortedCustomers);
 
+      // Çizgi + mesafe
       const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
       setRouteCoords(latlngs);
       setRouteKm((data.trips[0].distance as number) / 1000);
+
+      // İlk müşteriyi vurgula
+      if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0], 0, true);
     } catch (e) {
       console.error(e);
-      const seq: LatLng[] = [[salesRep.lat, salesRep.lng], ...orderedCustomers.map(c => [c.lat, c.lng] as LatLng)];
+      // OSRM yoksa: basit bağla (rep → listedeki sıra)
+      const seq: LatLng[] = [[rep.lat, rep.lng], ...orderedCustomers.map(c => [c.lat, c.lng] as LatLng)];
       setRouteCoords(seq);
-      let acc = 0;
-      for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
+      let acc = 0; for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
       setRouteKm(acc);
     } finally {
       setLoading(false);
     }
   };
 
-  const highlightCustomer = (c: Customer, index: number, pan = true) => {
-    setSelectedId(c.id);
-    const m = markerRefs.current[c.id];
-    if (pan && mapRef.current) {
-      mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
-    }
-    if (m) m.openPopup();
-    const el = document.getElementById(`cust-row-${c.id}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  };
+  useEffect(() => {
+    // ilk açılışta merkezde
+    setOrderedCustomers(baseCustomers);
+  }, [baseCustomers]);
 
-  const toggleFullscreen = async () => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        await el.requestFullscreen();
-      } else {
-        await document.exitFullscreen();
-      }
-    } catch {
-      // bazı tarayıcılar kullanıcı jesti ister
-    }
-  };
+  const center: LatLng = [rep.lat, rep.lng];
 
   return (
-    <div className="w-full" ref={wrapperRef}>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xl font-semibold text-gray-900">Rota Haritası</h2>
+    <div className="relative w-full" ref={wrapperRef}>
+      {/* Üst başlık + aksiyonlar */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-gray-900 font-semibold">
+          <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+          Rota Haritası
+        </div>
         <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-700">Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b></div>
-          <button onClick={handleOptimize} disabled={loading}
-                  className={`px-4 py-2 rounded-lg font-semibold ${loading ? 'bg-gray-300 text-gray-600' : 'bg-[#0099CB] text-white hover:opacity-90'}`}>
-            {loading ? 'Rota Hesaplanıyor…' : 'Rotayı Optimize Et'}
+          <div className="text-sm text-gray-700">
+            Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
+          </div>
+          <button
+            onClick={handleOptimize}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`}
+          >
+            {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
           <button onClick={toggleFullscreen} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
-            {isFullscreen ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
+            {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         {/* Harita */}
-        <div className="lg:col-span-3">
-          <div className="h-[560px] w-full rounded-2xl overflow-hidden shadow relative">
-            <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} whenCreated={(m) => (mapRef.current = m)}>
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-              <Marker position={[salesRep.lat, salesRep.lng]} icon={repIcon}>
-                <Popup><b>{salesRep.name}</b></Popup>
-              </Marker>
+        <MapContainer
+          center={center}
+          zoom={13}
+          style={{ height: "100%", width: "100%" }}
+          whenCreated={(m) => (mapRef.current = m)}
+          className="z-0"
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
 
-              {orderedCustomers.map((c, i) => (
-                <Marker
-                  key={c.id}
-                  position={[c.lat, c.lng]}
-                  icon={numberIcon(i + 1, selectedId === c.id)}
-                  zIndexOffset={1000 - i}
-                  ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-                  eventHandlers={{ click: () => highlightCustomer(c, i, true) }}
-                >
-                  <Popup>
-                    <div className="space-y-1">
-                      <div><b>{i + 1}. {c.name}</b></div>
-                      <div>{c.address}, {c.district}</div>
-                      <div>Saat: {c.plannedTime}</div>
-                      <div>Tel: <a href={toTelHref(c.phone)} className="text-[#0099CB] underline">{c.phone}</a></div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
+          {/* Satış Uzmanı */}
+          <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
+            <Popup><b>{rep.name}</b></Popup>
+          </Marker>
 
-              {routeCoords.length > 0 && (
-                <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
-              )}
-            </MapContainer>
-          </div>
-        </div>
+          {/* Müşteriler (numaralı ikon + tel) */}
+          {orderedCustomers.map((c, i) => (
+            <Marker
+              key={c.id}
+              position={[c.lat, c.lng]}
+              icon={numberIcon(i + 1, selectedId === c.id)}
+              zIndexOffset={1000 - i}
+              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+              eventHandlers={{ click: () => highlightCustomer(c, i, true) }}
+            >
+              <Popup>
+                <div className="space-y-1">
+                  <div><b>{i + 1}. {c.name}</b></div>
+                  <div>{c.address}, {c.district}</div>
+                  <div>Saat: {c.plannedTime}</div>
+                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
-        {/* Ziyaret Sırası */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow p-4 max-h-[560px] overflow-auto">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-gray-800">Ziyaret Sırası</h3>
-              <button onClick={() => setListOpen(o => !o)} className="text-sm text-[#0099CB] underline">
-                {listOpen ? 'Listeyi Kapat' : 'Listeyi Aç'}
-              </button>
+          {/* Rota çizgisi */}
+          {routeCoords.length > 0 && (
+            <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
+          )}
+        </MapContainer>
+
+        {/* SOL PANEL — swipe ile aç/kapa, kulakçık var */}
+        <div
+          className={`absolute top-4 left-4 z-10 transition-transform duration-300 ${panelOpen ? "translate-x-0" : "-translate-x-[85%]"}`}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="bg-white/90 rounded-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[280px] max-w-sm">
+            {/* Başlık */}
+            <div className="flex items-center gap-2">
+              <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+              <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
             </div>
 
-            {listOpen && (
-              <div className="space-y-2">
-                {orderedCustomers.map((c, i) => {
-                  const selected = c.id === selectedId;
-                  return (
-                    <div id={`cust-row-${c.id}`} key={c.id}
-                         className={`p-3 rounded-lg border transition ${selected ? "bg-[#0099CB]/10 border-[#0099CB]/30" : "bg-white hover:bg-gray-50 border-gray-200"}`}>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => highlightCustomer(c, i, true)}
-                          className={`w-7 h-7 flex items-center justify-center rounded-full text-white text-sm font-bold ${selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"}`}
-                          title={`${i + 1}. müşteriyi vurgula`}
-                        >
-                          {i + 1}
-                        </button>
-                        <div className="min-w-0">
-                          <div className="font-medium text-gray-900 truncate">{c.name}</div>
-                          <div className="text-xs text-gray-600 truncate">{c.address}, {c.district}</div>
-                          <a href={toTelHref(c.phone)} className="text-xs text-[#0099CB] underline">{c.phone}</a>
-                        </div>
-                        <span className="ml-auto text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
-                      </div>
+            {/* Liste – sadece burası scroll olur */}
+            <div className="max-h-64 overflow-auto pr-1">
+              {orderedCustomers.map((c, i) => {
+                const selected = selectedId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    id={`cust-row-${c.id}`}
+                    className={`flex items-center gap-2 p-2 rounded transition cursor-pointer ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
+                    onClick={() => highlightCustomer(c, i, true)}
+                  >
+                    <span
+                      className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"}`}
+                      title={`${i + 1}. müşteri`}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{c.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
+                      <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e)=>e.stopPropagation()}>{c.phone}</a>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <span className="ml-auto text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {loading && (
-        <div className="fixed inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-50">
-          <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700">Rota Hesaplanıyor…</div>
+          {/* Kapalıyken görünen kulakçık (butonsuz kulakçık) */}
+          {!panelOpen && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              className="absolute top-1/2 -right-3 -translate-y-1/2 bg-white/90 border border-gray-200 rounded-full p-1 shadow"
+              aria-label="Paneli aç"
+              title="Paneli açmak için dokun"
+            >
+              <Minimize2 className="w-4 h-4 text-gray-700 rotate-90" />
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Loading */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700">
+              Rota Hesaplanıyor…
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
