@@ -657,7 +657,7 @@ if (currentScreen === 'dashboard') {
           {flowStep === 1 && (
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center gap-3 mb-4">
-                <IdCard className="w-5 h-5 text-[#0099CB]" />
+               <BadgeCheck className="w-5 h-5 text-[#0099CB]" />
                 <h3 className="text-lg font-semibold">Müşteri Bilgileri</h3>
               </div>
               <div className="grid md:grid-cols-2 gap-4">
