@@ -1,17 +1,15 @@
 // src/data/reps.ts
-import type { SalesRep as MapSalesRep } from '../RouteMap';
+import { SalesRep as MapSalesRep } from '../RouteMap';
+import { Rep } from '../types';
 
-export type Rep = { id: string; name: string };
-
-export const allReps: Rep[] = [
-  { id: 'rep-1', name: 'Serkan Özkan' },
-  { id: 'rep-2', name: 'Zelal Kaya' },
-  { id: 'rep-3', name: 'Şöhret Demir' },
-];
-
-// Harita için reps (RouteMap bileşeniyle aynı tip)
 export const salesRepForMap: MapSalesRep = {
   name: 'Satış Uzmanı',
-  lat: 40.9360,  // Maltepe civarı
-  lng: 29.1500,
+  lat: 40.9368,
+  lng: 29.1553,
 };
+
+export const allReps: Rep[] = [
+  { id: 'rep-1', name: 'Serkan Özkan',  lat: 40.9368, lng: 29.1553, phone: '0555 000 00 01' }, // Maltepe
+  { id: 'rep-2', name: 'Zelal Kaya',    lat: 41.0086, lng: 29.0736, phone: '0555 000 00 02' }, // Üsküdar
+  { id: 'rep-3', name: 'Şöhret Demir',  lat: 40.9913, lng: 29.0271, phone: '0555 000 00 03' }, // Kadıköy
+];
