@@ -175,4 +175,37 @@ function App() {
   );
 }
 
+  return (
+    <AppLayout
+      agentName={agentName}
+      role={role}
+      currentScreen={currentScreen}
+      setCurrentScreen={setCurrentScreen}
+    >
+      {/* ⬇️ yeni ekran */}
+      {currentScreen === 'assignmentMap' && role === 'manager' && (
+        <AssignmentMapScreen
+          customers={customers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          allReps={allReps}
+          onBack={() => setCurrentScreen('assignment')}
+        />
+      )}
+
+      {/* görev atama ekranı — setCurrentScreen prop’unu geçir */}
+      {currentScreen === 'assignment' && role === 'manager' && (
+        <AssignmentScreen
+          customers={customers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          allReps={allReps}
+          setCurrentScreen={setCurrentScreen} // ⬅️ eklendi
+        />
+      )}
+
+      {/* diğer ekranlar ... */}
+    </AppLayout>
+  );
+}
 export default App;
