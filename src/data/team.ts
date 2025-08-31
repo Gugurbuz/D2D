@@ -51,7 +51,7 @@ export const teamReps: TeamRep[] = [
     phone: '0555 000 00 04', 
     lat: 40.9497, 
     lng: 29.1228, 
-    completedToday: 1, 
+    completedToday: 0, 
     totalToday: 4,
     color: '#8b5cf6',                  // Mor (yeni eklendi)
     fillColor: 'rgba(139,92,246,.18)'
