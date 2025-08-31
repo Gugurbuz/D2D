@@ -105,57 +105,65 @@ const AssignmentScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Tablo */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full table-auto">
-            <colgroup>
-              <col className="w-12" />                 {/* Seç */}
-              <col className="w-[18%]" />              {/* Müşteri */}
-              <col className="w-[40%]" />              {/* Adres - GENİŞ */}
-              <col className="w-[12%]" />              {/* İlçe */}
-              <col className="w-[12%]" />              {/* Durum */}
-              <col className="w-[16%]" />              {/* Atanan */}
-            </colgroup>
+      {/* Tablo + Scroll */}
+      <div className="bg-white rounded-2xl border border-gray-200">
+        {/* Yatay scroll: */}
+        <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable' }}>
+          {/* Dikey scroll: görünüm yüksekliğini taşırsa */}
+          <div className="max-h-[65vh] overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+            <table className="min-w-[1100px] table-auto">
+              <colgroup>
+                <col className="w-12" />           {/* Seç */}
+                <col className="w-[18%]" />        {/* Müşteri */}
+                <col className="w-[42%]" />        {/* Adres */}
+                <col className="w-[12%]" />        {/* İlçe */}
+                <col className="w-[12%]" />        {/* Durum */}
+                <col className="w-[16%]" />        {/* Atanan */}
+              </colgroup>
 
-            <thead className="bg-gray-50 text-xs font-semibold text-gray-600">
-              <tr>
-                <th className="px-4 py-3 text-left">Seç</th>
-                <th className="px-4 py-3 text-left">Müşteri</th>
-                <th className="px-4 py-3 text-left">Adres</th>
-                <th className="px-4 py-3 text-left">İlçe</th>
-                <th className="px-4 py-3 text-left">Durum</th>
-                <th className="px-4 py-3 text-left">Atanan</th>
-              </tr>
-            </thead>
+              <thead className="text-xs font-semibold text-gray-600">
+                <tr>
+                  {['Seç','Müşteri','Adres','İlçe','Durum','Atanan'].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-left sticky top-0 z-10 bg-gray-50"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-            <tbody className="divide-y">
-              {filtered.map(c => {
-                const checked = !!localSelected[c.id];
-                const assignedTo = assignments[c.id];
-                return (
-                  <tr key={c.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))}
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap truncate">{c.name}</td>
-                    <td className="px-4 py-3 truncate">{c.address}</td>
-                    <td className="px-4 py-3 whitespace-nowrap truncate">{c.district}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm">{repName(assignedTo)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+              <tbody className="divide-y">
+                {filtered.map(c => {
+                  const checked = !!localSelected[c.id];
+                  const assignedTo = assignments[c.id];
+                  return (
+                    <tr key={c.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) =>
+                            setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap truncate">{c.name}</td>
+                      <td className="px-4 py-3 break-words">{c.address}</td>
+                      <td className="px-4 py-3 whitespace-nowrap truncate">{c.district}</td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{repName(assignedTo)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
