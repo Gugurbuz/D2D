@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import {
   User, MapPin, List, BarChart3, Home,
   Clock, CheckCircle, XCircle, AlertCircle,
-  Camera, Route, TrendingUp, Search, Mic, IdCard, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck
+  Camera, Route, TrendingUp, Search, Mic, IdCard, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck, UserCheck
 } from 'lucide-react';
 import RouteMap, { SalesRep as MapSalesRep, Customer } from './RouteMap';
 
@@ -73,6 +73,10 @@ function App() {
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({
     // örnek: '1': 'rep-1'
   });
+
+  // 🔁 Atama ekranında kullanılan state’leri ÜST SEVİYEYE taşıdık
+  const [localSelected, setLocalSelected] = useState<Record<string, boolean>>({});
+  const [selectedRep, setSelectedRep] = useState<string>(allReps[0]?.id || '');
 
   // === ZİYARET FLOW STATE (adım adım süreç) ===
   const [flowStep, setFlowStep] = useState<number>(1); // 1..4
@@ -148,7 +152,7 @@ function App() {
       if (currentScreen === 'visitFlow' && flowStep === 2 && !stream) {
         try {
           const s = await navigator.mediaDevices.getUserMedia({ video: true });
-        setStream(s);
+          setStream(s);
         } catch {
           // kamera izni verilmemiş olabilir
         }
@@ -361,9 +365,13 @@ function App() {
             <BarChart3 className="w-5 h-5" />
           </button>
           {role === 'manager' && (
-            <button onClick={() => setCurrentScreen('assignment')}
-                    className={`px-4 py-2 rounded-lg ${currentScreen === 'assignment' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}>
-              <span className="text-sm font-medium">Atama</span>
+            <button
+              onClick={() => setCurrentScreen('assignment')}
+              className={`px-4 py-2 rounded-lg ${currentScreen === 'assignment' ? 'bg-[#F9C800]' : 'hover:bg-gray-100'}`}
+              aria-label="Atama"
+              title="Atama"
+            >
+              <UserCheck className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -375,11 +383,7 @@ function App() {
      GÖREV ATAMA (YÖNETİCİ)
   ========================= */
   if (currentScreen === 'assignment' && role === 'manager') {
-    // Basit panel: çoklu müşteri seç, dropdown’dan rep seç, ata
-    const [localSelected, setLocalSelected] = useState<Record<string, boolean>>({});
-    const [selectedRep, setSelectedRep] = useState<string>(allReps[0]?.id || '');
-
-    // Filtre & arama (assignment ekranında da kullanalım)
+    // Filtre & arama
     const q = searchQuery.toLowerCase().trim();
     const filtered = (q
       ? customers.filter(c =>
@@ -611,7 +615,7 @@ function App() {
               {/* Dikey çizgi */}
               <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-gray-200 rounded-full" />
               <div className="space-y-6 max-h-[420px] overflow-auto pr-2">
-                {byTime.slice(0, 6).map((c, idx) => (
+                {byTime.slice(0, 6).map((c) => (
                   <div key={c.id} className="relative pl-8">
                     {/* Nokta */}
                     <div className={`absolute left-1.5 top-1.5 w-3 h-3 rounded-full ring-4 ring-white ${c.status === 'Tamamlandı' ? 'bg-green-500' : c.status === 'Yolda' ? 'bg-blue-500' : 'bg-yellow-500'}`} />
@@ -846,7 +850,7 @@ function App() {
     const StepIndicator = () => (
       <div className="flex items-center gap-2 mb-4">
         {[1,2,3,4].map(n => (
-          <div key={n} className={`h-2 rounded-full ${flowStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{width: n === 4 ? 56 : 56}} />
+          <div key={n} className={`h-2 rounded-full ${flowStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{width: 56}} />
         ))}
       </div>
     );
