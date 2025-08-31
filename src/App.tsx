@@ -74,6 +74,16 @@ function App() {
     setCustomers(prev => prev.map(c => c.id === cust.id ? { ...cust } : c));
     setSelectedCustomer({ ...cust });
   };
+  if (currentScreen === 'teamMap' && role === 'manager') {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <div className="p-6">
+        <TeamMapScreen />
+      </div>
+    </div>
+  );
+}
 
   // Ekran switch
   if (currentScreen === 'login') return <LoginScreen onLogin={handleLogin} />;
