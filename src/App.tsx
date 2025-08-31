@@ -4,6 +4,8 @@ import { Role, Screen, VisitResult, Rep } from './types';
 import { Customer, SalesRep as MapSalesRep } from './RouteMap';
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
+import { Users } from 'lucide-react';
+import TeamMapScreen from './screens/TeamMapScreen';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
