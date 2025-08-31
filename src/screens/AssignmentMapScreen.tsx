@@ -141,18 +141,17 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         <div className="p-4">
             <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                    <button onClick={onBack} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
-                        <ArrowLeft className="w-4 h-4" /> Geri
-                    </button>
-                    <div className="flex items-center gap-2 ml-2">
-                        <RouteIcon className="w-5 h-5 text-[#0099CB]" /> Haritadan Görev Atama
-                    </div>
+                    <button onClick={onBack} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"> <ArrowLeft className="w-4 h-4" /> Geri </button>
+                    <div className="flex items-center gap-2 ml-2"> <RouteIcon className="w-5 h-5 text-[#0099CB]" /> Haritadan Görev Atama </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button onClick={handleOptimize} disabled={loading} className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90 disabled:bg-gray-400">
-                        {loading ? "Hesaplanıyor..." : "Optimize Et"}
-                    </button>
+                    <button onClick={handleOptimize} disabled={loading} className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90 disabled:bg-gray-400"> {loading ? "Hesaplanıyor..." : "Optimize Et"} </button>
                 </div>
+            </div>
+
+            {/* DEĞİŞİKLİK: İpucu metni haritanın üstüne taşındı */}
+            <div className="mb-3 text-xs text-gray-600">
+                <b>İpucu:</b> Manuel atama için sağdaki paneli kullanın. Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
             </div>
             
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
@@ -161,9 +160,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     <DrawControl onPolygonCreated={handlePolygonCreated} onDeleted={handleClearSelection} />
 
                     {reps.map((r) => { const hull = displayRegions[r.id]; return hull && hull.length >= 3 ? ( <Polygon key={`poly-${r.id}`} positions={hull as unknown as LatLngExpression[]} pathOptions={{ color: REP_COLORS[r.id] || "#444", fillColor: REP_FILLS[r.id] || "rgba(0,0,0,.1)", fillOpacity: 0.6, weight: 2 }} /> ) : null; })}
-                    
                     {reps.map((r) => ( <Marker key={r.id} position={[r.lat, r.lng]} icon={repIconFor(r)}> <Popup><b>{r.name}</b></Popup> </Marker> ))}
-                    
                     {customers.map((c) => {
                         const color = colorForCustomer(c);
                         const isSelected = selectedIds.includes(c.id);
@@ -183,25 +180,23 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                             </Marker>
                         );
                     })}
-                    
-                    {Object.entries(displayRoutes).map(([repId, route]) => (
-                        route.coords.length > 1 && (
-                            <Polyline key={`route-${repId}`} positions={route.coords as LatLngExpression[]} pathOptions={{ color: REP_COLORS[repId] || '#ff0000', weight: 5, opacity: 0.8, dashArray: '5, 10' }} />
-                        )
-                    ))}
+                    {Object.entries(displayRoutes).map(([repId, route]) => ( route.coords.length > 1 && ( <Polyline key={`route-${repId}`} positions={route.coords as LatLngExpression[]} pathOptions={{ color: REP_COLORS[repId] || '#ff0000', weight: 5, opacity: 0.8, dashArray: '5, 10' }} /> ) ))}
                 </MapContainer>
 
                 {pendingOptimization && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-2xl px-4">
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-2xl">
                         <div className="bg-white rounded-xl shadow-2xl overflow-hidden animate-fade-in-down transition-all duration-300">
                             <div onClick={() => setIsSummaryExpanded(!isSummaryExpanded)} className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-50">
                                 <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-full">
-                                        <Info className="w-6 h-6" />
-                                    </div>
+                                    <div className="bg-blue-100 text-blue-600 p-2 rounded-full"> <Info className="w-6 h-6" /> </div>
                                     <div>
                                         <h3 className="font-bold text-gray-800">Optimizasyon Ön İzlemesi</h3>
-                                        <p className="text-sm text-gray-600">Detaylar için tıklayın</p>
+                                        {/* DEĞİŞİKLİK: Özet metni güncellendi */}
+                                        <p className="text-sm text-gray-600">
+                                            Toplam <b>{pendingOptimization.summary.reduce((acc, item) => acc + item.customerCount, 0)} ziyaret</b>, 
+                                            <b> {pendingOptimization.summary.filter(item => item.customerCount > 0).length} satış uzmanına</b> atandı.
+                                            Tahmini Rota: <b>{fmtKm(pendingOptimization.summary.reduce((acc, item) => acc + (item.totalKm || 0), 0))}</b>
+                                        </p>
                                     </div>
                                 </div>
                                 <ChevronDown className={`w-6 h-6 text-gray-500 transition-transform duration-300 ${isSummaryExpanded ? 'rotate-180' : ''}`} />
@@ -210,24 +205,13 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                             {isSummaryExpanded && (
                                 <div className="p-4 border-t bg-gray-50/50">
                                      <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="border-b">
-                                                <th className="pb-2 font-semibold text-gray-700">Satış Uzmanı</th>
-                                                <th className="pb-2 font-semibold text-gray-700 text-center">Müşteri</th>
-                                                <th className="pb-2 font-semibold text-gray-700 text-right">Rota (km)</th>
-                                            </tr>
-                                        </thead>
+                                        <thead><tr className="border-b"><th className="pb-2 font-semibold text-gray-700">Satış Uzmanı</th><th className="pb-2 font-semibold text-gray-700 text-center">Müşteri</th><th className="pb-2 font-semibold text-gray-700 text-right">Rota (km)</th></tr></thead>
                                         <tbody>
                                             {pendingOptimization.summary.map(item => (
                                                 <tr key={item.repId} className="border-b last:border-none">
-                                                    <td className="py-2.5 font-medium flex items-center gap-2">
-                                                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: REP_COLORS[item.repId] || '#ccc' }}></span>
-                                                        {item.repName}
-                                                    </td>
+                                                    <td className="py-2.5 font-medium flex items-center gap-2"> <span className="w-3 h-3 rounded-full" style={{ backgroundColor: REP_COLORS[item.repId] || '#ccc' }}></span> {item.repName} </td>
                                                     <td className="py-2.5 text-center">{item.customerCount}</td>
-                                                    <td className="py-2.5 text-right font-mono">
-                                                        {item.totalKm === null ? <span className="text-red-500">N/A</span> : fmtKm(item.totalKm)}
-                                                    </td>
+                                                    <td className="py-2.5 text-right font-mono"> {item.totalKm === null ? <span className="text-red-500">N/A</span> : fmtKm(item.totalKm)} </td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -236,13 +220,8 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                             )}
                             
                             <div className="p-3 bg-gray-100 border-t flex justify-end gap-3">
-                                <button onClick={handleCancelOptimization} className="px-5 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors">
-                                    Çık
-                                </button>
-                                <button onClick={handleConfirmOptimization} className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors inline-flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5"/>
-                                    Onayla
-                                </button>
+                                <button onClick={handleCancelOptimization} className="px-5 py-2 rounded-lg bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition-colors"> Çık </button>
+                                <button onClick={handleConfirmOptimization} className="px-5 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors inline-flex items-center gap-2"> <CheckCircle2 className="w-5 h-5"/> Onayla </button>
                             </div>
                         </div>
                     </div>
@@ -278,40 +257,26 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                                             <div className="font-medium text-gray-900 text-sm">{c.name}</div>
                                             <div className="text-xs text-gray-600 max-w-[200px] truncate">{c.address}, {c.district}</div>
                                         </div>
-                                        <button onClick={() => handleToggleSelection(c.id)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Seçimden çıkar">
-                                            <XCircle className="w-4 h-4" />
-                                        </button>
+                                        <button onClick={() => handleToggleSelection(c.id)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Seçimden çıkar"> <XCircle className="w-4 h-4" /> </button>
                                     </div>
                                 ))
                             )}
                         </div>
                         {selectedIds.length > 0 && (
                             <div className="p-4 border-t bg-white space-y-2">
-                                <button onClick={handleAssignSelected} className="w-full px-4 py-2 rounded-lg bg-green-600 text-white font-semibold inline-flex items-center justify-center gap-2 hover:bg-green-700 transition-colors">
-                                    <CheckCircle2 className="w-5 h-5" /> {selectedIds.length} Müşteriyi Ata
-                                </button>
-                                <button onClick={handleClearSelection} className="w-full px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors">
-                                    <Trash2 className="w-4 h-4" /> Seçimi Temizle
-                                </button>
+                                <button onClick={handleAssignSelected} className="w-full px-4 py-2 rounded-lg bg-green-600 text-white font-semibold inline-flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"> <CheckCircle2 className="w-5 h-5" /> {selectedIds.length} Müşteriyi Ata </button>
+                                <button onClick={handleClearSelection} className="w-full px-4 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold inline-flex items-center justify-center gap-2 hover:bg-gray-300 transition-colors"> <Trash2 className="w-4 h-4" /> Seçimi Temizle </button>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {!panelOpen && (
-                    <button onClick={() => setPanelOpen(true)} className="absolute top-4 right-4 z-[1000] bg-white shadow-lg p-3 rounded-full hover:bg-gray-100" title="Paneli Aç">
-                        <Users className="w-5 h-5 text-gray-700" />
-                    </button>
-                )}
-
+                {!panelOpen && ( <button onClick={() => setPanelOpen(true)} className="absolute top-4 right-4 z-[1000] bg-white shadow-lg p-3 rounded-full hover:bg-gray-100" title="Paneli Aç"> <Users className="w-5 h-5 text-gray-700" /> </button> )}
                 {loading && ( <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-[1200]"> <div className="rounded-lg bg-white shadow-lg px-6 py-4 text-base font-semibold text-gray-700"> Optimizasyon ve Rota Hesaplamaları Yapılıyor... </div> </div> )}
-                
                 {toast && ( <div className="fixed top-4 right-4 z-[1100]"> <div className="bg-white rounded-xl shadow-lg border px-4 py-3 text-sm text-gray-800"> {toast} </div> </div> )}
             </div>
 
-            <div className="mt-2 text-xs text-gray-600">
-                <b>İpucu:</b> Manuel atama için sağdaki paneli kullanın. Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
-            </div>
+            {/* DEĞİŞİKLİK: İpucu metni haritanın altından silindi */}
         </div>
     );
 };
