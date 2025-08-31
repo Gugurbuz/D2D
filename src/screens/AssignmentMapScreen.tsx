@@ -6,15 +6,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 // @ts-ignore
 import "leaflet-draw";
-import {
-  ArrowLeft,
-  Route as RouteIcon,
-  Ruler,
-  Users,
-  CheckCircle2,
-  XCircle,
-  Info,
-} from "lucide-react";
+import { ArrowLeft, Route as RouteIcon, Ruler, Users, Info } from "lucide-react";
 import { Customer } from "../RouteMap";
 import { Rep } from "../types";
 
@@ -115,19 +107,21 @@ const repIcon = L.divIcon({
 /* ------------------------------------------------
    Çizim Kontrolü (alan tooltip'i kapalı)
 ------------------------------------------------ */
-const DrawControl: React.FC<{ onPolygon: (poly: L.Polygon) => void }> = ({ onPolygon }) => {
+const DrawControl: React.FC<{ onPolygon: (poly: L.Polygon) => void; onClear: () => void }> = ({
+  onPolygon,
+  onClear,
+}) => {
   const map = useMap();
   const drawnItemsRef = useRef<L.FeatureGroup>(new L.FeatureGroup());
 
   useEffect(() => {
-    // featureGroup'u haritaya ekleyelim (silme için gerekli)
     map.addLayer(drawnItemsRef.current);
 
     const drawControl = new L.Control.Draw({
       draw: {
         polygon: {
           allowIntersection: false,
-          showArea: false, // <-- Hatanın kaynağı olan tooltip’i kapat
+          showArea: false, // tooltip kapalı (eski hatayı önler)
           metric: true,
           shapeOptions: { color: "#0099CB", weight: 2 },
         },
@@ -154,8 +148,7 @@ const DrawControl: React.FC<{ onPolygon: (poly: L.Polygon) => void }> = ({ onPol
 
     const onDeleted = () => {
       drawnItemsRef.current.clearLayers();
-      // Silinince üst komponent seçim ve rotayı temizleyecek.
-      map.fire("assignment-clear" as any);
+      onClear();
     };
 
     map.on(L.Draw.Event.CREATED, onCreated);
@@ -167,7 +160,7 @@ const DrawControl: React.FC<{ onPolygon: (poly: L.Polygon) => void }> = ({ onPol
       map.removeControl(drawControl as any);
       map.removeLayer(drawnItemsRef.current);
     };
-  }, [map, onPolygon]);
+  }, [map, onPolygon, onClear]);
 
   return null;
 };
@@ -182,7 +175,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
   allReps,
   onBack,
 }) => {
-  const reps = allReps.filter(r => r.lat != null && r.lng != null); // güvenli liste
+  const reps = allReps.filter((r) => r.lat != null && r.lng != null);
   const mapCenter: LatLng = reps[0] ? [reps[0].lat as number, reps[0].lng as number] : [40.9368, 29.1553];
 
   const [selectedRepId, setSelectedRepId] = useState<string>(reps[0]?.id || "rep-1");
@@ -195,13 +188,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // özet modal
-  const [showSummary, setShowSummary] = useState(false);
-  const [summaryRows, setSummaryRows] = useState<{ repId: string; repName: string; count: number; km: number | null }[]>([]);
-
-  // toast
-  const [toast, setToast] = useState<string | null>(null);
 
   const selectedCustomers = useMemo(
     () => customers.filter((c) => selectedIds.includes(c.id)),
@@ -218,18 +204,18 @@ const AssignmentMapScreen: React.FC<Props> = ({
     if (polygonLayerRef.current) polygonLayerRef.current.remove();
     polygonLayerRef.current = poly;
 
-    const latlngs = (poly.getLatLngs()[0] as L.LatLng[]).map(p => [p.lat, p.lng]) as LatLng[];
+    const latlngs = (poly.getLatLngs()[0] as L.LatLng[]).map((p) => [p.lat, p.lng]) as LatLng[];
 
     // poligon içindeki müşteriler
-    const inside = customers.filter(c => pointInPolygon([c.lat, c.lng], latlngs));
-    const insideIds = inside.map(c => c.id);
+    const inside = customers.filter((c) => pointInPolygon([c.lat, c.lng], latlngs));
+    const insideIds = inside.map((c) => c.id);
     setSelectedIds(insideIds);
 
     // otomatik atama (seçili rep'e)
     if (insideIds.length) {
-      setAssignments(prev => {
+      setAssignments((prev) => {
         const n = { ...prev };
-        insideIds.forEach(id => (n[id] = selectedRepId));
+        insideIds.forEach((id) => (n[id] = selectedRepId));
         return n;
       });
     }
@@ -238,15 +224,13 @@ const AssignmentMapScreen: React.FC<Props> = ({
     await computeRouteForSelection(inside, selectedRepId);
   };
 
-  // Harita "assignment-clear" olayı → seçim/rota temizle
-  useEffect(() => {
-    // @ts-ignore
-    const handler = () => { setSelectedIds([]); setRouteCoords([]); setRouteKm(null); };
-    // Leaflet map'i hook'tan almak zahmetli, basit çözüm: window üstünden dinleme yok.
-    // Bunu atlıyoruz çünkü DrawControl zaten map.fire ile tetikliyor; burada cleanup
-    // üst komponentte manuel yapılabilir. (İhtiyaç yoksa boş bırakın.)
-    return () => {};
-  }, []);
+  // DrawControl silince temizle
+  const handleClear = () => {
+    polygonLayerRef.current = null;
+    setSelectedIds([]);
+    setRouteCoords([]);
+    setRouteKm(null);
+  };
 
   // Rota hesaplama (seçilenler için)
   const computeRouteForSelection = async (list: Customer[], rid: string) => {
@@ -258,16 +242,16 @@ const AssignmentMapScreen: React.FC<Props> = ({
       if (!list.length) return;
 
       const rep =
-        reps.find(r => r.id === rid && r.lat != null && r.lng != null) ||
-        reps.find(r => r.lat != null && r.lng != null);
+        reps.find((r) => r.id === rid && r.lat != null && r.lng != null) ||
+        reps.find((r) => r.lat != null && r.lng != null);
 
-      if (!rep) return; // güvenlik
+      if (!rep) return;
 
       const start: LatLng = [rep.lat as number, rep.lng as number];
 
       // OSRM trip (rep + müşteriler)
-      const coords = [start, ...list.map(c => [c.lat, c.lng] as LatLng)]
-        .map(p => `${p[1]},${p[0]}`)
+      const coords = [start, ...list.map((c) => [c.lat, c.lng] as LatLng)]
+        .map((p) => `${p[1]},${p[0]}`)
         .join(";");
 
       const data = await osrmTrip(coords);
@@ -279,11 +263,11 @@ const AssignmentMapScreen: React.FC<Props> = ({
     } catch {
       // Fallback: sırayla haversine
       const rep =
-        reps.find(r => r.id === rid && r.lat != null && r.lng != null) ||
-        reps.find(r => r.lat != null && r.lng != null);
+        reps.find((r) => r.id === rid && r.lat != null && r.lng != null) ||
+        reps.find((r) => r.lat != null && r.lng != null);
       if (!rep) return;
 
-      const seq = [[rep.lat as number, rep.lng as number] as LatLng, ...list.map(c => [c.lat, c.lng] as LatLng)];
+      const seq = [[rep.lat as number, rep.lng as number] as LatLng, ...list.map((c) => [c.lat, c.lng] as LatLng)];
       let acc = 0;
       for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
       setRouteCoords(seq);
@@ -291,34 +275,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  // Rota Özeti
-  const buildSummary = async () => {
-    const rows: { repId: string; repName: string; count: number; km: number | null }[] = [];
-    for (const r of reps) {
-      const list = customers.filter(c => assignments[c.id] === r.id);
-      if (!list.length || r.lat == null || r.lng == null) {
-        rows.push({ repId: r.id, repName: r.name, count: list.length, km: list.length ? 0 : 0 });
-        continue;
-      }
-      let km: number | null = null;
-      try {
-        const coords = [[r.lat, r.lng] as LatLng, ...list.map(c => [c.lat, c.lng] as LatLng)]
-          .map(p => `${p[1]},${p[0]}`)
-          .join(";");
-        const data = await osrmTrip(coords);
-        km = (data.trips[0].distance as number) / 1000;
-      } catch {
-        const seq = [[r.lat, r.lng] as LatLng, ...list.map(c => [c.lat, c.lng] as LatLng)];
-        let acc = 0;
-        for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
-        km = acc;
-      }
-      rows.push({ repId: r.id, repName: r.name, count: list.length, km });
-    }
-    setSummaryRows(rows);
-    setShowSummary(true);
   };
 
   return (
@@ -358,20 +314,13 @@ const AssignmentMapScreen: React.FC<Props> = ({
 
           <div className="text-sm text-gray-700 flex items-center gap-2">
             <Info className="w-4 h-4" />
-            <span>Seçilen: <b>{selectedIds.length}</b></span>
+            <span>Seçilen: <b>{selectedCustomers.length}</b></span>
           </div>
 
           <div className="text-sm text-gray-700 flex items-center gap-2">
             <Ruler className="w-4 h-4" />
             <span>Rota: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b></span>
           </div>
-
-          <button
-            onClick={buildSummary}
-            className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90"
-          >
-            Rota Özeti
-          </button>
         </div>
       </div>
 
@@ -381,7 +330,7 @@ const AssignmentMapScreen: React.FC<Props> = ({
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
 
           {/* Çizim Kontrolü */}
-          <DrawControl onPolygon={handlePolygonCreated} />
+          <DrawControl onPolygon={handlePolygonCreated} onClear={handleClear} />
 
           {/* Rep Marker'ları (koord. olanlar) */}
           {reps.map((r) => (
@@ -404,7 +353,9 @@ const AssignmentMapScreen: React.FC<Props> = ({
                 <Popup>
                   <div className="space-y-1">
                     <div className="font-semibold">{c.name}</div>
-                    <div className="text-sm text-gray-600">{c.address}, {c.district}</div>
+                    <div className="text-sm text-gray-600">
+                      {c.address}, {c.district}
+                    </div>
                     <div className="text-sm">Saat: {c.plannedTime}</div>
                     <div className="text-sm">Tel: {c.phone}</div>
                     <div className="text-xs text-gray-500">
@@ -448,70 +399,6 @@ const AssignmentMapScreen: React.FC<Props> = ({
         Çokgen aracı ile bir alan çizdiğinizde, alan içindeki müşteriler seçtiğiniz satış
         uzmanına otomatik atanır ve rota hesaplanır.
       </div>
-
-      {/* Özet Modal */}
-      {showSummary && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-xl">
-            <div className="px-5 py-4 border-b flex items-center justify-between">
-              <div className="font-semibold text-gray-900 flex items-center gap-2">
-                <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-                Rota Özeti
-              </div>
-              <button className="p-2 rounded-lg hover:bg-gray-100" onClick={() => setShowSummary(false)} aria-label="Kapat">
-                <XCircle className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            <div className="p-5">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-600">
-                      <th className="py-2">Satış Uzmanı</th>
-                      <th className="py-2">Atanan Müşteri</th>
-                      <th className="py-2">Toplam Yol</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {summaryRows.map((row) => (
-                      <tr key={row.repId} className="border-t">
-                        <td className="py-2">{row.repName}</td>
-                        <td className="py-2">{row.count}</td>
-                        <td className="py-2">{fmtKm(row.km)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-5 flex items-center justify-end gap-2">
-                <button onClick={() => setShowSummary(false)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
-                  Devam Et
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSummary(false);
-                    setToast("Görev atamaları tamamlandı.");
-                    setTimeout(() => setToast(null), 2500);
-                  }}
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white inline-flex items-center gap-2"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Tamamla
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed top-4 right-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg border px-4 py-3 text-sm text-gray-800">{toast}</div>
-        </div>
-      )}
     </div>
   );
 };
