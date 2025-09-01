@@ -15,7 +15,7 @@ import {
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
 import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
-import ThemeSwitcher from './ThemeSwitcher'; // YENİLİK: ThemeSwitcher'ı import ettik
+import ThemeSwitcher from './ThemeSwitcher';
 
 type Props = {
   agentName: string;
@@ -107,6 +107,8 @@ const Navigation: React.FC<Props> = ({
                   <Btn onClick={() => setCurrentScreen("teamMap")} active={currentScreen === "teamMap"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
                 </>
               )}
+              
+              {/* MESAJLAR BUTONU */}
               <Btn onClick={() => setCurrentScreen("messages")} active={currentScreen === "messages"} label="Mesajlar">
                 <MessageSquare className="w-5 h-5" />
                 {messageUnreadCount > 0 && (
@@ -117,7 +119,7 @@ const Navigation: React.FC<Props> = ({
                 )}
               </Btn>
 
-              {/* Bildirimler */}
+              {/* BİLDİRİMLER BUTONU */}
               <div className="relative shrink-0" ref={notifAnchorRef}>
                 <button
                   type="button"
@@ -132,13 +134,13 @@ const Navigation: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* YENİLİK: Tema Değiştirici Butonu buraya eklendi */}
+              {/* TEMA DEĞİŞTİRİCİ BUTONU */}
               <div className="shrink-0">
                 <ThemeSwitcher />
               </div>
             </div>
             
-            {/* Bildirim Dropdown'ı için karanlık mod stilleri */}
+            {/* BİLDİRİM AÇILIR MENÜSÜ */}
             {notifOpen && (
               <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
