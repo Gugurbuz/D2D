@@ -40,4 +40,11 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
           </div>
         </div>
         <button onClick={onLogin} className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors">
-          Giriş
+          Giriş Yap
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+export default LoginScreen;
