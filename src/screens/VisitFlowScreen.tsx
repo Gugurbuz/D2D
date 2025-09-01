@@ -1,346 +1,464 @@
 // src/screens/VisitFlowScreen.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useReducer, useState, useRef, useEffect } from 'react';
+
+// İkonları import ediyoruz
 import {
   IdCard, Camera, Smartphone, FileText, PenLine, Send,
-  ChevronRight, ShieldCheck, CheckCircle
+  ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
+  Loader2, ScanLine, Nfc,
 } from 'lucide-react';
 import { Customer } from '../RouteMap';
 
+// --- TİPLER VE STATE TANIMLAMALARI ---
+type VisitStatus =
+  | 'Pending'
+  | 'InProgress'
+  | 'Completed'
+  | 'Rejected'
+  | 'Unreachable'
+  | 'Postponed';
+
+type FlowStep = 1 | 2 | 3 | 4;
+
+type VerificationStatus = 'idle' | 'scanning' | 'success' | 'error';
+
+type State = {
+  visitStatus: VisitStatus;
+  currentStep: FlowStep;
+  idPhoto: string | null;
+  ocrStatus: VerificationStatus;
+  nfcStatus: VerificationStatus;
+  contractAccepted: boolean;
+  smsSent: boolean;
+  notes: string;
+};
+
+type Action =
+  | { type: 'SET_VISIT_STATUS'; payload: VisitStatus }
+  | { type: 'SET_STEP'; payload: FlowStep }
+  | { type: 'SET_ID_PHOTO'; payload: string | null }
+  | { type: 'SET_OCR_STATUS'; payload: VerificationStatus }
+  | { type: 'SET_NFC_STATUS'; payload: VerificationStatus }
+  | { type: 'SET_CONTRACT_ACCEPTED'; payload: boolean }
+  | { type: 'SET_SMS_SENT'; payload: boolean }
+  | { type: 'SET_NOTES'; payload: string }
+  | { type: 'RESET' };
+
+// --- REDUCER FONKSİYONU ---
+const initialState: State = {
+  visitStatus: 'Pending',
+  currentStep: 1,
+  idPhoto: null,
+  ocrStatus: 'idle',
+  nfcStatus: 'idle',
+  contractAccepted: false,
+  smsSent: false,
+  notes: '',
+};
+
+function visitReducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_VISIT_STATUS':
+      return { ...initialState, visitStatus: action.payload, notes: state.notes };
+    case 'SET_STEP':
+      return { ...state, currentStep: action.payload };
+    case 'SET_ID_PHOTO':
+      return { ...state, idPhoto: action.payload };
+    case 'SET_OCR_STATUS':
+      return { ...state, ocrStatus: action.payload };
+    case 'SET_NFC_STATUS':
+      return { ...state, nfcStatus: action.payload };
+    case 'SET_CONTRACT_ACCEPTED':
+      return { ...state, contractAccepted: action.payload };
+    case 'SET_SMS_SENT':
+      return { ...state, smsSent: action.payload };
+    case 'SET_NOTES':
+      return { ...state, notes: action.payload };
+    case 'RESET':
+      return initialState;
+    default:
+      return state;
+  }
+}
+
+// --- PROPS ---
 type Props = {
   customer: Customer;
   onCloseToList: () => void;
-  onCompleteVisit: (updated: Customer) => void;
+  onCompleteVisit: (updated: Customer, status: VisitStatus, notes: string) => void;
 };
 
+// --- ANA BİLEŞEN ---
 const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteVisit }) => {
-  const [flowStep, setFlowStep] = useState(1);
-  const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || '');
-  const [flowSmsSent, setFlowSmsSent] = useState(false);
-  const [flowContractAccepted, setFlowContractAccepted] = useState(false);
+  const [state, dispatch] = useReducer(visitReducer, initialState);
 
-  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Kamera state
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [nfcChecked, setNfcChecked] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [usingBack, setUsingBack] = useState(true);
-
-  const isLocalhost = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
-  const isSecure = window.isSecureContext || window.location.protocol === 'https:' || isLocalhost;
-
-  // --- İMZA CANVAS ---
-  useEffect(() => {
-    const canvas = signatureCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    let drawing = false;
-
-    const getPos = (e: any, c: HTMLCanvasElement) => {
-      const rect = c.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return { x: clientX - rect.left, y: clientY - rect.top };
-    };
-    const start = (e: MouseEvent | TouchEvent) => { drawing = true; const { x, y } = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(x, y); };
-    const move = (e: MouseEvent | TouchEvent) => { if (!drawing) return; const { x, y } = getPos(e, canvas); ctx.lineTo(x, y); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); };
-    const end = () => { drawing = false; };
-    canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-    canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
-    return () => {
-      canvas.removeEventListener('mousedown', start); canvas.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
-      canvas.removeEventListener('touchstart', start); canvas.removeEventListener('touchmove', move); window.removeEventListener('touchend', end);
-    };
-  }, [flowStep]);
-
-  // --- KAMERA: Başlat / Durdur ---
-  const startCamera = async (back = true) => {
-    setCameraError(null);
-    try {
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: back ? { ideal: 'environment' } : { ideal: 'user' }
-        },
-        audio: false
-      } as any;
-      const s = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(s);
-      setUsingBack(back);
-    } catch (err: any) {
-      setCameraError(`${err?.name || 'Hata'}: ${err?.message || 'Kamera başlatılamadı'}`);
+  const handleSaveVisitResult = (status: VisitStatus) => {
+    dispatch({ type: 'SET_VISIT_STATUS', payload: status });
+    if (status !== 'InProgress') {
+      onCompleteVisit(customer, status, state.notes);
+      onCloseToList();
     }
   };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      setStream(null);
-    }
-  };
-
-  // stream'i <video>'ya bağla
-  useEffect(() => {
-    const v = videoRef.current;
-    if (v && stream) {
-      v.srcObject = stream as any;
-      // iOS Safari için: muted + playsInline + autoplay
-      v.muted = true;
-      v.playsInline = true;
-      // play() user gesture gerektirebilir ama muted+playsInline genelde yeterli
-      v.play().catch(() => {/* sessizce yut */});
-    }
-  }, [stream]);
-
-  // Adımdan çıkarken kamerayı kapat
-  useEffect(() => {
-    if (flowStep !== 2) stopCamera();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flowStep]);
 
   const StepIndicator = () => (
     <div className="flex items-center gap-2 mb-4">
-      {[1,2,3,4].map(n => (
-        <div key={n} className={`h-2 rounded-full ${flowStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{ width: 56 }} />
+      {[1, 2, 3, 4].map(n => (
+        <div key={n} className={`h-2 rounded-full transition-colors ${state.currentStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{ width: 56 }} />
       ))}
     </div>
   );
 
-  const complete = () => {
-    onCompleteVisit({ ...customer, status: 'Tamamlandı' as const });
-    onCloseToList();
-  };
-
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-2xl font-bold text-gray-900">Ziyaret Akışı</h1>
-        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900">← Listeye Dön</button>
+    <div className="p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Ziyaret: {customer.name}</h1>
+        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium">← Listeye Dön</button>
       </div>
-      <StepIndicator />
 
-      {/* ADIM 1 */}
-      {flowStep === 1 && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <IdCard className="w-5 h-5 text-[#0099CB]" />
-            <h3 className="text-lg font-semibold">Müşteri Bilgileri</h3>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div><label className="text-sm text-gray-600">Ad Soyad</label><input defaultValue={customer.name} className="w-full mt-1 p-2 border rounded-lg" /></div>
-            <div><label className="text-sm text-gray-600">Telefon</label><input defaultValue={customer.phone} className="w-full mt-1 p-2 border rounded-lg" /></div>
-            <div className="md:col-span-2"><label className="text-sm text-gray-600">Adres</label><input defaultValue={`${customer.address}, ${customer.district}`} className="w-full mt-1 p-2 border rounded-lg" /></div>
-            <div><label className="text-sm text-gray-600">Sayaç No</label><input defaultValue={customer.meterNumber} className="w-full mt-1 p-2 border rounded-lg" /></div>
-            <div><label className="text-sm text-gray-600">Tarife</label><input defaultValue={customer.tariff} className="w-full mt-1 p-2 border rounded-lg" /></div>
-          </div>
-          <div className="mt-6 text-right">
-            <button onClick={() => setFlowStep(2)} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
-              Devam <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+      {state.visitStatus === 'Pending' && (
+        <VisitStatusSelection onSave={handleSaveVisitResult} notes={state.notes} setNotes={(notes) => dispatch({ type: 'SET_NOTES', payload: notes })} />
       )}
 
-      {/* ADIM 2: Kimlik Doğrulama */}
-      {flowStep === 2 && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          {!isSecure && (
-            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-amber-900 text-sm">
-              Mobilde kamerayı açmak için HTTPS gerekir. Hızlı çözüm:
-              <b> ngrok</b>/<b>Cloudflare Tunnel</b> ile 5173 portunu tünelleyin veya
-              Vite’i HTTPS ile çalıştırın (örn. <code>vite --https --host</code> ve yerel sertifika).
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 mb-4">
-            <Camera className="w-5 h-5 text-[#0099CB]" />
-            <h3 className="text-lg font-semibold">Kimlik Doğrulama</h3>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 items-start">
-            {/* Kamera */}
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Kamera Önizleme</p>
-              <div className="aspect-video bg-black/5 rounded-lg overflow-hidden flex items-center justify-center">
-                {stream ? (
-                  <video
-                    ref={videoRef}
-                    className="w-full h-full object-cover"
-                    autoPlay
-                    muted
-                    playsInline
-                    controls={false}
-                    // iOS PIP engelle:
-                    disablePictureInPicture
-                  />
-                ) : (
-                  <div className="text-gray-500 text-sm p-6 text-center">
-                    Kamera başlatılmadı.
-                    <div className="mt-2">
-                      <button
-                        onClick={() => startCamera(true)}
-                        className="px-4 py-2 bg-[#0099CB] text-white rounded-lg"
-                      >
-                        Kamerayı Başlat (Arka)
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={() => (stream ? stopCamera() : startCamera(usingBack))}
-                  className="px-4 py-2 bg-white border rounded-lg"
-                >
-                  {stream ? 'Kamerayı Durdur' : 'Kamerayı Başlat'}
-                </button>
-                <button
-                  onClick={() => { stopCamera(); startCamera(!usingBack); }}
-                  className="px-4 py-2 bg-white border rounded-lg"
-                >
-                  Ön/Arka Değiştir
-                </button>
-                <button onClick={() => alert('Fotoğraf çekildi (simülasyon).')} className="px-4 py-2 bg-[#0099CB] text-white rounded-lg">
-                  Fotoğraf Çek
-                </button>
-                <button onClick={() => alert('Kimlik OCR işlendi (simülasyon).')} className="px-4 py-2 bg-white border rounded-lg">
-                  OCR İşle
-                </button>
-              </div>
-
-              {cameraError && (
-                <div className="mt-2 text-sm text-red-600">
-                  {cameraError}
-                  {cameraError.includes('NotAllowedError') && ' — Tarayıcı izinlerini kontrol edin.'}
-                </div>
-              )}
-            </div>
-
-            {/* NFC */}
-            <div>
-              <p className="text-sm text-gray-600 mb-2">NFC Kimlik Okuma</p>
-              <div className="p-4 border rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <Smartphone className="w-4 h-4 text-[#0099CB]" />
-                  <span>Telefonu kimliğe yaklaştırın</span>
-                </div>
-                <button
-                  onClick={() => setNfcChecked(true)}
-                  className={`px-4 py-2 rounded-lg ${nfcChecked ? 'bg-green-600 text-white' : 'bg-[#F9C800] text-gray-900'}`}
-                >
-                  {nfcChecked ? 'NFC Başarılı' : 'NFC Okut'}
-                </button>
-                <p className="text-xs text-gray-500 mt-2">
-                  Not: Tarayıcı NFC API desteklemiyorsa bu adım simüle edilir.
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <label className="text-sm text-gray-600">Doğrulama Notu</label>
-                <textarea className="w-full mt-1 p-2 border rounded-lg" rows={3} placeholder="Kimlik bilgileri kontrol notları..." />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-between">
-            <button onClick={() => setFlowStep(1)} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-            <button
-              onClick={() => setFlowStep(3)}
-              disabled={!nfcChecked}
-              className={`px-6 py-3 rounded-lg ${nfcChecked ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}
-            >
-              Devam
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ADIM 3 */}
-      {flowStep === 3 && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <FileText className="w-5 h-5 text-[#0099CB]" />
-            <h3 className="text-lg font-semibold">Sözleşme Onayı</h3>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
-              <div className="h-64 border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
-                <div className="text-center text-gray-500 text-sm">Sözleşme PDF önizlemesi (placeholder)</div>
-              </div>
-              <label className="mt-4 flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={flowContractAccepted} onChange={(e) => setFlowContractAccepted(e.target.checked)} />
-                Koşulları okudum, onaylıyorum.
-              </label>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 mb-2 flex items-center gap-2"><PenLine className="w-4 h-4" /> Islak/Dijital İmza</p>
-              <div className="border rounded-lg p-2">
-                <canvas ref={signatureCanvasRef} width={520} height={180} className="w-full h-[180px] bg-white rounded" />
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => {
-                      const c = signatureCanvasRef.current; if (!c) return;
-                      const ctx = c.getContext('2d'); if (!ctx) return;
-                      ctx.clearRect(0, 0, c.width, c.height);
-                    }}
-                    className="px-3 py-2 bg-white border rounded-lg"
-                  >
-                    Temizle
-                  </button>
-                  <button onClick={() => alert('İmza kaydedildi (simülasyon).')} className="px-3 py-2 bg-[#0099CB] text-white rounded-lg">
-                    İmzayı Kaydet
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <p className="text-sm text-gray-600 mb-2 flex items-center gap-2"><Send className="w-4 h-4" /> SMS ile Onay</p>
-                <div className="flex gap-2">
-                  <input value={flowSmsPhone} onChange={(e)=>setFlowSmsPhone(e.target.value)} className="flex-1 p-2 border rounded-lg" placeholder="5XX XXX XX XX" />
-                  <button onClick={() => setFlowSmsSent(true)} className="px-4 py-2 bg-[#F9C800] rounded-lg">SMS Gönder</button>
-                </div>
-                {flowSmsSent && <div className="mt-2 flex items-center gap-2 text-green-700 text-sm"><ShieldCheck className="w-4 h-4" />Doğrulama SMS’i gönderildi (simülasyon).</div>}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-between">
-            <button onClick={() => setFlowStep(2)} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-            <button
-              onClick={() => setFlowStep(4)}
-              disabled={!flowContractAccepted}
-              className={`px-6 py-3 rounded-lg ${flowContractAccepted ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-600'}`}
-            >
-              Devam
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ADIM 4 */}
-      {flowStep === 4 && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <CheckCircle className="w-5 h-5 text-[#0099CB]" />
-            <h3 className="text-lg font-semibold">Satışı Tamamla</h3>
-          </div>
-          <div className="p-4 border rounded-lg bg-gray-50">
-            <p className="text-gray-800"><b>Müşteri:</b> {customer.name}</p>
-            <p className="text-gray-800"><b>Adres:</b> {customer.address}, {customer.district}</p>
-            <p className="text-gray-800"><b>Tarife:</b> {customer.tariff}</p>
-            <p className="text-gray-800"><b>Telefon:</b> {customer.phone}</p>
-          </div>
-          <div className="mt-6 flex justify-between">
-            <button onClick={() => setFlowStep(3)} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-            <button onClick={complete} className="px-6 py-3 rounded-lg bg-green-600 text-white">Satışı Kaydet</button>
-          </div>
-        </div>
+      {state.visitStatus === 'InProgress' && (
+        <>
+          <StepIndicator />
+          {state.currentStep === 1 && <CustomerInfoStep customer={customer} dispatch={dispatch} />}
+          {state.currentStep === 2 && <IdVerificationStep state={state} dispatch={dispatch} />}
+          {state.currentStep === 3 && <ContractStep state={state} dispatch={dispatch} customer={customer} />}
+          {state.currentStep === 4 && <CompletionStep customer={customer} dispatch={dispatch} onComplete={() => handleSaveVisitResult('Completed')} />}
+        </>
       )}
     </div>
   );
 };
+
+// ==================================================================
+// ==================== YARDIMCI BİLEŞENLER =========================
+// ==================================================================
+
+// --- ZİYARET DURUM SEÇİM EKRANI ---
+const VisitStatusSelection: React.FC<{ onSave: (status: VisitStatus) => void; notes: string; setNotes: (notes: string) => void; }> = ({ onSave, notes, setNotes }) => (
+  <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+    <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sonucunu Belirtin</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button onClick={() => onSave('InProgress')} className="p-4 border rounded-lg text-left hover:bg-green-50 hover:border-green-400 transition-colors flex items-center gap-4">
+        <CheckCircle className="w-8 h-8 text-green-500" />
+        <div>
+          <p className="font-semibold text-green-800">Sözleşme Başlat</p>
+          <p className="text-sm text-gray-600">Müşteri teklifi kabul etti, sürece başla.</p>
+        </div>
+      </button>
+      <button onClick={() => onSave('Rejected')} className="p-4 border rounded-lg text-left hover:bg-red-50 hover:border-red-400 transition-colors flex items-center gap-4">
+        <XCircle className="w-8 h-8 text-red-500" />
+        <div>
+          <p className="font-semibold text-red-800">Teklifi Reddetti</p>
+          <p className="text-sm text-gray-600">Müşteri teklifi istemedi.</p>
+        </div>
+      </button>
+      <button onClick={() => onSave('Unreachable')} className="p-4 border rounded-lg text-left hover:bg-yellow-50 hover:border-yellow-400 transition-colors flex items-center gap-4">
+        <UserX className="w-8 h-8 text-yellow-500" />
+        <div>
+          <p className="font-semibold text-yellow-800">Ulaşılamadı</p>
+          <p className="text-sm text-gray-600">Müşteri adreste bulunamadı.</p>
+        </div>
+      </button>
+      <button onClick={() => onSave('Postponed')} className="p-4 border rounded-lg text-left hover:bg-blue-50 hover:border-blue-400 transition-colors flex items-center gap-4">
+        <Clock className="w-8 h-8 text-blue-500" />
+        <div>
+          <p className="font-semibold text-blue-800">Ertelendi</p>
+          <p className="text-sm text-gray-600">Müşteri daha sonra görüşmek istedi.</p>
+        </div>
+      </button>
+    </div>
+    <div className="mt-6">
+        <label htmlFor="visitNotes" className="block text-sm font-medium text-gray-700 mb-1">Ziyaret Notları (Reddetme/Erteleme Sebebi vb.)</label>
+        <textarea
+            id="visitNotes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            className="w-full p-2 border rounded-lg"
+            placeholder="Örn: Müşteri mevcut sağlayıcısından memnun olduğunu belirtti."
+        />
+    </div>
+  </div>
+);
+
+// --- ADIM 1: Müşteri Bilgileri ---
+const CustomerInfoStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action> }> = ({ customer, dispatch }) => (
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+      <div className="flex items-center gap-3 mb-4">
+        <IdCard className="w-5 h-5 text-[#0099CB]" />
+        <h3 className="text-lg font-semibold">1. Müşteri Bilgileri Kontrolü</h3>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div><label className="text-sm text-gray-600">Ad Soyad</label><input defaultValue={customer.name} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+        <div><label className="text-sm text-gray-600">Telefon</label><input defaultValue={customer.phone} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+        <div className="md:col-span-2"><label className="text-sm text-gray-600">Adres</label><input defaultValue={`${customer.address}, ${customer.district}`} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+      </div>
+      <div className="mt-6 text-right">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
+          Bilgiler Doğru, Devam Et <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+);
+
+// --- ADIM 2: Kimlik Doğrulama ---
+const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Action> }> = ({ state, dispatch }) => {
+  const [isBypassChecked, setIsBypassChecked] = useState(false);
+  
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  const startCamera = async () => {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    setCameraError(null);
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setStream(s);
+    } catch (err: any) {
+      setCameraError(`Kamera başlatılamadı: ${err.message}`);
+    }
+  };
+  
+  const stopCamera = () => {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+    }
+  };
+
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    if (videoElement && stream) {
+      videoElement.srcObject = stream;
+      const playPromise = videoElement.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error("Video oynatma hatası:", error);
+          setCameraError("Kamera başlatıldı ancak video otomatik oynatılamadı.");
+        });
+      }
+    }
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  const handleCaptureAndOcr = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    const photoDataUrl = canvas.toDataURL('image/jpeg');
+    dispatch({ type: 'SET_ID_PHOTO', payload: photoDataUrl });
+    dispatch({ type: 'SET_OCR_STATUS', payload: 'scanning' });
+    stopCamera(); 
+    setTimeout(() => {
+      if (Math.random() < 0.8) {
+        dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+      } else {
+        dispatch({ type: 'SET_OCR_STATUS', payload: 'error' });
+        dispatch({ type: 'SET_ID_PHOTO', payload: null });
+      }
+    }, 2500);
+  };
+
+  const handleNfcRead = () => {
+    dispatch({ type: 'SET_NFC_STATUS', payload: 'scanning' });
+    setTimeout(() => {
+        dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
+    }, 2000);
+  };
+  
+  const handleBypassToggle = (isChecked: boolean) => {
+    setIsBypassChecked(isChecked);
+    if (isChecked) {
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+      dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
+      stopCamera();
+    } else {
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' });
+      dispatch({ type: 'SET_NFC_STATUS', payload: 'idle' });
+    }
+  };
+
+  const isVerified = state.ocrStatus === 'success' && state.nfcStatus === 'success';
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+        <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <ScanLine className="w-5 h-5 text-[#0099CB]" />
+              <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
+            </div>
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
+                <input
+                    type="checkbox"
+                    id="bypass-verification"
+                    checked={isBypassChecked}
+                    onChange={(e) => handleBypassToggle(e.target.checked)}
+                    className="h-4 w-4 rounded text-[#0099CB] focus:ring-[#0099CB]"
+                />
+                <label htmlFor="bypass-verification" className="text-sm font-medium text-yellow-800">[TEST] Doğrulamayı Atla</label>
+            </div>
+        </div>
+        
+        <fieldset disabled={isBypassChecked}>
+          <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity ${isBypassChecked ? 'opacity-40' : 'opacity-100'}`}>
+              <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Kimlik Fotoğrafı</p>
+                  <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+                      <video 
+                          ref={videoRef} 
+                          className={`w-full h-full object-cover ${!stream ? 'hidden' : ''}`} 
+                          autoPlay 
+                          muted 
+                          playsInline 
+                      />
+                      {stream && <div className="absolute inset-0 border-[3px] border-dashed border-white/70 m-4 rounded-xl pointer-events-none" />}
+                      {!stream && state.idPhoto && <img src={state.idPhoto} alt="Çekilen Kimlik" className="w-full h-full object-contain" />}
+                      {!stream && !state.idPhoto && <div className="text-gray-400 p-4 text-center">Kamera kapalı veya izin bekleniyor.</div>}
+                      <canvas ref={canvasRef} className="hidden" />
+                  </div>
+                  {cameraError && <p className="text-red-600 text-sm mt-2">{cameraError}</p>}
+                  
+                  <div className="mt-4">
+                      {state.ocrStatus === 'idle' && (
+                          <button onClick={stream ? handleCaptureAndOcr : startCamera} className="w-full bg-[#0099CB] text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2">
+                              <Camera className="w-4 h-4" /> {stream ? 'Fotoğraf Çek ve Doğrula' : 'Kamerayı Başlat'}
+                          </button>
+                      )}
+                      {state.ocrStatus === 'scanning' && <div className="text-center p-2"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0099CB]" /> <p>Kimlik okunuyor...</p></div>}
+                      {state.ocrStatus === 'success' && <div className="text-center p-2 text-green-600 font-semibold flex items-center justify-center gap-2"><CheckCircle className="w-5 h-5"/> Kimlik başarıyla okundu.</div>}
+                      {state.ocrStatus === 'error' && (
+                          <div className="text-center p-2 text-red-600">
+                              <p className="font-semibold">Kimlik okunamadı!</p>
+                              <p className="text-sm">Lütfen daha aydınlık bir ortamda, yansıma olmadan tekrar deneyin.</p>
+                              <button onClick={() => dispatch({type: 'SET_OCR_STATUS', payload: 'idle'})} className="mt-2 text-sm bg-gray-200 px-3 py-1 rounded">Tekrar Dene</button>
+                          </div>
+                      )}
+                  </div>
+              </div>
+              <div className={`transition-opacity duration-500 ${state.ocrStatus === 'success' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                   <p className="text-sm font-medium text-gray-700 mb-2">Çipli Kimlik (NFC) Onayı</p>
+                   <div className="p-4 border rounded-lg h-full flex flex-col justify-center items-center">
+                      {state.nfcStatus === 'idle' && <button onClick={handleNfcRead} className="bg-[#F9C800] text-gray-900 px-4 py-2 rounded-lg flex items-center gap-2"><Nfc className="w-5 h-5" /> NFC ile Oku</button>}
+                      {state.nfcStatus === 'scanning' && <div className="text-center p-2"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#F9C800]" /> <p>Telefonu kimliğe yaklaştırın...</p></div>}
+                      {state.nfcStatus === 'success' && <div className="text-center p-2 text-green-600 font-semibold flex items-center justify-center gap-2"><ShieldCheck className="w-5 h-5"/> NFC onayı başarılı.</div>}
+                      {state.nfcStatus === 'error' && <p className="text-red-600">NFC okunamadı.</p>}
+                      <p className="text-xs text-gray-500 mt-2 text-center">Bu adım, kimlikteki çipten bilgileri alarak güvenliği artırır.</p>
+                   </div>
+              </div>
+          </div>
+        </fieldset>
+        <div className="mt-6 flex justify-between">
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} disabled={!isVerified} className={`px-6 py-3 rounded-lg text-white ${isVerified ? 'bg-[#0099CB]' : 'bg-gray-300'}`}>
+              Devam Et
+            </button>
+        </div>
+    </div>
+  );
+};
+
+// --- ADIM 3: Sözleşme ve İmza ---
+const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
+    const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+    const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || '');
+
+    // İmza canvas'ı için useEffect buraya eklenebilir.
+    useEffect(() => {
+     const canvas = signatureCanvasRef.current;
+     if (!canvas) return;
+     const ctx = canvas.getContext('2d');
+     if (!ctx) return;
+     let drawing = false;
+     const getPos = (e: any, c: HTMLCanvasElement) => {
+       const rect = c.getBoundingClientRect();
+       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+       return { x: clientX - rect.left, y: clientY - rect.top };
+     };
+     const start = (e: MouseEvent | TouchEvent) => { drawing = true; const { x, y } = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(x, y); };
+     const move = (e: MouseEvent | TouchEvent) => { if (!drawing) return; const { x, y } = getPos(e, canvas); ctx.lineTo(x, y); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); };
+     const end = () => { drawing = false; };
+     canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+     canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
+     return () => {
+       canvas.removeEventListener('mousedown', start); canvas.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
+       canvas.removeEventListener('touchstart', start); canvas.removeEventListener('touchmove', move); window.removeEventListener('touchend', end);
+     };
+    }, []);
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+             <div className="flex items-center gap-3 mb-4">
+                <FileText className="w-5 h-5 text-[#0099CB]" />
+                <h3 className="text-lg font-semibold">3. Sözleşme Onayı</h3>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
+                <div className="h-64 border rounded-lg bg-gray-50 flex items-center justify-center">
+                  <p className="text-gray-500">Sözleşme PDF'i burada görüntülenecek.</p>
+                </div>
+                <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={state.contractAccepted} onChange={(e) => dispatch({type: 'SET_CONTRACT_ACCEPTED', payload: e.target.checked})} />
+                  Sözleşme koşullarını okudum ve onaylıyorum.
+                </label>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
+                <div className="border rounded-lg p-2 bg-gray-50">
+                  <canvas ref={signatureCanvasRef} width={520} height={180} className="w-full h-[180px] bg-white rounded" />
+                </div>
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
+                  <div className="flex gap-2">
+                    <input value={flowSmsPhone} onChange={(e)=>setFlowSmsPhone(e.target.value)} className="flex-1 p-2 border rounded-lg" placeholder="5XX XXX XX XX" />
+                    <button onClick={() => dispatch({type: 'SET_SMS_SENT', payload: true})} className="px-4 py-2 bg-[#F9C800] rounded-lg">SMS Gönder</button>
+                  </div>
+                  {state.smsSent && <div className="mt-2 flex items-center gap-2 text-green-700 text-sm"><ShieldCheck className="w-4 h-4" />Onay SMS'i gönderildi.</div>}
+                </div>
+              </div>
+            </div>
+             <div className="mt-6 flex justify-between">
+                <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+                <button
+                  onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })}
+                  disabled={!state.contractAccepted || !state.smsSent}
+                  className={`px-6 py-3 rounded-lg text-white ${(!state.contractAccepted || !state.smsSent) ? 'bg-gray-300' : 'bg-[#0099CB]'}`}
+                >
+                  Sözleşmeyi Onayla ve Bitir
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// --- ADIM 4: Tamamlama ---
+const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
+    <div className="bg-white rounded-xl shadow-sm p-6 text-center animate-fade-in">
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+        <h3 className="text-2xl font-semibold">Sözleşme Tamamlandı!</h3>
+        <p className="text-gray-600 mt-2">Müşteri {customer.name} için elektrik satış sözleşmesi başarıyla oluşturulmuştur.</p>
+        <div className="mt-6 flex justify-center gap-4">
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+            <button onClick={onComplete} className="px-8 py-3 rounded-lg bg-green-600 text-white font-semibold">
+              Ziyareti Kaydet
+            </button>
+        </div>
+    </div>
+);
 
 export default VisitFlowScreen;
