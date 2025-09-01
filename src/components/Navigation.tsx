@@ -14,7 +14,7 @@ import {
 import { Role, Screen } from "../types";
 import { mockConversations as convs } from '../data/messages';
 import { AppNotification, mockNotifications as notifSeed } from '../data/notifications';
-import ThemeSwitcher from './ThemeSwitcher';
+
 
 type Props = {
   agentName: string;
