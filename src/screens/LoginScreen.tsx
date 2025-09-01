@@ -10,7 +10,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
     <div
       className="absolute top-0 left-0 w-full h-2/5 bg-center bg-cover" // Ekranın üstten %40'ını kaplar
       style={{
-        backgroundImage: "url('')",
+        backgroundImage: "url('https://www.vbm.ai/wp-content/uploads/2024/10/enerjisa-yeni-duzenlenmis.png')",
       }}
     />
 
