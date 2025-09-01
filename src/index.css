@@ -1,24 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* Yatay taşmayı global kapat */
-html, body, #root {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Flex çocukların gereksiz taşmasını önle */
-* { min-width: 0; }
-
-/* Görsel elemanlar taşmasın */
-img, video, canvas { max-width: 100%; height: auto; }
-
-/* Kaydırılabilir nav / buton barı için scrollbar gizle */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-.leaflet-container {
-  touch-action: pan-x pan-y;
-  will-change: transform;
-  backface-visibility: hidden;
-}

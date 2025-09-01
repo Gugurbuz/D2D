@@ -10,6 +10,7 @@ type Props = {
   assignments: Record<string, string | undefined>;
   setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
   allReps: Rep[];
+  // ⬇️ eklendi
   setCurrentScreen: (s: Screen) => void;
 };
 
@@ -60,8 +61,7 @@ const AssignmentScreen: React.FC<Props> = ({
   const repName = (rid?: string) => allReps.find(r => r.id === rid)?.name || '—';
 
   return (
-    // Tam genişlik + kenar pedini küçült
-    <div className="w-full max-w-none px-2 sm:px-4 lg:px-6 py-4">
+    <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Görev Atama</h1>
 
@@ -106,68 +106,37 @@ const AssignmentScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Full-bleed tablo (yan boşlukları da kullan) */}
-      <div className="bg-white border border-gray-200 rounded-2xl">
-        {/* Yatay kaydırma kabı: ekrana sığmadığında devreye girer */}
-        <div className="overflow-x-auto" style={{ scrollbarGutter: 'stable' }}>
-          {/* Dikey kaydırma kabı: yüksekliği aşınca kaydır */}
-          <div className="max-h-[75vh] overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
-            {/* Geniş ekranlarda tam otur, dar ekranlarda en az genişlik */}
-            <table className="w-full min-w-[1000px] xl:min-w-full table-auto">
-              <colgroup>
-                <col className="w-12" />                       {/* Seç */}
-                <col className="w-[16%] md:w-[18%] xl:w-[18%]" />  {/* Müşteri */}
-                <col className="w-[44%] md:w-[42%] xl:w-[50%]" />  {/* Adres - geniş */}
-                <col className="w-[10%] md:w-[12%]" />             {/* İlçe */}
-                <col className="w-[10%] md:w-[12%]" />             {/* Durum */}
-                <col className="w-[14%] md:w-[16%]" />             {/* Atanan */}
-              </colgroup>
-
-              <thead className="text-xs font-semibold text-gray-600">
-                <tr>
-                  {['Seç','Müşteri','Adres','İlçe','Durum','Atanan'].map((h) => (
-                    <th
-                      key={h}
-                      className="px-4 py-3 text-left sticky top-0 z-10 bg-gray-50"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody className="divide-y">
-                {filtered.map(c => {
-                  const checked = !!localSelected[c.id];
-                  const assignedTo = assignments[c.id];
-                  return (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) =>
-                            setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))
-                          }
-                        />
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap truncate">{c.name}</td>
-                      {/* Adres: geniş + taşanları güzel kır */}
-                      <td className="px-4 py-3 whitespace-normal break-words">{c.address}</td>
-                      <td className="px-4 py-3 whitespace-nowrap truncate">{c.district}</td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{repName(assignedTo)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      {/* Liste */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-0 overflow-hidden">
+        <div className="grid grid-cols-6 gap-2 px-4 py-3 text-xs font-semibold text-gray-600 border-b">
+          <div>Seç</div>
+          <div>Müşteri</div>
+          <div>Adres</div>
+          <div>İlçe</div>
+          <div>Durum</div>
+          <div>Atanan</div>
         </div>
+
+        {filtered.map(c => {
+          const checked = !!localSelected[c.id];
+          const assignedTo = assignments[c.id];
+          return (
+            <div key={c.id} className="grid grid-cols-6 gap-2 px-4 py-3 items-center border-b last:border-b-0 hover:bg-gray-50">
+              <div>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(e) => setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))}
+                />
+              </div>
+              <div className="truncate">{c.name}</div>
+              <div className="truncate">{c.address}</div>
+              <div className="truncate">{c.district}</div>
+              <div><span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(c.status)}`}>{c.status}</span></div>
+              <div className="text-sm">{repName(assignedTo)}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
