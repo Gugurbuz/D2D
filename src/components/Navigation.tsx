@@ -19,7 +19,7 @@ import {
 import { Role, Screen } from '../types';
 import { mockConversations } from '../data/messages'; 
 import { mockNotifications as defaultNotifications, AppNotification } from '../data/notifications'; // Bildirimleri ayrı bir dosyadan alalım
-
+import ThemeSwitcher from './ThemeSwitcher'; 
 type Props = {
   agentName: string;
   role: Role;
