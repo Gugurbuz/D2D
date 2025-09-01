@@ -1,5 +1,6 @@
 import * as kdTree from 'kd-tree-javascript';
-
+// BU SATIRI EKLEYİN
+console.log("Imported kdTree Module:", kdTree);
 // =================================================================================
 // Tipler & Arayüzler
 // =================================================================================
