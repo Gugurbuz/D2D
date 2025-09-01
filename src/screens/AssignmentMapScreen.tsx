@@ -56,7 +56,6 @@ const initials = (name: string) => { const parts = name.trim().split(/\s+/); ret
 const createRepIcon = (rep: Rep) => L.divIcon({ className: "rep-marker", html: `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:${rep.color || "#111827"};color:#fff;border:2px solid #fff;font-weight:800;font-size:11px;box-shadow:0 2px 6px rgba(0,0,0,.25);">${initials(rep.name)}</div>`, iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -24] });
 const createCustomerIcon = (color: string, highlighted = false) => { const ring = highlighted ? "box-shadow:0 0 0 6px rgba(0,0,0,.08);" : ""; return L.divIcon({ className: "cust-marker", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);${ring}"></div>`, iconSize: [22, 22], iconAnchor: [11, 22], popupAnchor: [0, -18] }); };
 
-// YENİ: İstekleri Gruplama (Batching) Fonksiyonu
 const processInBatches = async <T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
@@ -76,9 +75,7 @@ const processInBatches = async <T, R>(
 // =================================================================================
 // Alt Bileşenler (Child Components) - Değişiklik Yok
 // =================================================================================
-
-// Harita Çizim Kontrolü
-const DrawControl = ({ onPolygonCreated, onDeleted }: { onPolygonCreated: (layer: L.Polygon) => void, onDeleted: () => void }) => {
+const DrawControl = /* ... Öncekiyle aynı kod ... */ ({ onPolygonCreated, onDeleted }: { onPolygonCreated: (layer: L.Polygon) => void, onDeleted: () => void }) => {
     const map = useMap();
     useEffect(() => {
         const drawnItems = new L.FeatureGroup();
@@ -116,9 +113,7 @@ const DrawControl = ({ onPolygonCreated, onDeleted }: { onPolygonCreated: (layer
     }, [map, onPolygonCreated, onDeleted]);
     return null;
 };
-
-// Harita Katmanları Bileşeni
-const MapLayers = React.memo(({ customers, reps, assignments, selectedIds, onToggleSelection, colorLookups, displayRegions, displayRoutes, repIcons, customerIcons }: any) => {
+const MapLayers = React.memo(/* ... Öncekiyle aynı kod ... */ ({ customers, reps, assignments, selectedIds, onToggleSelection, colorLookups, displayRegions, displayRoutes, repIcons, customerIcons }: any) => {
     return <>
         {Object.entries(displayRegions).map(([repId, hull]) => {
             const rep = reps.find((r: Rep) => r.id === repId);
@@ -156,9 +151,7 @@ const MapLayers = React.memo(({ customers, reps, assignments, selectedIds, onTog
         ))}
     </>
 });
-
-// Manuel Atama Paneli
-const ManualAssignmentPanel = React.memo(({ isOpen, onClose, reps, selectedRepId, onRepChange, selectedCustomers, onToggleSelection, onAssign, onClearSelection }: any) => {
+const ManualAssignmentPanel = React.memo(/* ... Öncekiyle aynı kod ... */ ({ isOpen, onClose, reps, selectedRepId, onRepChange, selectedCustomers, onToggleSelection, onAssign, onClearSelection }: any) => {
     if (!isOpen) return null;
     return (
         <div className="absolute top-0 right-0 bottom-0 z-[1000] transition-transform duration-300 translate-x-0 flex">
@@ -209,9 +202,7 @@ const ManualAssignmentPanel = React.memo(({ isOpen, onClose, reps, selectedRepId
         </div>
     );
 });
-
-// Optimizasyon Önizleme Kartı
-const OptimizationPreview = React.memo(({ result, onConfirm, onCancel, colorLookups }: { result: OptimizationResult, onConfirm: () => void, onCancel: () => void, colorLookups: any }) => {
+const OptimizationPreview = React.memo(/* ... Öncekiyle aynı kod ... */ ({ result, onConfirm, onCancel, colorLookups }: { result: OptimizationResult, onConfirm: () => void, onCancel: () => void, colorLookups: any }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     return (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] w-full max-w-2xl px-4">
@@ -257,35 +248,31 @@ const OptimizationPreview = React.memo(({ result, onConfirm, onCancel, colorLook
     );
 });
 
-
 // =================================================================================
 // Ana Bileşen (Main Component)
 // =================================================================================
 const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssignments, allReps: reps, onBack }) => {
 
-    // --- State Management ---
     const [selectedRepId, setSelectedRepId] = useState<string>(reps[0]?.id || "");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
-    const [loadingMessage, setLoadingMessage] = useState("Hesaplanıyor..."); // YENİ: Dinamik yükleme mesajı
+    const [loadingMessage, setLoadingMessage] = useState("Hesaplanıyor...");
     const [panelOpen, setPanelOpen] = useState(false);
     const [toast, setToast] = useState<ToastState | null>(null);
     const [regions, setRegions] = useState<Record<string, LatLng[]>>({});
     const [optimizedRoutes, setOptimizedRoutes] = useState<Record<string, { coords: LatLng[], distance: number }>>({});
     const [pendingOptimization, setPendingOptimization] = useState<OptimizationResult | null>(null);
 
-    // YENİ: Worker referansı
     const workerRef = useRef<Worker | null>(null);
 
-    // YENİ: Worker'ı başlatma ve sonlandırma
     useEffect(() => {
+        // Not: Worker dosyasının yolu projenizin yapısına göre farklılık gösterebilir.
         workerRef.current = new Worker(new URL('../optimization.worker.ts', import.meta.url), { type: 'module' });
         return () => {
             workerRef.current?.terminate();
         };
     }, []);
 
-    // --- Memoized Values ---
     const colorLookups = useMemo(() => {
         const colorMap: Record<string, string> = {};
         reps.forEach(rep => { colorMap[rep.id] = rep.color; });
@@ -293,9 +280,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         return { colors: colorMap };
     }, [reps]);
 
-    const repIcons = useMemo(() => Object.fromEntries(
-        reps.map(rep => [rep.id, createRepIcon(rep)])
-    ), [reps]);
+    const repIcons = useMemo(() => Object.fromEntries(reps.map(rep => [rep.id, createRepIcon(rep)])), [reps]);
 
     const customerIcons = useMemo(() => {
         const assignSource = pendingOptimization ? pendingOptimization.assignments : assignments;
@@ -313,7 +298,6 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     const displayRegions = pendingOptimization?.regions ?? regions;
     const displayRoutes = pendingOptimization?.routes ?? optimizedRoutes;
 
-    // --- Callbacks & Handlers ---
     const showToast = useCallback((message: string, type: ToastState['type'] = 'info', duration = 3000) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), duration);
@@ -345,65 +329,64 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         handleClearSelection();
     }, [selectedIds, selectedRepId, reps, setAssignments, showToast, handleClearSelection]);
 
-    // GÜNCELLENDİ: Optimizasyon Fonksiyonu
+    // GÜNCELLENDİ: Optimizasyon ve ilerleme durumu yönetimi
     const handleOptimize = useCallback(async () => {
         if (!workerRef.current) return;
-    
+
         setLoading(true);
-        setLoadingMessage("Müşteriler kümeleniyor...");
+        setLoadingMessage("Optimizasyon başlatılıyor...");
         setRegions({});
         setOptimizedRoutes({});
         setPendingOptimization(null);
-    
+
         workerRef.current.postMessage({ customers, reps });
-    
+
         workerRef.current.onmessage = async (event) => {
-            const { assignments: nextAssignments, hulls, customersPerRep, error } = event.data;
-    
-            if (error) {
+            const { type, progress, message, error } = event.data;
+
+            if (type === 'progress') {
+                setLoadingMessage(message || `Hesaplanıyor... %${Math.round(progress)}`);
+                return;
+            }
+
+            if (type === 'error') {
                 console.error("Worker hatası:", error);
                 showToast("Optimizasyon başarısız oldu: " + error, 'error');
                 setLoading(false);
                 return;
             }
-    
-            setLoadingMessage("Rotalar hesaplanıyor...");
-    
-            const routeProcessor = async (rep: Rep) => {
-                const repCustomers = customersPerRep[rep.id] || [];
-                if (repCustomers.length === 0) {
-                    return { repId: rep.id, repName: rep.name, customerCount: 0, totalKm: null, coords: [] };
-                }
+
+            if (type === 'complete') {
+                const { assignments: nextAssignments, hulls, customersPerRep } = event.data;
+                setLoadingMessage("Rotalar hesaplanıyor...");
+
+                const routeProcessor = async (rep: Rep) => {
+                    const repCustomers = customersPerRep[rep.id] || [];
+                    if (repCustomers.length === 0) return { repId: rep.id, repName: rep.name, customerCount: 0, totalKm: null, coords: [] };
+                    try {
+                        const coords = [[rep.lat, rep.lng], ...repCustomers.map(c => [c.lat, c.lng] as LatLng)].map(p => `${p[1]},${p[0]}`).join(';');
+                        const tripData = await osrmTrip(coords);
+                        return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: tripData.trips[0].distance / 1000, coords: tripData.trips[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as LatLng) };
+                    } catch (err) {
+                        return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: null, coords: [] };
+                    }
+                };
+
                 try {
-                    const coords = [[rep.lat, rep.lng], ...repCustomers.map(c => [c.lat, c.lng] as LatLng)].map(p => `${p[1]},${p[0]}`).join(';');
-                    const tripData = await osrmTrip(coords);
-                    return {
-                        repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: tripData.trips[0].distance / 1000,
-                        coords: tripData.trips[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as LatLng)
-                    };
+                    const results = await processInBatches(reps, routeProcessor, 5);
+                    const newOptimizedRoutes: Record<string, { coords: LatLng[], distance: number }> = {};
+                    results.forEach(res => { if (res.coords.length > 0) newOptimizedRoutes[res.repId] = { coords: res.coords, distance: res.totalKm ?? 0 }; });
+
+                    setPendingOptimization({
+                        assignments: nextAssignments, regions: hulls, routes: newOptimizedRoutes,
+                        summary: results.sort((a, b) => a.repName.localeCompare(b.repName)),
+                    });
                 } catch (err) {
-                    console.warn(`Rota hesaplanamadı: ${rep.name}`, err);
-                    return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: null, coords: [] };
+                    console.error("Rota hesaplama sırasında hata:", err);
+                    showToast("Rota hesaplama başarısız oldu.", 'error');
+                } finally {
+                    setLoading(false);
                 }
-            };
-    
-            try {
-                const results = await processInBatches(reps, routeProcessor, 5);
-                const newOptimizedRoutes: Record<string, { coords: LatLng[], distance: number }> = {};
-                results.forEach(res => {
-                    if (res.coords.length > 0) newOptimizedRoutes[res.repId] = { coords: res.coords, distance: res.totalKm ?? 0 };
-                });
-    
-                setPendingOptimization({
-                    assignments: nextAssignments, regions: hulls, routes: newOptimizedRoutes,
-                    summary: results.sort((a,b) => a.repName.localeCompare(b.repName)),
-                });
-    
-            } catch (err) {
-                console.error("Rota hesaplama sırasında hata:", err);
-                showToast("Rota hesaplama başarısız oldu.", 'error');
-            } finally {
-                setLoading(false);
             }
         };
 
@@ -412,7 +395,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             showToast("Optimizasyon sırasında kritik bir hata oluştu.", 'error');
             setLoading(false);
         };
-    
+
     }, [customers, reps, showToast]);
 
     const handleConfirmOptimization = useCallback(() => {
@@ -426,7 +409,6 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
 
     const handleCancelOptimization = useCallback(() => setPendingOptimization(null), []);
 
-    // --- Render ---
     return (
         <div className="p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -465,27 +447,9 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     />
                 </MapContainer>
 
-                {pendingOptimization && (
-                    <OptimizationPreview result={pendingOptimization} onConfirm={handleConfirmOptimization} onCancel={handleCancelOptimization} colorLookups={colorLookups} />
-                )}
-
-                <ManualAssignmentPanel
-                    isOpen={panelOpen}
-                    onClose={() => setPanelOpen(false)}
-                    reps={reps}
-                    selectedRepId={selectedRepId}
-                    onRepChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedRepId(e.target.value)}
-                    selectedCustomers={selectedCustomers}
-                    onToggleSelection={handleToggleSelection}
-                    onAssign={handleAssignSelected}
-                    onClearSelection={handleClearSelection}
-                />
-                
-                {!panelOpen && (
-                    <button onClick={() => setPanelOpen(true)} className="absolute top-4 right-4 z-[1000] bg-white shadow-lg p-3 rounded-full hover:bg-gray-100" title="Paneli Aç">
-                        <Users className="w-5 h-5 text-gray-700" />
-                    </button>
-                )}
+                {pendingOptimization && <OptimizationPreview result={pendingOptimization} onConfirm={handleConfirmOptimization} onCancel={handleCancelOptimization} colorLookups={colorLookups} />}
+                <ManualAssignmentPanel isOpen={panelOpen} onClose={() => setPanelOpen(false)} reps={reps} selectedRepId={selectedRepId} onRepChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedRepId(e.target.value)} selectedCustomers={selectedCustomers} onToggleSelection={handleToggleSelection} onAssign={handleAssignSelected} onClearSelection={handleClearSelection} />
+                {!panelOpen && <button onClick={() => setPanelOpen(true)} className="absolute top-4 right-4 z-[1000] bg-white shadow-lg p-3 rounded-full hover:bg-gray-100" title="Paneli Aç"><Users className="w-5 h-5 text-gray-700" /></button>}
                 
                 {loading && (
                     <div className="absolute inset-0 bg-white/60 backdrop-blur-sm flex items-center justify-center z-[1200]">
@@ -498,10 +462,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                 
                 {toast && (
                     <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[2000] animate-fade-in-down">
-                        <div className={`flex items-center gap-3 rounded-xl shadow-2xl px-4 py-3 ${
-                            toast.type === 'success' ? 'bg-green-600 text-white' :
-                            toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-white text-gray-800'
-                        }`}>
+                        <div className={`flex items-center gap-3 rounded-xl shadow-2xl px-4 py-3 ${toast.type === 'success' ? 'bg-green-600 text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-white text-gray-800'}`}>
                             {toast.type === 'success' && <CheckCircle2 />}
                             {toast.type === 'error' && <AlertTriangle />}
                             {toast.type === 'info' && <Info className="text-blue-500"/>}
