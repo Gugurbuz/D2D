@@ -1,5 +1,5 @@
 // YENİ: K-d tree kütüphanesini içe aktar
-import { KdTree } from 'kd-tree-javascript';
+import * as kdTree from 'kd-tree-javascript';
 
 // =================================================================================
 // Tipler & Arayüzler (Aynı kalıyor)
