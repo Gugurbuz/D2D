@@ -12,7 +12,7 @@ type ThemeContextType = {
 // 1. Context'i oluştur
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// 2. Provider Bileşenini oluştur
+// 2. Provider Bileşenini oluştur (Tema yönetimi mantığı burada)
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // Sayfa ilk yüklendiğinde localStorage'dan veya sistem tercihinden temayı al
@@ -20,10 +20,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     if (savedTheme) {
       return savedTheme;
     }
-    // Sistem tercihini kontrol et
+    // Sistem tercihini kontrol et (Kullanıcı işletim sisteminde karanlık mod kullanıyorsa)
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
+    // Varsayılan olarak aydınlık mod
     return 'light';
   });
 
@@ -31,10 +32,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     const root = window.document.documentElement; // <html> etiketi
     
     // Tema değiştikçe <html> etiketinden class'ı kaldır/ekle
-    root.classList.remove('light', 'dark');
+    const isDark = theme === 'dark';
+    root.classList.remove(isDark ? 'light' : 'dark');
     root.classList.add(theme);
 
-    // Kullanıcının tercihini localStorage'a kaydet
+    // Kullanıcının tercihini tarayıcı hafızasına (localStorage) kaydet
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -45,11 +47,11 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 3. Kolay kullanım için özel bir hook oluştur
+// 3. Kolay kullanım için özel bir hook (useTheme) oluştur
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
+    throw new Error('useTheme, bir ThemeProvider içinde kullanılmalıdır');
   }
   return context;
 };
