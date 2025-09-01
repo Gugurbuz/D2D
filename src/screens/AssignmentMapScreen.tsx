@@ -44,7 +44,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     
-    // DÜZELTME: Panelin başlangıç durumu 'kapalı' (false) olarak ayarlandı.
+    // Panelin başlangıç durumu 'kapalı' (false) olarak ayarlandı.
     const [panelOpen, setPanelOpen] = useState(false);
 
     const [regions, setRegions] = useState<Record<string, LatLng[]>>({});
@@ -61,8 +61,6 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         fillMap['_default'] = 'rgba(156,163,175,.18)';
         return { colors: colorMap, fills: fillMap };
     }, [reps]);
-
-    // ... Diğer tüm fonksiyonlar ve mantık aynı kalıyor ...
     const showToast = (message: string, type: ToastState['type'] = 'info', duration = 3000) => { setToast({ message, type }); setTimeout(() => { setToast(null); }, duration); };
     const colorForCustomer = (c: Customer) => { const assignSource = pendingOptimization ? pendingOptimization.assignments : assignments; const repId = assignSource[c.id] || '_default'; return colorLookups.colors[repId] || colorLookups.colors['_default']; };
     const handleClearSelection = useCallback(() => { setSelectedIds([]); }, []);
@@ -79,8 +77,21 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
 
     return (
         <div className="p-4">
+            {/* DÜZELTME: Kaybolan üst menü buraya geri eklendi */}
             <div className="mb-3 flex items-center justify-between">
-                {/* ... Üst Bar ... */}
+                <div className="flex items-center gap-2 text-gray-900 font-semibold">
+                    <button onClick={onBack} className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2">
+                        <ArrowLeft className="w-4 h-4" /> Geri
+                    </button>
+                    <div className="flex items-center gap-2 ml-2">
+                        <RouteIcon className="w-5 h-5 text-[#0099CB]" /> Haritadan Görev Atama
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button onClick={handleOptimize} disabled={loading} className="px-4 py-2 rounded-lg bg-[#0099CB] text-white font-semibold hover:opacity-90 disabled:bg-gray-400">
+                        {loading ? "Hesaplanıyor..." : "Optimize Et"}
+                    </button>
+                </div>
             </div>
 
             <div className="mb-3 text-xs text-gray-600">
@@ -89,9 +100,17 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow-md">
                 <MapContainer center={mapCenter as LatLngExpression} zoom={13} style={{ height: "100%", width: "100%" }} className="z-0">
-                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" className="dark-tile-layer" />
+                    <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
                     <DrawControl onPolygonCreated={handlePolygonCreated} onDeleted={handleClearSelection} />
-                    {/* ... Harita içeriği ... */}
+                    
+                    {reps.map((r) => { const hull = displayRegions[r.id]; return hull && hull.length >= 3 ? ( <Polygon key={`poly-${r.id}`} positions={hull as unknown as LatLngExpression[]} pathOptions={{ color: r.color, fillColor: r.fillColor, fillOpacity: 0.6, weight: 2 }} /> ) : null; })}
+                    {reps.map((r) => ( <Marker key={r.id} position={[r.lat, r.lng]} icon={repIconFor(r)}> <Popup><b>{r.name}</b></Popup> </Marker> ))}
+                    {customers.map((c) => {
+                        const color = colorForCustomer(c);
+                        const isSelected = selectedIds.includes(c.id);
+                        return ( <Marker key={c.id} position={[c.lat, c.lng]} icon={customerIcon(color, isSelected)}> <Popup>{/* ... */}</Popup> </Marker> );
+                    })}
+                    {Object.entries(displayRoutes).map(([repId, route]) => ( route.coords.length > 1 && ( <Polyline key={`route-${repId}`} positions={route.coords as LatLngExpression[]} pathOptions={{ color: colorLookups.colors[repId] || '#ff0000', weight: 5, opacity: 0.8, dashArray: '5, 10' }} /> ) ))}
                 </MapContainer>
 
                 {pendingOptimization && (
