@@ -7,7 +7,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
   <div 
     className="min-h-screen flex items-center justify-center p-4 bg-center bg-cover" 
     style={{
-      backgroundImage: "url('https://www.vbm.ai/wp-content/uploads/2024/10/enerjisa-yeni-duzenlenmis.png')",
+      backgroundImage: "url('')",
     }}
   >
     {/* DEĞİŞİKLİK: bg-opacity-40 yapıldı ve backdrop-blur-md kaldırıldı */}
