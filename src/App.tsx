@@ -19,6 +19,7 @@ import VisitFlowScreen from './screens/VisitFlowScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
+import ProfileScreens from './screens/ProfileScreens';
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
