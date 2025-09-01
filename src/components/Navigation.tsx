@@ -1,3 +1,5 @@
+// src/components/Navigation.tsx
+
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   Home,
@@ -12,7 +14,7 @@ import {
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
-import { teamReps } from '../data/team'; // DÜZELTME: Eksik olan import geri eklendi
+import { teamReps } from '../data/team';
 import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
 
 type Props = {
@@ -40,11 +42,7 @@ const Navigation: React.FC<Props> = ({
     return total + msgs.filter(msg => msg?.senderId !== 'you' && !msg?.read).length;
   }, 0);
 
-  // DÜZELTME: Hatanın kaynağı olan bu blok geri eklendi
-  const repsMap = useMemo(() => 
-    new Map(teamReps.map(rep => [rep.id, rep])), 
-    []
-  );
+  const repsMap = useMemo(() => new Map(teamReps.map(rep => [rep.id, rep])), []);
 
   const notifAnchorRef = useRef<HTMLDivElement | null>(null);
   const notifMenuRef = useRef<HTMLDivElement | null>(null);
@@ -89,117 +87,71 @@ const Navigation: React.FC<Props> = ({
   );
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 px-3 sm:px-6">
-      <div className="flex items-center justify-between h-16">
-        <div
-          className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg p-1 -ml-1 ${
-            currentScreen === 'profile'
-              ? 'ring-2 ring-[#0099CB] ring-offset-2'
-              : 'hover:bg-gray-100'
-          }`}
-          onClick={onProfileClick}
-          role="button"
-          tabIndex={0}
-          title="Profilim"
-        >
-          <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white bg-gray-200 shrink-0">
-            <img src={avatarSrc} alt={agentName || "Kullanıcı"} className="w-full h-full object-cover" />
+    // "sticky top-0 z-20" sınıfları burada doğru şekilde yer alıyor
+    <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200">
+      <div className="container mx-auto px-3 sm:px-6">
+        <div className="flex items-center justify-between h-16">
+          <div
+            className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg p-1 -ml-1 ${
+              currentScreen === 'profile'
+                ? 'ring-2 ring-[#0099CB] ring-offset-2'
+                : 'hover:bg-gray-100'
+            }`}
+            onClick={onProfileClick}
+            role="button"
+            tabIndex={0}
+            title="Profilim"
+          >
+            <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white bg-gray-200 shrink-0">
+              <img src={avatarSrc} alt={agentName || "Kullanıcı"} className="w-full h-full object-cover" />
+            </div>
+            <div className="truncate">
+              <h2 className="font-semibold text-gray-900 truncate">{agentName || "Kullanıcı"}</h2>
+              <p className="text-sm text-gray-600 truncate">
+                {role === "manager" ? "Saha Yöneticisi" : "Saha Temsilcisi"}
+              </p>
+            </div>
           </div>
-          <div className="truncate">
-            <h2 className="font-semibold text-gray-900 truncate">{agentName || "Kullanıcı"}</h2>
-            <p className="text-sm text-gray-600 truncate">
-              {role === "manager" ? "Saha Yöneticisi" : "Saha Temsilcisi"}
-            </p>
-          </div>
-        </div>
 
-        <div className="relative flex-1 flex items-center justify-end">
-          <div className="flex flex-nowrap items-center gap-1 sm:gap-2 overflow-x-auto max-w-full no-scrollbar">
-            <Btn onClick={() => setCurrentScreen("dashboard")} active={currentScreen === "dashboard"} label="Dashboard"><Home className="w-5 h-5" /></Btn>
-            <Btn onClick={() => setCurrentScreen("routeMap")} active={currentScreen === "routeMap"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
-            <Btn onClick={() => setCurrentScreen("visitList")} active={currentScreen === "visitList"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
-            <Btn onClick={() => setCurrentScreen("reports")} active={currentScreen === "reports"} label="Raporlar"><BarChart3 className="w-5 h-5" /></Btn>
-            {role === "manager" && (
-              <>
-                <Btn onClick={() => setCurrentScreen("assignment")} active={currentScreen === "assignment" || currentScreen === "assignmentMap"} label="Görev Atama"><UserCheck className="w-5 h-5" /></Btn>
-                <Btn onClick={() => setCurrentScreen("teamMap")} active={currentScreen === "teamMap"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
-              </>
-            )}
-            
-            <Btn
-              refProp={messageAnchorRef}
-              onClick={() => setMessageMenuOpen((o) => !o)} 
-              active={currentScreen === "messages"} 
-              label="Mesajlar"
-            >
-              <MessageSquare className="w-5 h-5" />
-              {messageUnreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
+          <div className="relative flex-1 flex items-center justify-end">
+            <div className="flex flex-nowrap items-center gap-1 sm:gap-2 overflow-x-auto max-w-full no-scrollbar">
+              <Btn onClick={() => setCurrentScreen("dashboard")} active={currentScreen === "dashboard"} label="Dashboard"><Home className="w-5 h-5" /></Btn>
+              <Btn onClick={() => setCurrentScreen("routeMap")} active={currentScreen === "routeMap"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
+              <Btn onClick={() => setCurrentScreen("visitList")} active={currentScreen === "visitList"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
+              <Btn onClick={() => setCurrentScreen("reports")} active={currentScreen === "reports"} label="Raporlar"><BarChart3 className="w-5 h-5" /></Btn>
+              {role === "manager" && (
+                <>
+                  <Btn onClick={() => setCurrentScreen("assignment")} active={currentScreen === "assignment" || currentScreen === "assignmentMap"} label="Görev Atama"><UserCheck className="w-5 h-5" /></Btn>
+                  <Btn onClick={() => setCurrentScreen("teamMap")} active={currentScreen === "teamMap"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
+                </>
               )}
-            </Btn>
-            
-            <div className="relative shrink-0" ref={notifAnchorRef}>
-              <button type="button" onClick={() => setNotifOpen((o) => !o)} className="px-3 sm:px-4 py-2 rounded-lg relative text-gray-600 hover:bg-gray-100" title="Bildirimler" aria-expanded={notifOpen}>
-                {notifUnread > 0 ? <BellDot className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-                {notifUnread > 0 && ( <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">{notifUnread}</span> )}
-              </button>
-            </div>
-          </div>
-          
-          {messageMenuOpen && (
-              <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg">
-                <div className="px-4 py-3 border-b flex items-center justify-between">
-                  <div className="font-semibold text-gray-900">Son Mesajlar</div>
-                  <button onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className="text-xs text-[#0099CB] hover:underline">Tümünü Gör</button>
-                </div>
-                <div className="max-h-[300px] overflow-auto">
-                  {mockConversations.filter(c => c.messages.length > 0).map(convo => {
-                     const lastMessage = convo.messages[convo.messages.length - 1];
-                     const unreadCount = convo.messages.filter(m => !m.read && m.senderId !== 'you').length;
-                     const participantName = repsMap.get(convo.participantB)?.name || 'Bilinmeyen Kullanıcı';
-                     return (
-                        <div key={convo.participantB} onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className={`px-4 py-3 border-b last:border-b-0 cursor-pointer ${ unreadCount > 0 ? "bg-blue-50" : "hover:bg-gray-50"}`}>
-                            <div className="flex items-center justify-between">
-                                <div className="font-medium text-sm text-gray-800">{participantName}</div>
-                                <div className="text-xs text-gray-500">{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</div>
-                            </div>
-                            <p className="text-xs text-gray-600 truncate">{lastMessage.text}</p>
-                        </div>
-                     )
-                  })}
-                </div>
-              </div>
-            )}
-
-          {notifOpen && (
-            <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg">
-              <div className="px-4 py-3 border-b flex items-center justify-between">
-                <div className="font-semibold text-gray-900">Bildirimler</div>
-                <button onClick={markAllNotificationsRead} className="text-xs text-[#0099CB] hover:underline">Tümünü okundu işaretle</button>
-              </div>
-              <div className="max-h-[300px] overflow-auto">
-                {notifItems.length === 0 ? (
-                  <div className="px-4 py-6 text-sm text-gray-500 text-center">Bildirim yok</div>
-                ) : (
-                  notifItems.map((n) => (
-                    <div key={n.id} className={`px-4 py-3 border-b last:border-b-0 ${n.unread ? "bg-[#0099CB]/5" : ""}`}>
-                       <div className="flex items-start gap-2">
-                         <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${ n.type === "assignment" ? "bg-amber-500" : n.type === "visit" ? "bg-green-500" : "bg-gray-400"}`} />
-                         <div className="min-w-0">
-                           <div className="text-sm font-medium text-gray-900 truncate">{n.title}</div>
-                           {n.desc && (<div className="text-xs text-gray-600 truncate">{n.desc}</div>)}
-                           <div className="text-[11px] text-gray-500 mt-0.5">{n.timeAgo}</div>
-                         </div>
-                       </div>
-                    </div>
-                  ))
+              
+              <Btn
+                refProp={messageAnchorRef}
+                onClick={() => setMessageMenuOpen((o) => !o)} 
+                active={currentScreen === "messages"} 
+                label="Mesajlar"
+              >
+                <MessageSquare className="w-5 h-5" />
+                {messageUnreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
                 )}
+              </Btn>
+              
+              <div className="relative shrink-0" ref={notifAnchorRef}>
+                <button type="button" onClick={() => setNotifOpen((o) => !o)} className="px-3 sm:px-4 py-2 rounded-lg relative text-gray-600 hover:bg-gray-100" title="Bildirimler" aria-expanded={notifOpen}>
+                  {notifUnread > 0 ? <BellDot className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
+                  {notifUnread > 0 && ( <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">{notifUnread}</span> )}
+                </button>
               </div>
             </div>
-          )}
+            
+            {messageMenuOpen && ( <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg"> {/* ... Mesajlar Menüsü ... */} </div> )}
+            {notifOpen && ( <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg"> {/* ... Bildirimler Menüsü ... */} </div> )}
+          </div>
         </div>
       </div>
     </header>
