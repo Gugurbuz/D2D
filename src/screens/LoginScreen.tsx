@@ -11,7 +11,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
     }}
   >
     {/* DEĞİŞİKLİK: bg-opacity-40 yapıldı ve backdrop-blur-md kaldırıldı */}
-    <div className="bg-white bg-opacity-40 rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="bg-white bg-opacity-55 rounded-2xl shadow-xl p-8 w-full max-w-md">
       <div className="text-center mb-8">
         <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
           <img 
