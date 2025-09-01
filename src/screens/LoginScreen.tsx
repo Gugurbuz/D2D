@@ -18,7 +18,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
     <div className="relative min-h-screen flex items-center justify-center p-4">
       
       {/* Login Formu: Saydamlığı artırıldı ve blur efekti güçlendirildi */}
-      <div className="bg-white bg-opacity-80 backdrop-blur-md rounded-2xl shadow-xl p-8 w-full max-w-md">
+      <div className="bg-white bg-opacity-55 backdrop-blur-md rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
             <img 
