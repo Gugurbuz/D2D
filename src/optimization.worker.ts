@@ -1,6 +1,7 @@
-import * as kdTree from 'kd-tree-javascript';
-// BU SATIRI EKLEYİN
-console.log("Imported kdTree Module:", kdTree);
+// YENİ: Modern ve uyumlu kütüphaneleri içe aktarıyoruz
+import KDBush from 'kdbush';
+import { around } from 'geokdbush';
+
 // =================================================================================
 // Tipler & Arayüzler
 // =================================================================================
@@ -11,18 +12,8 @@ interface Rep { id: string; lat: number; lng: number; name: string; }
 const OPTIMIZATION_ITERATIONS = 8;
 
 // =================================================================================
-// Yardımcı Fonksiyonlar
+// Yardımcı Fonksiyonlar (Artık Haversine'e ihtiyacımız yok, geokdbush hallediyor)
 // =================================================================================
-const haversineKm = (a: LatLng, b: LatLng): number => {
-    const R = 6371;
-    const dLat = ((b[0] - a[0]) * Math.PI) / 180;
-    const dLng = ((b[1] - a[1]) * Math.PI) / 180;
-    const lat1 = (a[0] * Math.PI) / 180;
-    const lat2 = (b[0] * Math.PI) / 180;
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(h));
-};
-
 const convexHull = (points: LatLng[]): LatLng[] => {
     if (points.length < 3) return points.slice();
     const pts = points.slice().sort((a, b) => (a[1] === b[1] ? a[0] - b[0] : a[1] - b[1]));
@@ -47,14 +38,10 @@ const convexHull = (points: LatLng[]): LatLng[] => {
 // Worker'ın ana dinleyicisi
 // =================================================================================
 self.onmessage = (event: MessageEvent<{ customers: Customer[]; reps: Rep[] }>) => {
-    // Gelecekteki sorunları ayıklamak için:
-    // console.log("kdTree modülü:", kdTree); 
-    
     const { customers, reps } = event.data;
 
     try {
         const K = reps.length;
-        const pts: LatLng[] = customers.map(c => [c.lat, c.lng]);
         if (customers.length === 0 || K === 0) {
             self.postMessage({ type: 'error', error: "Müşteri veya Temsilci bulunamadı." });
             return;
@@ -64,37 +51,38 @@ self.onmessage = (event: MessageEvent<{ customers: Customer[]; reps: Rep[] }>) =
         let centroids: LatLng[] = reps.map(r => [r.lat, r.lng]);
         let assignments: number[] = new Array(customers.length).fill(-1);
 
+        // KDBush, temsilcilerin (reps) index'ini tutmamızı gerektiriyor
+        const repPoints = reps.map((rep, index) => ({ ...rep, index }));
+
         for (let i = 0; i < OPTIMIZATION_ITERATIONS; i++) {
             self.postMessage({ type: 'progress', progress: (i / OPTIMIZATION_ITERATIONS) * 100, message: `İterasyon ${i + 1}/${OPTIMIZATION_ITERATIONS}` });
 
             const buckets: number[][] = Array.from({ length: K }, () => []);
 
-            const centroidPoints = centroids.map((point, index) => ({
-                x: point[0], y: point[1], repIndex: index
-            }));
+            // 1. Her iterasyonda centroid'lerin coğrafi index'ini oluşturuyoruz
+            const centroidIndex = new KDBush(
+                repPoints,
+                (p) => centroids[p.index][1], // lng
+                (p) => centroids[p.index][0]  // lat
+            );
             
-            const distance = (a: { x: number, y: number }, b: { x: number, y: number }) => haversineKm([a.x, a.y], [b.x, b.y]);
-            
-            // SON DÜZELTME: Constructor'a .default üzerinden erişim
-            const tree = new (kdTree as any).default(centroidPoints, distance, ["x", "y"]);
-
             const customerOrder = [...customers.keys()].sort(() => Math.random() - 0.5);
 
             customerOrder.forEach(custIdx => {
-                const point = pts[custIdx];
-                const customerPoint = { x: point[0], y: point[1] };
-                const nearestReps = tree.nearest(customerPoint, K);
+                const customer = customers[custIdx];
+
+                // 2. GeoKDBush ile en yakın K adet temsilciyi buluyoruz. Bu çok hızlı!
+                const nearestRepIndices = around(centroidIndex, customer.lng, customer.lat, K);
 
                 let chosenRep = -1;
-                for (const [nearest, dist] of nearestReps) {
-                    const repIdx = (nearest as any).repIndex;
-                    if (buckets[repIdx].length < targetCapacity) {
-                        chosenRep = repIdx;
+                for (const repIndex of nearestRepIndices) {
+                    if (buckets[repIndex].length < targetCapacity) {
+                        chosenRep = repIndex;
                         break;
                     }
                 }
                 if (chosenRep === -1) {
-                    chosenRep = (nearestReps[0][0] as any).repIndex;
+                    chosenRep = nearestRepIndices[0];
                 }
                 
                 buckets[chosenRep].push(custIdx);
@@ -103,8 +91,9 @@ self.onmessage = (event: MessageEvent<{ customers: Customer[]; reps: Rep[] }>) =
 
             centroids = buckets.map((bucket, k) => {
                 if (bucket.length === 0) return reps[k] ? [reps[k].lat, reps[k].lng] : centroids[k];
-                const sum = bucket.reduce((acc, ptIdx) => [acc[0] + pts[ptIdx][0], acc[1] + pts[ptIdx][1]], [0, 0] as LatLng);
-                return [sum[0] / bucket.length, sum[1] / bucket.length];
+                const sumLat = bucket.reduce((acc, ptIdx) => acc + customers[ptIdx].lat, 0);
+                const sumLng = bucket.reduce((acc, ptIdx) => acc + customers[ptIdx].lng, 0);
+                return [sumLat / bucket.length, sumLng / bucket.length];
             });
         }
 
