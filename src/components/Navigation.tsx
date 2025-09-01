@@ -1,5 +1,3 @@
-// src/components/Navigation.tsx
-
 import React, { useEffect, useRef, useState } from "react";
 import {
   Home,
@@ -15,7 +13,7 @@ import {
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
 import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
-import ThemeSwitcher from './ThemeSwitcher';
+import ThemeSwitcher from './ThemeSwitcher'; // ThemeSwitcher'ı import ediyoruz
 
 type Props = {
   agentName: string;
@@ -108,7 +106,6 @@ const Navigation: React.FC<Props> = ({
                 </>
               )}
               
-              {/* MESAJLAR BUTONU */}
               <Btn onClick={() => setCurrentScreen("messages")} active={currentScreen === "messages"} label="Mesajlar">
                 <MessageSquare className="w-5 h-5" />
                 {messageUnreadCount > 0 && (
@@ -119,13 +116,15 @@ const Navigation: React.FC<Props> = ({
                 )}
               </Btn>
 
-              {/* BİLDİRİMLER BUTONU */}
+              {/* Bildirimler */}
               <div className="relative shrink-0" ref={notifAnchorRef}>
                 <button
                   type="button"
                   onClick={() => setNotifOpen((o) => !o)}
                   className="px-3 sm:px-4 py-2 rounded-lg relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   title="Bildirimler"
+                  aria-label="Bildirimler"
+                  aria-expanded={notifOpen}
                 >
                   {notifUnread > 0 ? <BellDot className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
                   {notifUnread > 0 && (
@@ -134,13 +133,13 @@ const Navigation: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* TEMA DEĞİŞTİRİCİ BUTONU */}
+              {/* YENİLİK: Tema Değiştirici Butonu buraya eklendi */}
               <div className="shrink-0">
                 <ThemeSwitcher />
               </div>
             </div>
             
-            {/* BİLDİRİM AÇILIR MENÜSÜ */}
+            {/* Bildirim Dropdown'ı için karanlık mod stilleri */}
             {notifOpen && (
               <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
