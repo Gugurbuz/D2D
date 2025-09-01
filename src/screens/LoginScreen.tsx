@@ -6,7 +6,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
   <div 
     className="min-h-screen flex items-center justify-center p-4 bg-center bg-no-repeat" 
     style={{ 
-      backgroundImage: "url('https://media.licdn.com/dms/image/v2/D5616AQHsvGxmt8b1Uw/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1677791208243?e=2147483647&v=beta&t=qA9Q6QbX_9_4mzs5WWUedPvF6UFm4z_YTSbSLs9RMNM')",
+      backgroundImage: "url('https://officesnapshots.com/wp-content/uploads/2024/06/enerjisa-offices-ankara-13.jpg')",
       backgroundSize: "contain",
       backgroundColor: "#f5f5f5"
     }}
