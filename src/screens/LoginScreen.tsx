@@ -8,7 +8,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
     
     {/* YENİ YAPI: Sadece üst alanı kaplayan Banner Katmanı */}
     <div
-      className="absolute top-0 left-0 w-full h-2/5 bg-center bg-cover" // Ekranın üstten %40'ını kaplar
+      className="absolute top-100 left-0 w-full h-2/5 bg-center bg-cover" // Ekranın üstten %40'ını kaplar
       style={{
         backgroundImage: "url('https://media.licdn.com/dms/image/v2/D4D16AQHUrW2XEiUU6w/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1701871393092?e=2147483647&v=beta&t=hegKvnwUsa6qrMzJaaaLbY9ad5Fb5wW0h1AKQ4mJeZw')",
       }}
