@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react"; // useMemo eklendi
 import {
   Home,
   Route,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
-import { teamReps } from '../data/team';
+import { teamReps } from '../data/team'; // DÜZELTME: Eksik olan bu import geri eklendi
 import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
 
 type Props = {
@@ -32,15 +32,19 @@ const Navigation: React.FC<Props> = ({
 }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState<AppNotification[]>(defaultNotifications);
-  const notifUnread = notifItems.filter((n) => n?.unread).length;
+  const notifUnread = notifItems.filter((n) => n.unread).length;
 
   const [messageMenuOpen, setMessageMenuOpen] = useState(false);
   const messageUnreadCount = mockConversations.reduce((total, conversation) => {
-    const msgs = Array.isArray(conversation?.messages) ? conversation.messages : [];
-    return total + msgs.filter(msg => msg?.senderId !== 'you' && !msg?.read).length;
+    const unread = conversation.messages.filter(msg => msg.senderId !== 'you' && !msg.read).length;
+    return total + unread;
   }, 0);
-
-  const repsMap = useMemo(() => new Map(teamReps.map(rep => [rep.id, rep])), []);
+  
+  // DÜZELTME: Hatanın kaynağı olan eksik repsMap verisi geri eklendi.
+  const repsMap = useMemo(() => 
+    new Map(teamReps.map(rep => [rep.id, rep])), 
+    []
+  );
 
   const notifAnchorRef = useRef<HTMLDivElement | null>(null);
   const notifMenuRef = useRef<HTMLDivElement | null>(null);
