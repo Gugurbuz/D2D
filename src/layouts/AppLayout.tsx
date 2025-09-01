@@ -1,3 +1,5 @@
+// src/layouts/AppLayout.tsx
+
 import React from "react";
 import Navigation from "../components/Navigation";
 import { Role, Screen } from "../types";
@@ -20,7 +22,8 @@ export default function AppLayout({
   children,
 }: Props) {
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    // DÜZELTME: `overflow-x-hidden` sınıfı `sticky` özelliğini bozduğu için kaldırıldı.
+    <div className="min-h-screen bg-gray-50">
       <Navigation
         agentName={agentName}
         role={role}
