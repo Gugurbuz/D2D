@@ -40,6 +40,7 @@ export type Screen =
   | 'reports'
   | 'routeMap'
   | 'assignment'
+ | 'profile'
   | 'assignmentMap'; 
 
 // src/types.ts
