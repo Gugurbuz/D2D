@@ -1,6 +1,4 @@
-// src/components/Navigation.tsx
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   Home,
   Route,
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
-import { teamReps } from '../data/team';
+import { teamReps } from '../data/team'; // DÜZELTME: Eksik olan import geri eklendi
 import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
 
 type Props = {
@@ -42,7 +40,11 @@ const Navigation: React.FC<Props> = ({
     return total + msgs.filter(msg => msg?.senderId !== 'you' && !msg?.read).length;
   }, 0);
 
-  const repsMap = useMemo(() => new Map(teamReps.map(rep => [rep.id, rep])), []);
+  // DÜZELTME: Hatanın kaynağı olan bu blok geri eklendi
+  const repsMap = useMemo(() => 
+    new Map(teamReps.map(rep => [rep.id, rep])), 
+    []
+  );
 
   const notifAnchorRef = useRef<HTMLDivElement | null>(null);
   const notifMenuRef = useRef<HTMLDivElement | null>(null);
@@ -87,7 +89,6 @@ const Navigation: React.FC<Props> = ({
   );
 
   return (
-    // DÜZELTME: `container mx-auto` kaldırıldı, padding (`px-3 sm:px-6`) doğrudan buraya eklendi.
     <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 px-3 sm:px-6">
       <div className="flex items-center justify-between h-16">
         <div
@@ -148,8 +149,57 @@ const Navigation: React.FC<Props> = ({
             </div>
           </div>
           
-          {messageMenuOpen && ( <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg"> {/* ... Mesajlar Menüsü ... */} </div> )}
-          {notifOpen && ( <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg"> {/* ... Bildirimler Menüsü ... */} </div> )}
+          {messageMenuOpen && (
+              <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg">
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <div className="font-semibold text-gray-900">Son Mesajlar</div>
+                  <button onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className="text-xs text-[#0099CB] hover:underline">Tümünü Gör</button>
+                </div>
+                <div className="max-h-[300px] overflow-auto">
+                  {mockConversations.filter(c => c.messages.length > 0).map(convo => {
+                     const lastMessage = convo.messages[convo.messages.length - 1];
+                     const unreadCount = convo.messages.filter(m => !m.read && m.senderId !== 'you').length;
+                     const participantName = repsMap.get(convo.participantB)?.name || 'Bilinmeyen Kullanıcı';
+                     return (
+                        <div key={convo.participantB} onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className={`px-4 py-3 border-b last:border-b-0 cursor-pointer ${ unreadCount > 0 ? "bg-blue-50" : "hover:bg-gray-50"}`}>
+                            <div className="flex items-center justify-between">
+                                <div className="font-medium text-sm text-gray-800">{participantName}</div>
+                                <div className="text-xs text-gray-500">{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</div>
+                            </div>
+                            <p className="text-xs text-gray-600 truncate">{lastMessage.text}</p>
+                        </div>
+                     )
+                  })}
+                </div>
+              </div>
+            )}
+
+          {notifOpen && (
+            <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg">
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <div className="font-semibold text-gray-900">Bildirimler</div>
+                <button onClick={markAllNotificationsRead} className="text-xs text-[#0099CB] hover:underline">Tümünü okundu işaretle</button>
+              </div>
+              <div className="max-h-[300px] overflow-auto">
+                {notifItems.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-500 text-center">Bildirim yok</div>
+                ) : (
+                  notifItems.map((n) => (
+                    <div key={n.id} className={`px-4 py-3 border-b last:border-b-0 ${n.unread ? "bg-[#0099CB]/5" : ""}`}>
+                       <div className="flex items-start gap-2">
+                         <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${ n.type === "assignment" ? "bg-amber-500" : n.type === "visit" ? "bg-green-500" : "bg-gray-400"}`} />
+                         <div className="min-w-0">
+                           <div className="text-sm font-medium text-gray-900 truncate">{n.title}</div>
+                           {n.desc && (<div className="text-xs text-gray-600 truncate">{n.desc}</div>)}
+                           <div className="text-[11px] text-gray-500 mt-0.5">{n.timeAgo}</div>
+                         </div>
+                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
