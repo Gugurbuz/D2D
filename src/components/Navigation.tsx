@@ -1,5 +1,4 @@
 // src/components/Navigation.tsx
-
 import React, { useEffect, useRef, useState } from "react";
 import {
   Home,
@@ -37,7 +36,7 @@ const Navigation: React.FC<Props> = ({
   const [notifItems, setNotifItems] = useState<AppNotification[]>(defaultNotifications);
   const notifUnread = notifItems.filter((n) => n.unread).length;
 
-  // YENİLİK: Mesajlar için state'ler
+  // Mesajlar için state'ler
   const [messageMenuOpen, setMessageMenuOpen] = useState(false);
   const [messageItems, setMessageItems] = useState(mockConversations);
   const messageUnreadCount = messageItems.reduce((total, conversation) => {
@@ -47,11 +46,10 @@ const Navigation: React.FC<Props> = ({
   // Referanslar (ref)
   const notifAnchorRef = useRef<HTMLDivElement | null>(null);
   const notifMenuRef = useRef<HTMLDivElement | null>(null);
-  // YENİLİK: Mesajlar menüsü için ref'ler
   const messageAnchorRef = useRef<HTMLButtonElement | null>(null);
   const messageMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // Dışarıya tıklandığında menüleri kapatma efekti
+  // Dışarıya tıklandığında menüleri kapatma
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -59,7 +57,7 @@ const Navigation: React.FC<Props> = ({
       if (notifAnchorRef.current && !notifAnchorRef.current.contains(t) && notifMenuRef.current && !notifMenuRef.current.contains(t)) {
         setNotifOpen(false);
       }
-      // YENİLİK: Mesaj menüsünü kapat
+      // Mesaj menüsünü kapat
       if (messageAnchorRef.current && !messageAnchorRef.current.contains(t) && messageMenuRef.current && !messageMenuRef.current.contains(t)) {
         setMessageMenuOpen(false);
       }
@@ -70,6 +68,13 @@ const Navigation: React.FC<Props> = ({
 
   const markAllNotificationsRead = () => setNotifItems((prev) => prev.map((n) => ({ ...n, unread: false })));
   const avatarSrc = agentAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(agentName || "Kullanıcı")}&background=0099CB&color=fff`;
+
+  // PROFİL TIKLAMA HANDLER'I: menüleri kapat + profile ekranına git
+  const onProfileClick = () => {
+    setMessageMenuOpen(false);
+    setNotifOpen(false);
+    setCurrentScreen('profile'); // Screen tipine 'profile' eklediğinden emin ol
+  };
 
   const Btn = ({ onClick, active, children, label, refProp }: { onClick: () => void; active: boolean; children: React.ReactNode; label: string; refProp?: React.Ref<HTMLButtonElement> }) => (
     <button
@@ -89,8 +94,19 @@ const Navigation: React.FC<Props> = ({
     <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="container mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Sol Taraf - Profil */}
-          <div className="flex items-center gap-3 min-w-0">
+          {/* Sol Taraf - Profil (ARTIK TIKLANABİLİR) */}
+          <div
+            className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg px-2 py-1 ${
+              currentScreen === 'profile'
+                ? 'ring-2 ring-[#0099CB] ring-offset-2 dark:ring-offset-gray-800'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+            onClick={onProfileClick}
+            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onProfileClick()}
+            role="button"
+            tabIndex={0}
+            title="Profilim"
+          >
             <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white bg-gray-200 shrink-0">
               <img src={avatarSrc} alt={agentName || "Kullanıcı"} className="w-full h-full object-cover" />
             </div>
@@ -114,7 +130,7 @@ const Navigation: React.FC<Props> = ({
                 </>
               )}
               
-              {/* YENİLİK: MESAJLAR BUTONU ARTIK MENÜ AÇIYOR */}
+              {/* MESAJLAR BUTONU - MENÜ AÇAR */}
               <Btn
                 refProp={messageAnchorRef}
                 onClick={() => setMessageMenuOpen(o => !o)} 
@@ -151,7 +167,7 @@ const Navigation: React.FC<Props> = ({
               </div>
             </div>
             
-            {/* YENİLİK: MESAJLAR AÇILIR MENÜSÜ */}
+            {/* MESAJLAR AÇILIR MENÜSÜ */}
             {messageMenuOpen && (
               <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-gray-800 dark:border-gray-700">
                 <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
@@ -162,7 +178,6 @@ const Navigation: React.FC<Props> = ({
                   {messageItems.filter(c => c.messages.length > 0).map(convo => {
                      const lastMessage = convo.messages[convo.messages.length-1];
                      const unreadCount = convo.messages.filter(m => !m.read && m.senderId !== 'you').length;
-                     // TODO: `repsMap` kullanarak `participantB`'nin adını alın
                      const participantName = `Rep ${convo.participantB}`;
                      return (
                         <div key={convo.participantB} onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className={`px-4 py-3 border-b dark:border-gray-700 last:border-b-0 cursor-pointer ${ unreadCount > 0 ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
