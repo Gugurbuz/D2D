@@ -1,4 +1,3 @@
-// src/layouts/AppLayout.tsx
 import React from "react";
 import Navigation from "../components/Navigation";
 import { Role, Screen } from "../types";
@@ -8,7 +7,7 @@ type Props = {
   role: Role;
   currentScreen: Screen;
   setCurrentScreen: (s: Screen) => void;
-  agentAvatarUrl?: string; // YENİ
+  agentAvatarUrl?: string;
   children: React.ReactNode;
 };
 
@@ -27,7 +26,7 @@ export default function AppLayout({
         role={role}
         currentScreen={currentScreen}
         setCurrentScreen={setCurrentScreen}
-        agentAvatarUrl={agentAvatarUrl} // YENİ
+        agentAvatarUrl={agentAvatarUrl}
       />
       <main className="px-3 sm:px-6 py-4">{children}</main>
     </div>
