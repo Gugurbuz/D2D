@@ -51,7 +51,7 @@ self.onmessage = (event: MessageEvent<{ customers: Customer[]; reps: Rep[] }>) =
             
             // Boyutlar (dimensions) ve uzaklık fonksiyonu
             const distance = (a: { x: number, y: number }, b: { x: number, y: number }) => haversineKm([a.x, a.y], [b.x, b.y]);
-            const tree = new KdTree(centroidPoints, distance, ["x", "y"]);
+         const tree = new kdTree.KdTree(centroidPoints, distance, ["x", "y"]);
 
             const customerOrder = [...customers.keys()].sort(() => Math.random() - 0.5);
 
