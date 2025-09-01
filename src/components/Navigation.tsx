@@ -185,7 +185,7 @@ const Navigation: React.FC<Props> = ({
               </div>
 
               <div className="shrink-0">
-                <ThemeSwitcher />
+           
               </div>
             </div>
 
