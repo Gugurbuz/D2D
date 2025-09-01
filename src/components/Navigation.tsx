@@ -1,6 +1,7 @@
+// src/components/Navigation.tsx
+
 import React, { useEffect, useRef, useState } from "react";
 import {
-  User,
   Home,
   Route,
   List,
@@ -9,12 +10,12 @@ import {
   Users,
   Bell,
   BellDot,
-  MessageSquare, // Mesajlar ikonu için eklenmişti
+  MessageSquare,
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
-import { mockNotifications as defaultNotifications, AppNotification } from '../data/notifications';
-import ThemeSwitcher from './ThemeSwitcher'; // YENİLİK: Tema değiştirici bileşenini import et
+import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
+import ThemeSwitcher from './ThemeSwitcher'; // YENİLİK: ThemeSwitcher'ı import ettik
 
 type Props = {
   agentName: string;
@@ -62,9 +63,10 @@ const Navigation: React.FC<Props> = ({
   const Btn = ({ onClick, active, children, label }: { onClick: () => void; active: boolean; children: React.ReactNode; label: string; }) => (
     <button
       onClick={onClick}
-      // GÜNCELLEME: Butonlara karanlık mod hover stili eklendi
-      className={`relative shrink-0 px-3 sm:px-4 py-2 rounded-lg ${
-        active ? "bg-[#F9C800] text-gray-900" : "hover:bg-gray-100 dark:hover:bg-gray-700"
+      className={`relative shrink-0 px-3 sm:px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-300 ${
+        active 
+          ? "bg-[#F9C800] text-gray-900" 
+          : "hover:bg-gray-100 dark:hover:bg-gray-700"
       }`}
       title={label}
       aria-label={label}
@@ -74,7 +76,6 @@ const Navigation: React.FC<Props> = ({
   );
 
   return (
-    // GÜNCELLEME: Header'a karanlık mod stilleri eklendi
     <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
       <div className="container mx-auto px-3 sm:px-6">
         <div className="flex items-center justify-between h-16">
@@ -84,7 +85,6 @@ const Navigation: React.FC<Props> = ({
               <img src={avatarSrc} alt={agentName || "Kullanıcı"} className="w-full h-full object-cover" />
             </div>
             <div className="truncate">
-              {/* GÜNCELLEME: Metinlere karanlık mod renkleri eklendi */}
               <h2 className="font-semibold text-gray-900 truncate dark:text-gray-100">
                 {agentName || "Kullanıcı"}
               </h2>
@@ -122,11 +122,8 @@ const Navigation: React.FC<Props> = ({
                 <button
                   type="button"
                   onClick={() => setNotifOpen((o) => !o)}
-                  // GÜNCELLEME: Butona karanlık mod stili eklendi
-                  className="px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative"
+                  className="px-3 sm:px-4 py-2 rounded-lg relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                   title="Bildirimler"
-                  aria-label="Bildirimler"
-                  aria-expanded={notifOpen}
                 >
                   {notifUnread > 0 ? <BellDot className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
                   {notifUnread > 0 && (
@@ -135,11 +132,10 @@ const Navigation: React.FC<Props> = ({
                 </button>
               </div>
 
-              {/* YENİLİK: Tema Değiştirici Buton buraya eklendi */}
+              {/* YENİLİK: Tema Değiştirici Butonu buraya eklendi */}
               <div className="shrink-0">
                 <ThemeSwitcher />
               </div>
-              
             </div>
             
             {/* Bildirim Dropdown'ı için karanlık mod stilleri */}
@@ -155,14 +151,14 @@ const Navigation: React.FC<Props> = ({
                   ) : (
                     notifItems.map((n) => (
                       <div key={n.id} className={`px-4 py-3 border-b dark:border-gray-700 last:border-b-0 ${n.unread ? "bg-[#0099CB]/5 dark:bg-blue-500/10" : "dark:hover:bg-gray-700"}`}>
-                        <div className="flex items-start gap-2">
-                          <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${ n.type === "assignment" ? "bg-amber-500" : n.type === "visit" ? "bg-green-500" : "bg-gray-400"}`} />
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">{n.title}</div>
-                            {n.desc && (<div className="text-xs text-gray-600 truncate dark:text-gray-400">{n.desc}</div>)}
-                            <div className="text-[11px] text-gray-500 mt-0.5 dark:text-gray-500">{n.timeAgo}</div>
-                          </div>
-                        </div>
+                         <div className="flex items-start gap-2">
+                           <span className={`mt-0.5 inline-block w-2 h-2 rounded-full ${ n.type === "assignment" ? "bg-amber-500" : n.type === "visit" ? "bg-green-500" : "bg-gray-400"}`} />
+                           <div className="min-w-0">
+                             <div className="text-sm font-medium text-gray-900 truncate dark:text-gray-100">{n.title}</div>
+                             {n.desc && (<div className="text-xs text-gray-600 truncate dark:text-gray-400">{n.desc}</div>)}
+                             <div className="text-[11px] text-gray-500 mt-0.5 dark:text-gray-500">{n.timeAgo}</div>
+                           </div>
+                         </div>
                       </div>
                     ))
                   )}
