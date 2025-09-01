@@ -1,25 +1,22 @@
-// src/screens/LoginScreen.tsx
-
 import React from 'react';
 
 type Props = { onLogin: () => void; };
 
 const LoginScreen: React.FC<Props> = ({ onLogin }) => (
-  // 1. Ana Konteyner: Tüm ekranı kaplar ve içerik için zemin hazırlar.
+  // Ana konteyner, artık düz bir arkaplan rengine sahip
   <div className="relative min-h-screen bg-gray-100">
     
-    {/* 2. Arkaplan Katmanı: Resmi gösterir ve arkada durur */}
+    {/* YENİ YAPI: Sadece üst alanı kaplayan Banner Katmanı */}
     <div
-      className="absolute top-0 left-0 w-full h-full bg-center bg-cover"
+      className="absolute top-0 left-0 w-full h-2/5 bg-center bg-cover" // Ekranın üstten %40'ını kaplar
       style={{
         backgroundImage: "url('https://media.licdn.com/dms/image/v2/D4D16AQHUrW2XEiUU6w/profile-displaybackgroundimage-shrink_200_800/profile-displaybackgroundimage-shrink_200_800/0/1701871393092?e=2147483647&v=beta&t=hegKvnwUsa6qrMzJaaaLbY9ad5Fb5wW0h1AKQ4mJeZw')",
       }}
     />
 
-    {/* 3. İçerik Katmanı: Login formunu ortalar ve ön planda durur */}
-    <div className="relative min-h-screen flex items-center justify-center p-4">
+    {/* İçerik Katmanı: Login formunu dikey ve yatayda ortalar */}
+    <div className="relative min-h-screen flex flex-col items-center justify-center p-4">
       
-      {/* Login Formu: Saydamlığı artırıldı ve blur efekti güçlendirildi */}
       <div className="bg-white bg-opacity-80 backdrop-blur-md rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -43,11 +40,4 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => (
           </div>
         </div>
         <button onClick={onLogin} className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors">
-          Giriş Yap
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-export default LoginScreen;
+          Giriş
