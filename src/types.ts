@@ -40,7 +40,6 @@ export type Screen =
   | 'reports'
   | 'routeMap'
   | 'assignment'
-  | 'profile'
   | 'assignmentMap'; 
 
 // src/types.ts
@@ -52,19 +51,3 @@ export type Rep = {
   phone?: string;
 };
 
-// src/types.ts
-
-export type Role = 'admin' | 'agent';
-
-// YENİLİK: 'messages' ekranı eklendi
-export type Screen = 'routeMap' | 'teamMap' | 'assignmentMap' | 'messages' | 'settings';
-
-export type Rep = {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  phone: string;
-  color: string;
-  fillColor: string;
-};

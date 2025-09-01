@@ -1,6 +1,7 @@
 // src/components/Navigation.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
+  User,
   Home,
   Route,
   List,
@@ -9,20 +10,51 @@ import {
   Users,
   Bell,
   BellDot,
-  MessageSquare,
 } from "lucide-react";
 import { Role, Screen } from "../types";
-import { mockConversations, Message } from '../data/messages';
-import { AppNotification, mockNotifications as defaultNotifications } from '../data/notifications';
-import ThemeSwitcher from './ThemeSwitcher';
 
 type Props = {
   agentName: string;
   role: Role;
   currentScreen: Screen;
   setCurrentScreen: (s: Screen) => void;
-  agentAvatarUrl?: string;
+  agentAvatarUrl?: string; // gerçek foto URL'i buradan gelir
 };
+
+type AppNotification = {
+  id: string;
+  title: string;
+  desc?: string;
+  timeAgo: string;
+  type: "assignment" | "visit" | "system";
+  unread?: boolean;
+};
+
+const mockNotifications: AppNotification[] = [
+  {
+    id: "n1",
+    title: "3 müşteri Zelal Kaya’ya atandı",
+    desc: "Kadıköy, Üsküdar, Ataşehir",
+    timeAgo: "3 dk önce",
+    type: "assignment",
+    unread: true,
+  },
+  {
+    id: "n2",
+    title: "Serkan Özkan 2 ziyareti tamamladı",
+    desc: "Tamamlanan oranı %40",
+    timeAgo: "32 dk önce",
+    type: "visit",
+    unread: true,
+  },
+  {
+    id: "n3",
+    title: "Sistem bakımı 22:00–23:00",
+    timeAgo: "1 saat önce",
+    type: "system",
+    unread: false,
+  },
+];
 
 const Navigation: React.FC<Props> = ({
   agentName,
@@ -31,57 +63,53 @@ const Navigation: React.FC<Props> = ({
   setCurrentScreen,
   agentAvatarUrl,
 }) => {
-  // Bildirimler için state'ler
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifItems, setNotifItems] = useState<AppNotification[]>(defaultNotifications);
-  const notifUnread = notifItems.filter((n) => n.unread).length;
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<AppNotification[]>(mockNotifications);
+  const unread = items.filter((n) => n.unread).length;
 
-  // Mesajlar için state'ler
-  const [messageMenuOpen, setMessageMenuOpen] = useState(false);
-  const [messageItems, setMessageItems] = useState(mockConversations);
-  const messageUnreadCount = messageItems.reduce((total, conversation) => {
-    return total + conversation.messages.filter(msg => msg.senderId !== 'you' && !msg.read).length;
-  }, 0);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // Referanslar (ref)
-  const notifAnchorRef = useRef<HTMLDivElement | null>(null);
-  const notifMenuRef = useRef<HTMLDivElement | null>(null);
-  const messageAnchorRef = useRef<HTMLButtonElement | null>(null);
-  const messageMenuRef = useRef<HTMLDivElement | null>(null);
-
-  // Dışarıya tıklandığında menüleri kapatma
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      // Bildirim menüsünü kapat
-      if (notifAnchorRef.current && !notifAnchorRef.current.contains(t) && notifMenuRef.current && !notifMenuRef.current.contains(t)) {
-        setNotifOpen(false);
-      }
-      // Mesaj menüsünü kapat
-      if (messageAnchorRef.current && !messageAnchorRef.current.contains(t) && messageMenuRef.current && !messageMenuRef.current.contains(t)) {
-        setMessageMenuOpen(false);
+      if (
+        anchorRef.current &&
+        !anchorRef.current.contains(t) &&
+        menuRef.current &&
+        !menuRef.current.contains(t)
+      ) {
+        setOpen(false);
       }
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  const markAllNotificationsRead = () => setNotifItems((prev) => prev.map((n) => ({ ...n, unread: false })));
-  const avatarSrc = agentAvatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(agentName || "Kullanıcı")}&background=0099CB&color=fff`;
+  const markAllRead = () =>
+    setItems((prev) => prev.map((n) => ({ ...n, unread: false })));
 
-  // PROFİL TIKLAMA HANDLER'I: menüleri kapat + profile ekranına git
-  const onProfileClick = () => {
-    setMessageMenuOpen(false);
-    setNotifOpen(false);
-    setCurrentScreen('profile'); // Screen tipine 'profile' eklediğinden emin ol
-  };
+  const avatarSrc =
+    agentAvatarUrl ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      agentName || "Kullanıcı"
+    )}&background=0099CB&color=fff`;
 
-  const Btn = ({ onClick, active, children, label, refProp }: { onClick: () => void; active: boolean; children: React.ReactNode; label: string; refProp?: React.Ref<HTMLButtonElement> }) => (
+  const Btn = ({
+    onClick,
+    active,
+    children,
+    label,
+  }: {
+    onClick: () => void;
+    active: boolean;
+    children: React.ReactNode;
+    label: string;
+  }) => (
     <button
-      ref={refProp}
       onClick={onClick}
-      className={`relative shrink-0 px-3 sm:px-4 py-2 rounded-lg transition-colors text-gray-600 dark:text-gray-300 ${
-        active ? "bg-[#F9C800] text-gray-900" : "hover:bg-gray-100 dark:hover:bg-gray-700"
+      className={`shrink-0 px-3 sm:px-4 py-2 rounded-lg ${
+        active ? "bg-[#F9C800]" : "hover:bg-gray-100"
       }`}
       title={label}
       aria-label={label}
@@ -91,118 +119,174 @@ const Navigation: React.FC<Props> = ({
   );
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-      <div className="container mx-auto px-3 sm:px-6">
-        <div className="flex items-center justify-between h-16">
-          {/* Sol Taraf - Profil (ARTIK TIKLANABİLİR) */}
-          <div
-            className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg px-2 py-1 ${
-              currentScreen === 'profile'
-                ? 'ring-2 ring-[#0099CB] ring-offset-2 dark:ring-offset-gray-800'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
-            onClick={onProfileClick}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onProfileClick()}
-            role="button"
-            tabIndex={0}
-            title="Profilim"
-          >
-            <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white bg-gray-200 shrink-0">
-              <img src={avatarSrc} alt={agentName || "Kullanıcı"} className="w-full h-full object-cover" />
-            </div>
-            <div className="truncate">
-              <h2 className="font-semibold text-gray-900 truncate dark:text-gray-100">{agentName || "Kullanıcı"}</h2>
-              <p className="text-sm text-gray-600 truncate dark:text-gray-400">{role === "manager" ? "Saha Yöneticisi" : "Saha Temsilcisi"}</p>
-            </div>
+    <div className="bg-white shadow-sm border-b border-gray-200 px-3 sm:px-6 py-3">
+      <div className="flex items-center justify-between gap-3">
+        {/* SOL: Kullanıcı */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white bg-gray-200 shrink-0">
+            <img
+              src={avatarSrc}
+              alt={agentName || "Kullanıcı"}
+              className="w-full h-full object-cover"
+            />
           </div>
-
-          {/* SAĞ: Araç Çubuğu */}
-          <div className="relative flex-1 flex items-center justify-end">
-            <div className="flex flex-nowrap items-center gap-1 sm:gap-2 overflow-x-auto max-w-full no-scrollbar">
-              <Btn onClick={() => setCurrentScreen("dashboard")} active={currentScreen === "dashboard"} label="Dashboard"><Home className="w-5 h-5" /></Btn>
-              <Btn onClick={() => setCurrentScreen("routeMap")} active={currentScreen === "routeMap"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
-              <Btn onClick={() => setCurrentScreen("visitList")} active={currentScreen === "visitList"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
-              <Btn onClick={() => setCurrentScreen("reports")} active={currentScreen === "reports"} label="Raporlar"><BarChart3 className="w-5 h-5" /></Btn>
-              {role === "manager" && (
-                <>
-                  <Btn onClick={() => setCurrentScreen("assignmentMap")} active={currentScreen === "assignmentMap"} label="Görev Atama"><UserCheck className="w-5 h-5" /></Btn>
-                  <Btn onClick={() => setCurrentScreen("teamMap")} active={currentScreen === "teamMap"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
-                </>
-              )}
-              
-              {/* MESAJLAR BUTONU - MENÜ AÇAR */}
-              <Btn
-                refProp={messageAnchorRef}
-                onClick={() => setMessageMenuOpen(o => !o)} 
-                active={currentScreen === "messages"} 
-                label="Mesajlar"
-              >
-                <MessageSquare className="w-5 h-5" />
-                {messageUnreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                )}
-              </Btn>
-
-              {/* BİLDİRİMLER BUTONU */}
-              <div className="relative shrink-0" ref={notifAnchorRef}>
-                <button
-                  type="button"
-                  onClick={() => setNotifOpen((o) => !o)}
-                  className="px-3 sm:px-4 py-2 rounded-lg relative text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  title="Bildirimler"
-                  aria-expanded={notifOpen}
-                >
-                  {notifUnread > 0 ? <BellDot className="w-5 h-5" /> : <Bell className="w-5 h-5" />}
-                  {notifUnread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">{notifUnread}</span>
-                  )}
-                </button>
-              </div>
-
-              <div className="shrink-0">
-                <ThemeSwitcher />
-              </div>
-            </div>
-            
-            {/* MESAJLAR AÇILIR MENÜSÜ */}
-            {messageMenuOpen && (
-              <div ref={messageMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-gray-800 dark:border-gray-700">
-                <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">Son Mesajlar</div>
-                  <button onClick={() => setCurrentScreen("messages")} className="text-xs text-[#0099CB] hover:underline">Tümünü Gör</button>
-                </div>
-                <div className="max-h-[300px] overflow-auto">
-                  {messageItems.filter(c => c.messages.length > 0).map(convo => {
-                     const lastMessage = convo.messages[convo.messages.length-1];
-                     const unreadCount = convo.messages.filter(m => !m.read && m.senderId !== 'you').length;
-                     const participantName = `Rep ${convo.participantB}`;
-                     return (
-                        <div key={convo.participantB} onClick={() => { setCurrentScreen("messages"); setMessageMenuOpen(false); }} className={`px-4 py-3 border-b dark:border-gray-700 last:border-b-0 cursor-pointer ${ unreadCount > 0 ? "bg-blue-50 dark:bg-blue-500/10" : "hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
-                            <div className="flex items-center justify-between">
-                                <div className="font-medium text-sm text-gray-800 dark:text-gray-200">{participantName}</div>
-                                <div className="text-xs text-gray-500">{new Date(lastMessage.timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</div>
-                            </div>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{lastMessage.text}</p>
-                        </div>
-                     )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* BİLDİRİM AÇILIR MENÜSÜ */}
-            {notifOpen && (
-              <div ref={notifMenuRef} className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg dark:bg-gray-800 dark:border-gray-700">
-                {/* ... bildirim menüsü içeriği ... */}
-              </div>
-            )}
+          <div className="truncate">
+            <h2 className="font-semibold text-gray-900 truncate">
+              {agentName || "Kullanıcı"}
+            </h2>
+            <p className="text-sm text-gray-600 truncate">
+              {role === "manager" ? "Saha Yöneticisi" : "Saha Temsilcisi"}
+            </p>
           </div>
         </div>
+
+        {/* SAĞ: Araç Çubuğu (yatay kaydırılabilir) */}
+        <div className="relative flex-1 flex items-center justify-end">
+          <div className="flex flex-nowrap items-center gap-1 sm:gap-2 overflow-x-auto max-w-full no-scrollbar">
+            <Btn
+              onClick={() => setCurrentScreen("dashboard")}
+              active={currentScreen === "dashboard"}
+              label="Dashboard"
+            >
+              <Home className="w-5 h-5" />
+            </Btn>
+
+            <Btn
+              onClick={() => setCurrentScreen("routeMap")}
+              active={currentScreen === "routeMap"}
+              label="Rota Haritası"
+            >
+              <Route className="w-5 h-5" />
+            </Btn>
+
+            <Btn
+              onClick={() => setCurrentScreen("visitList")}
+              active={currentScreen === "visitList"}
+              label="Ziyaret Listesi"
+            >
+              <List className="w-5 h-5" />
+            </Btn>
+
+            <Btn
+              onClick={() => setCurrentScreen("reports")}
+              active={currentScreen === "reports"}
+              label="Raporlar"
+            >
+              <BarChart3 className="w-5 h-5" />
+            </Btn>
+
+            {role === "manager" && (
+              <>
+                <Btn
+                  onClick={() => setCurrentScreen("assignment")}
+                  active={currentScreen === "assignment"}
+                  label="Görev Atama"
+                >
+                  <UserCheck className="w-5 h-5" />
+                </Btn>
+
+                <Btn
+                  onClick={() => setCurrentScreen("teamMap")}
+                  active={currentScreen === "teamMap"}
+                  label="Ekip Haritası"
+                >
+                  <Users className="w-5 h-5" />
+                </Btn>
+              </>
+            )}
+
+            {/* Bildirimler */}
+            <div className="relative shrink-0" ref={anchorRef}>
+              <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                className="px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 relative"
+                title="Bildirimler"
+                aria-label="Bildirimler"
+                aria-expanded={open}
+              >
+                {unread > 0 ? (
+                  <BellDot className="w-5 h-5" />
+                ) : (
+                  <Bell className="w-5 h-5" />
+                )}
+                {unread > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">
+                    {unread}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Bildirim Dropdown (fixed + yüksek z-index) */}
+          {open && (
+            <div
+              ref={menuRef}
+              className="fixed right-3 top-16 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg"
+              role="dialog"
+              aria-label="Bildirimler listesi"
+            >
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <div className="font-semibold text-gray-900">Bildirimler</div>
+                <button
+                  onClick={markAllRead}
+                  className="text-xs text-[#0099CB] hover:underline"
+                >
+                  Tümünü okundu işaretle
+                </button>
+              </div>
+              <div className="max-h-[300px] overflow-auto">
+                {items.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                    Bildirim yok
+                  </div>
+                ) : (
+                  items.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`px-4 py-3 border-b last:border-b-0 ${
+                        n.unread ? "bg-[#0099CB]/5" : ""
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`mt-0.5 inline-block w-2 h-2 rounded-full ${
+                            n.type === "assignment"
+                              ? "bg-amber-500"
+                              : n.type === "visit"
+                              ? "bg-green-500"
+                              : "bg-gray-400"
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {n.title}
+                          </div>
+                          {n.desc && (
+                            <div className="text-xs text-gray-600 truncate">
+                              {n.desc}
+                            </div>
+                          )}
+                          <div className="text-[11px] text-gray-500 mt-0.5">
+                            {n.timeAgo}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </header>
+
+      {/* opsiyonel: scrollbar gizleme utility'si yoksa global CSS’e ekleyebilirsin:
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      */}
+    </div>
   );
 };
 
