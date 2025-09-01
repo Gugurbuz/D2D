@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
+// Bu import yolu, dosyanın 'src/components/' içinde olduğunu varsayar
 import { useTheme } from '../context/ThemeContext';
 
 const ThemeSwitcher: React.FC = () => {
