@@ -404,12 +404,15 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
               scale="preview"
             />
             <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
-  <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center">
-    <Maximize2 className="h-4 w-4 text-white" />
+  <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
+  <div className="h-8 w-8 rounded-full bg-[#F9C800] text-gray-900 shadow ring-1 ring-black/10 flex items-center justify-center">
+    <Maximize2 className="h-4 w-4" />
   </div>
-  <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-black/50 text-white rounded">
-    
+  <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-[#F9C800] text-gray-900 rounded shadow ring-1 ring-black/10">
+    Tam ekran
   </div>
+</div>
+
 </div>
           </button>
 
