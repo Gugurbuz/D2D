@@ -28,6 +28,31 @@ import ProfileScreens from './screens/ProfileScreens';
 import { GuideProvider, HelpFAB, useGuide } from "./guide/GuideSystem";
 import { GUIDE_VERSION } from "./guide/guideConfig";
 
+// DEBUG amaçlı: her ekranda turu zorla başlat
+const DEBUG_GUIDE = true; // işin bitince false yap veya satırı sil
+
+function ForceStartOnce() {
+  const { role, screen, startTour, setHelpOpen } = useGuide();
+
+  React.useEffect(() => {
+    // Bu rol+ekran için "tamamlandı" bayrağını temizle
+    const key = `guide:${GUIDE_VERSION}:${role}:${screen}:done`;
+    try { localStorage.removeItem(key); } catch {}
+
+    // DOM hazır olsun diye bir sonraki frame'de başlat
+    const id = requestAnimationFrame(() => {
+      // İstersen önce yardım çekmecesini açtır:
+      // setHelpOpen(true);
+      startTour();
+    });
+
+    return () => cancelAnimationFrame(id);
+  }, [role, screen, startTour, setHelpOpen]);
+
+  return null;
+}
+
+
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
   const [role, setRole] = useState<Role>('rep');
