@@ -443,7 +443,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             </div>
 
             <div className="mb-3 text-xs text-gray-600">
-                <b>İpucu:</b> Manuel atama için sağdaki paneli kullanın. Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
+                <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın. Manuel atama için sağdaki paneli kullanın. Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
             </div>
 
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
