@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useState } from 'react';
 import AppLayout from './layouts/AppLayout';
 import MessagesScreen from './screens/MessagesScreen';
@@ -7,6 +6,9 @@ import { Customer } from './RouteMap';
 
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
+
+// Kullanıcı verilerini team.ts dosyasından import ediyoruz
+import { teamReps, managerUser } from './data/team';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
@@ -20,58 +22,15 @@ import VisitFlowScreen from './screens/VisitFlowScreen';
 import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
-
-// ✅ Profil ekranı
 import ProfileScreens from './screens/ProfileScreens';
 
-// ✅ Guide sistemi (tablet uyumlu)
-import { GuideProvider, HelpFAB, useGuide } from "./guide/GuideSystem";
+// Guide sistemi
+import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
 import { GUIDE_VERSION } from "./guide/guideConfig";
-
-// DEBUG amaçlı: her ekranda turu zorla başlat
-const DEBUG_GUIDE = false; // işin bitince false yap veya satırı sil
-
-function ForceStartOnce() {
-  const { role, screen, startTour, setHelpOpen } = useGuide();
-
-  React.useEffect(() => {
-    // Bu rol+ekran için "tamamlandı" bayrağını temizle
-    const key = `guide:${GUIDE_VERSION}:${role}:${screen}:done`;
-    try { localStorage.removeItem(key); } catch {}
-
-    // DOM hazır olsun diye bir sonraki frame'de başlat
-    const id = requestAnimationFrame(() => {
-      // İstersen önce yardım çekmecesini açtır:
-      // setHelpOpen(true);
-      startTour();
-    });
-
-    return (
-  <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
-    {DEBUG_GUIDE && <ForceStartOnce />}  {/* ⬅️ Sadece debug için */}
-    <AppLayout
-      agentName={agentName}
-      role={role}
-      currentScreen={currentScreen}
-      setCurrentScreen={setCurrentScreen}
-    >
-      {/* ... senin mevcut ekranların ... */}
-      <HelpFAB />
-    </AppLayout>
-  </GuideProvider>
-);
-
-
-    return () => cancelAnimationFrame(id);
-  }, [role, screen, startTour, setHelpOpen]);
-
-  return null;
-}
-
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
-  const [role, setRole] = useState<Role>('rep');
+  const [role, setRole] = useState<Role>('sales');
   const [agentName, setAgentName] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [filter, setFilter] = useState('Bugün');
@@ -80,7 +39,10 @@ function App() {
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
 
-  const currentRepId = role === 'rep' ? 'rep-1' : undefined;
+  // Varsayılan satış temsilcisi olarak mock data dizisindeki ilk kişiyi alıyoruz.
+  const salesUser = teamReps[0];
+
+  const currentRepId = role === 'sales' ? salesUser.id : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
     if (role === 'manager') return true;
     const assigned = assignments[c.id];
@@ -93,37 +55,29 @@ function App() {
     r === 'manager' ? 'sahaYonetici' : 'satisUzmani';
 
   const toAppScreen = (s: Screen, r: Role): AppScreen => {
-    // guideConfig’te olmayan ekranları en yakın rehbere eşleştir
     switch (s) {
-      case 'dashboard':
-        return 'dashboard';
-      case 'routeMap':
-        return 'routeMap';
-      case 'visitList':
-        return 'visitList';
-      case 'assignmentMap':
-        return 'assignmentMap';
-      // Yakın eşleştirmeler:
-      case 'assignment':
-        return 'assignmentMap';
+      case 'dashboard': return 'dashboard';
+      case 'routeMap': return 'routeMap';
+      case 'visitList': return 'visitList';
+      case 'assignmentMap': return 'assignmentMap';
+      case 'assignment': return 'assignmentMap';
       case 'visitDetail':
-      case 'visitFlow':
-        return 'visitList';
+      case 'visitFlow': return 'visitList';
       case 'teamMap':
       case 'messages':
       case 'reports':
       case 'profile':
       default:
-        // Yöneticide raporlama ağırlıklı olduğu için dashboard mantıklı
         return 'dashboard';
     }
   };
 
-  const handleSpeechToText = () => { /* ... Fonksiyon içeriği değişmedi ... */ };
+  const handleSpeechToText = () => { /* Fonksiyon içeriği değişmedi */ };
+  
   const handleLogin = () => {
-    setAgentName('Serkan Özkan');
     setCurrentScreen('roleSelect');
   };
+
   const handleStartVisit = (customer: Customer) => {
     const updated = customers.map((c) =>
       c.id === customer.id ? { ...c, status: 'Yolda' as const } : c
@@ -132,26 +86,35 @@ function App() {
     setSelectedCustomer({ ...customer, status: 'Yolda' });
     setCurrentScreen('visitFlow');
   };
+
   const handleCompleteVisit = (cust: Customer) => {
     setCustomers((prev) => prev.map((c) => (c.id === cust.id ? { ...cust } : c)));
     setSelectedCustomer({ ...cust });
   };
 
-  // Login ve rol seçimi ekranlarında rehbere gerek yok, direkt render
-  if (currentScreen === 'login') return <LoginScreen onLogin={handleLogin} />;
+  // Login ve rol seçimi ekranları
+  if (currentScreen === 'login') {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   if (currentScreen === 'roleSelect') {
     return (
       <RoleSelectScreen
-        onSelect={(r) => {
-          setRole(r);
+        onSelect={(selectedRole) => {
+          if (selectedRole === 'manager') {
+            setRole('manager');
+            setAgentName(managerUser.name);
+          } else { // 'sales'
+            setRole('sales');
+            setAgentName(salesUser.name);
+          }
           setCurrentScreen('dashboard');
         }}
       />
     );
   }
 
-  // Rehber sağlayıcısı: rol + ekran eşlemesi (tablet için autoStart + long-press açık)
+  // Guide sağlayıcısı ve ana uygulama düzeni
   const guideRole = toAppRole(role);
   const guideScreen = toAppScreen(currentScreen, role);
 
@@ -163,9 +126,9 @@ function App() {
         currentScreen={currentScreen}
         setCurrentScreen={setCurrentScreen}
       >
-        {/* ✅ PROFIL */}
+        {/* Ekranların koşullu olarak render edilmesi */}
         {currentScreen === 'profile' && (
-          <ProfileScreens role={role === 'manager' ? 'manager' : 'sales'} />
+          <ProfileScreens role={role} />
         )}
 
         {currentScreen === 'assignmentMap' && role === 'manager' && (
@@ -189,8 +152,7 @@ function App() {
         )}
 
         {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
-
-        {/* Mesajlar */}
+        
         {currentScreen === 'messages' && <MessagesScreen />}
 
         {currentScreen === 'dashboard' && (
@@ -244,11 +206,6 @@ function App() {
           <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
         )}
 
-        {/* ✅ Tablet: sağ altta “?” yardım menüsü */}
         <HelpFAB />
       </AppLayout>
-    </GuideProvider>
-  );
-}
-
-export default App;
+    </G
