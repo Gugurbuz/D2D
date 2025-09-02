@@ -403,9 +403,14 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
               signatureDataUrl={signatureDataUrl}  // ⬅️ imza slotuna geçer
               scale="preview"
             />
-            <div className="absolute bottom-2 right-2 text-[10px] px-2 py-1 bg-black/60 text-white rounded">
-              Dokun ve büyüt
-            </div>
+            <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
+  <div className="h-8 w-8 rounded-full bg-black/60 flex items-center justify-center">
+    <Maximize2 className="h-4 w-4 text-white" />
+  </div>
+  <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-black/50 text-white rounded">
+    Tam ekran
+  </div>
+</div>
           </button>
 
           <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
