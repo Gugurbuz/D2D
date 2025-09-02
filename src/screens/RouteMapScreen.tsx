@@ -284,17 +284,40 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 if (m) m.openPopup();
               }}}
             >
-              <Popup>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <b>{i + 1}. {c.name}</b>
-                    {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
-                  </div>
-                  <div>{c.address}, {c.district}</div>
-                  <div>Saat: {c.plannedTime}</div>
-                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
+             <Popup>
+  <div className="space-y-1">
+    <div className="flex items-center gap-2">
+      <b>{i + 1}. {c.name}</b>
+      {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
+    </div>
+    <div>{c.address}, {c.district}</div>
+    <div>Saat: {c.plannedTime}</div>
+    <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
 
-                  {/* ==== GÜNCELLENMİŞ BUTON STİLİ ==== */}
+    {/* ★ POPUP İÇİ YILDIZ BUTONU */}
+    <div className="mt-2">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setStarredId(prev => (prev === c.id ? null : c.id));
+        }}
+        className={`w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border font-semibold transition
+          ${starredId === c.id
+            ? "bg-[#F5B301] border-[#F5B301] text-white"
+            : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"}`}
+        title={starredId === c.id ? "İlk duraktan kaldır" : "İlk durak yap"}
+        aria-pressed={starredId === c.id}
+      >
+        {starredId === c.id
+          ? <Star className="w-4 h-4 fill-current" />
+          : <StarOff className="w-4 h-4" />
+        }
+        <span>{starredId === c.id ? "İlk durak" : "İlk durak yap"}</span>
+      </button>
+    </div>
+
+    {/* ==== Navigasyon butonu ==== */}
     <a
       href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
       target="_blank"
@@ -304,10 +327,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       <Navigation className="w-4 h-4" />
       <span>Navigasyonu Başlat</span>
     </a>
-                  {/* ==== DEĞİŞİKLİK SONU ==== */}
-                  
-                </div>
-              </Popup>
+  </div>
+</Popup>
+
             </Marker>
           ))}
 
