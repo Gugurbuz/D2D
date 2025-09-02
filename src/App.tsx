@@ -23,6 +23,10 @@ import TeamMapScreen from './screens/TeamMapScreen';
 
 // ✅ Profil ekranı
 import ProfileScreens from './screens/ProfileScreens';
+// ✅ Guide ekranı
+import { GuideProvider, HelpButton } from "./guide/GuideSystem";
+import type { AppRole, AppScreen } from "./guide/guideConfig";
+
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
