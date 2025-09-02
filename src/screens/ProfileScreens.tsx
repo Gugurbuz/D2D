@@ -134,13 +134,41 @@ const SideNav: React.FC<{
   );
 };
 
+// ===== HATA DÜZELTME: Eksik olan ToggleLine bileşeni eklendi =====
+const ToggleLine: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; compact?: boolean }> = ({ label, checked, onChange, hint, compact }) => (
+    <div className={`flex items-center justify-between ${compact ? "" : "rounded-lg border border-gray-200 p-3"}`}>
+      <div>
+        <div className="text-sm font-medium text-gray-900">{label}</div>
+        {hint && <div className="text-xs text-gray-500">{hint}</div>}
+      </div>
+      <Switch checked={checked} onChange={onChange} />
+    </div>
+);
+
 // ===== Sales Profile =====
 export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) => {
   const [form, setForm] = useState<SalesUser>({ ...defaultSales, ...(user as SalesUser) });
   const [tab, setTab] = useState<string>("personal");
   const set = <K extends keyof SalesUser>(k: K, v: SalesUser[K]) => setForm((f) => ({ ...f, [k]: v }));
   const onSave = () => { alert("Profil kaydedildi (Satış Uzmanı)"); };
-  const toggleDay = (key: keyof WorkDays) => set("workDays", { ...(form.workDays || defaultSales.workDays!), [key]: !form.workDays?.[key] });
+
+  // ===== İYİLEŞTİRME: State güncellemelerini sağlamlaştıran yardımcı fonksiyonlar =====
+  const setWorkHours = (part: "start" | "end", value: string) => {
+    const current = form.workHours ?? { start: "09:00", end: "18:00" };
+    set("workHours", { ...current, [part]: value });
+  };
+  const setBreakTimes = (part: "start" | "end", value: string) => {
+    const current = form.breakTimes ?? { start: "12:30", end: "13:30" };
+    set("breakTimes", { ...current, [part]: value });
+  };
+  const handleNotificationChange = (key: keyof Notifications, value: boolean) => {
+    const current = form.notifications ?? defaultBase.notifications;
+    set("notifications", { ...current!, [key]: value });
+  };
+  const toggleDay = (key: keyof WorkDays) => {
+    const current = form.workDays ?? defaultSales.workDays;
+    set("workDays", { ...current!, [key]: !current![key] });
+  };
 
   const items = [
     { key: "personal", label: "Kişisel Bilgiler" },
@@ -152,7 +180,6 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
   ];
 
   return (
-    // ===== DEĞİŞİKLİK 1.1: Boşluklar azaltıldı =====
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <div className="mb-4 flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-yellow-100"><User className="h-5 w-5 text-[#0099CB]" /></div>
@@ -162,7 +189,6 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
         </div>
       </div>
 
-       {/* ===== DEĞİŞİKLİK 1.2: Bölümler arası boşluk artırıldı ===== */}
       <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
@@ -171,9 +197,9 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
               <div className="grid gap-4 md:grid-cols-2">
                 <FieldRow label="Ad Soyad"><Input value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Adınız Soyadınız" /></FieldRow>
                 <FieldRow label="E-posta"><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="ornek@firma.com" /></FieldRow>
-                <FieldRow label="Telefon"><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+90..." /></FieldRow>
-                <FieldRow label="Bölge"><Input value={form.region} onChange={(e) => set("region", e.target.value)} placeholder="İstanbul Anadolu" /></FieldRow>
-                <FieldRow label="İlçe"><Input value={form.district} onChange={(e) => set("district", e.target.value)} placeholder="Kadıköy" /></FieldRow>
+                <FieldRow label="Telefon"><Input value={form.phone ?? ''} onChange={(e) => set("phone", e.target.value)} placeholder="+90..." /></FieldRow>
+                <FieldRow label="Bölge"><Input value={form.region ?? ''} onChange={(e) => set("region", e.target.value)} placeholder="İstanbul Anadolu" /></FieldRow>
+                <FieldRow label="İlçe"><Input value={form.district ?? ''} onChange={(e) => set("district", e.target.value)} placeholder="Kadıköy" /></FieldRow>
               </div>
             </Section>
           )}
@@ -181,10 +207,10 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
           {tab === "work" && (
             <Section title="Çalışma & Zaman">
               <div className="grid gap-4 md:grid-cols-2">
-                <FieldRow label="Başlangıç Saati"><Input type="time" value={form.workHours?.start} onChange={(e) => set("workHours", { ...(form.workHours||{end:""}), start: e.target.value })} /></FieldRow>
-                <FieldRow label="Bitiş Saati"><Input type="time" value={form.workHours?.end} onChange={(e) => set("workHours", { ...(form.workHours||{start:""}), end: e.target.value })} /></FieldRow>
-                <FieldRow label="Öğle Arası Başlangıç"><Input type="time" value={form.breakTimes?.start} onChange={(e) => set("breakTimes", { ...(form.breakTimes||{end:""}), start: e.target.value })} /></FieldRow>
-                <FieldRow label="Öğle Arası Bitiş"><Input type="time" value={form.breakTimes?.end} onChange={(e) => set("breakTimes", { ...(form.breakTimes||{start:""}), end: e.target.value })} /></FieldRow>
+                <FieldRow label="Başlangıç Saati"><Input type="time" value={form.workHours?.start} onChange={(e) => setWorkHours("start", e.target.value)} /></FieldRow>
+                <FieldRow label="Bitiş Saati"><Input type="time" value={form.workHours?.end} onChange={(e) => setWorkHours("end", e.target.value)} /></FieldRow>
+                <FieldRow label="Öğle Arası Başlangıç"><Input type="time" value={form.breakTimes?.start} onChange={(e) => setBreakTimes("start", e.target.value)} /></FieldRow>
+                <FieldRow label="Öğle Arası Bitiş"><Input type="time" value={form.breakTimes?.end} onChange={(e) => setBreakTimes("end", e.target.value)} /></FieldRow>
               </div>
               <div className="mt-3">
                 <div className="mb-1 text-xs font-medium text-gray-600">Çalışma Günleri</div>
@@ -206,7 +232,7 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
                 <FieldRow label="Varsayılan Harita Yakınlığı (8-18)"><Input type="number" min={8} max={18} value={form.defaultMapZoom ?? 13} onChange={(e) => set("defaultMapZoom", Number(e.target.value))} /></FieldRow>
                 <FieldRow label="Otomatik Check-in Çapı (metre)"><Input type="number" min={50} max={500} step={10} value={form.autoCheckinRadiusMeters ?? 100} onChange={(e) => set("autoCheckinRadiusMeters", Number(e.target.value))} /></FieldRow>
                 <FieldRow label="Günlük Ziyaret Hedefi"><Input type="number" min={0} value={form.dailyVisitTarget ?? 0} onChange={(e) => set("dailyVisitTarget", Number(e.target.value))} /></FieldRow>
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="md:col-span-2">
                   <ToggleLine label="Rota Optimizasyonu" checked={!!form.prefersOptimizedRoutes} onChange={(v) => set("prefersOptimizedRoutes", v)} hint="En kısa mesafeye öncelik" />
                 </div>
               </div>
@@ -226,9 +252,9 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
           {tab === "notifs" && (
             <Section title="Bildirimler">
               <div className="grid gap-3 md:grid-cols-3">
-                <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), email: v })} compact />
-                <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), sms: v })} compact />
-                <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), push: v })} compact />
+                <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => handleNotificationChange('email', v)} compact />
+                <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => handleNotificationChange('sms', v)} compact />
+                <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => handleNotificationChange('push', v)} compact />
               </div>
             </Section>
           )}
@@ -259,6 +285,11 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
   const set = <K extends keyof ManagerUser>(k: K, v: ManagerUser[K]) => setForm((f) => ({ ...f, [k]: v }));
   const onSave = () => { alert("Profil kaydedildi (Saha Yöneticisi)"); };
 
+  const handleNotificationChange = (key: keyof Notifications, value: boolean) => {
+    const currentNotifications = form.notifications ?? defaultBase.notifications;
+    set("notifications", { ...currentNotifications!, [key]: value, });
+  };
+
   const items = [
     { key: "personal", label: "Kişisel Bilgiler" },
     { key: "assign", label: "Atama Politikaları" },
@@ -267,20 +298,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
     { key: "notifs", label: "Bildirimler" },
     { key: "reports", label: "Rapor & Dışa Aktarım" },
   ];
-
-  // ===== DEĞİŞİKLİK: Bildirim ayarlarını daha güvenli bir şekilde güncelleyen fonksiyon =====
-  const handleNotificationChange = (key: keyof Notifications, value: boolean) => {
-    // Önce mevcut bildirim ayarlarını al. Eğer yoksa (undefined veya null ise), varsayılanı kullan.
-    const currentNotifications = form.notifications ?? defaultBase.notifications;
-    
-    set("notifications", {
-      // Varsayılan ayarların üzerine mevcut ayarları ve en son değişikliği ekle.
-      ...defaultBase.notifications!,
-      ...currentNotifications,
-      [key]: value,
-    });
-  };
-
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
@@ -295,16 +312,15 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
       <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
-          {/* ... Diğer sekmeler (personal, assign, team) aynı kalacak ... */}
           {tab === "personal" && (
             <Section title="Kişisel Bilgiler">
               <div className="grid gap-4 md:grid-cols-2">
                 <FieldRow label="Ad Soyad"><Input value={form.name} onChange={(e) => set("name", e.target.value)} /></FieldRow>
                 <FieldRow label="E-posta"><Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} /></FieldRow>
-                <FieldRow label="Telefon"><Input value={form.phone} onChange={(e) => set("phone", e.target.value)} /></FieldRow>
-                <FieldRow label="Bölge"><Input value={form.region} onChange={(e) => set("region", e.target.value)} placeholder="İstanbul Anadolu" /></FieldRow>
-                <FieldRow label="Sorumlu Bölge"><Input value={form.territory} onChange={(e) => set("territory", e.target.value)} placeholder="Anadolu 1. Bölge" /></FieldRow>
-                <FieldRow label="Ekip Adı"><Input value={form.teamName} onChange={(e) => set("teamName", e.target.value)} /></FieldRow>
+                <FieldRow label="Telefon"><Input value={form.phone ?? ''} onChange={(e) => set("phone", e.target.value)} /></FieldRow>
+                <FieldRow label="Bölge"><Input value={form.region ?? ''} onChange={(e) => set("region", e.target.value)} placeholder="İstanbul Anadolu" /></FieldRow>
+                <FieldRow label="Sorumlu Bölge"><Input value={form.territory ?? ''} onChange={(e) => set("territory", e.target.value)} placeholder="Anadolu 1. Bölge" /></FieldRow>
+                <FieldRow label="Ekip Adı"><Input value={form.teamName ?? ''} onChange={(e) => set("teamName", e.target.value)} /></FieldRow>
                 <FieldRow label="Ekip Büyüklüğü"><Input type="number" min={0} value={form.teamSize ?? 0} onChange={(e) => set("teamSize", Number(e.target.value))} /></FieldRow>
               </div>
             </Section>
@@ -344,7 +360,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
           {tab === "notifs" && ( 
             <Section title="Bildirimler">
               <div className="grid gap-3 md:grid-cols-3">
-                {/* ===== DEĞİŞİKLİK: Yeni ve daha güvenli fonksiyonu kullanıyoruz ===== */}
                 <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => handleNotificationChange('email', v)} compact />
                 <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => handleNotificationChange('sms', v)} compact />
                 <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => handleNotificationChange('push', v)} compact />
@@ -367,6 +382,7 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
     </div>
   );
 };
+
 // ===== Wrapper =====
 const ProfileScreens: React.FC<{ role: Role; salesUser?: Partial<SalesUser>; managerUser?: Partial<ManagerUser> }> = ({ role, salesUser, managerUser }) => {
   return role === "sales" ? <SalesProfile user={salesUser} /> : <ManagerProfile user={managerUser} />;
