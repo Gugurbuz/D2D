@@ -375,6 +375,9 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
   const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || "");
   const [sigOpen, setSigOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
+
+  // İmza Data URL'i (PNG). Kaydedilince hem önizleme hem modal imza slotu dolar.
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl;
@@ -387,12 +390,27 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Sol: PDF Önizleme + Onay */}
+        {/* Sol: Sözleşme Önizleme + Onay */}
         <div>
           <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
-          <div className="h-64 border rounded-lg bg-gray-50 flex items-center justify-center">
-            <p className="text-gray-500">Sözleşme PDF'i burada görüntülenecek.</p>
-          </div>
+
+          {/* Tek sayfa mock sözleşme kartı (minyatür) */}
+          <button
+            type="button"
+            onClick={() => setContractOpen(true)}
+            className="w-full h-64 border rounded-lg bg-white overflow-hidden relative text-left"
+            aria-label="Sözleşmeyi görüntüle"
+          >
+            <ContractMockPage
+              customer={customer}
+              signatureDataUrl={signatureDataUrl}
+              scale="preview"
+            />
+            <div className="absolute bottom-2 right-2 text-[10px] px-2 py-1 bg-black/60 text-white rounded">
+              Dokun ve büyüt
+            </div>
+          </button>
+
           <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
@@ -473,35 +491,8 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
 
       <div className="mt-6 flex justify-between">
         <button
-          onClick={() => dispatch({ type: "SET_STEP", payload: 2 })}
-          className="px-4 py-2 rounded-lg bg-white border"
-        >
-          Geri
-        </button>
-        <button
-          onClick={() => dispatch({ type: "SET_STEP", payload: 4 })}
-          disabled={!canContinue}
-          className={`px-6 py-3 rounded-lg text-white ${
-            canContinue ? "bg-[#0099CB]" : "bg-gray-300"
-          }`}
-        >
-          Sözleşmeyi Onayla ve Bitir
-        </button>
-      </div>
+          onClick={() => dispatch({ ty
 
-      {/* Tam ekran imza modalı */}
-      {sigOpen && (
-        <SignaturePadModal
-          onClose={() => setSigOpen(false)}
-          onSave={(dataUrl) => {
-            setSignatureDataUrl(dataUrl);
-            setSigOpen(false);
-          }}
-        />
-      )}
-    </div>
-  );
-};
 // --- ADIM 4: Tamamlama ---
 const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
     <div className="bg-white rounded-xl shadow-sm p-6 text-center animate-fade-in">
