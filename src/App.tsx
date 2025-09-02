@@ -29,7 +29,7 @@ import { GuideProvider, HelpFAB, useGuide } from "./guide/GuideSystem";
 import { GUIDE_VERSION } from "./guide/guideConfig";
 
 // DEBUG amaçlı: her ekranda turu zorla başlat
-const DEBUG_GUIDE = true; // işin bitince false yap veya satırı sil
+const DEBUG_GUIDE = false; // işin bitince false yap veya satırı sil
 
 function ForceStartOnce() {
   const { role, screen, startTour, setHelpOpen } = useGuide();
