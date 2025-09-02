@@ -658,5 +658,140 @@ const SignaturePadModal: React.FC<{
   );
 };
 
+// ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
+const ContractMockPage: React.FC<{
+  customer: Customer;
+  signatureDataUrl: string | null;
+  scale: "preview" | "full";
+}> = ({ customer, signatureDataUrl, scale }) => {
+  // Boyutlandırma: preview için daha küçük tipografi
+  const base = scale === "full"
+    ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
+    : { pad: "p-3", title: "text-base", body: "text-[11px]", small: "text-[10px]" };
+
+  // Null-güvenli alanlar
+  const cName     = customer?.name     ?? "—";
+  const cAddress  = customer?.address  ?? "—";
+  const cDistrict = customer?.district ?? "—";
+  const cPhone    = customer?.phone    ?? "—";
+
+  return (
+    <div className={`relative h-full w-full ${base.pad} bg-white`}>
+      {/* Başlık */}
+      <div className="text-center mb-2">
+        <div className={`font-semibold ${base.title} text-gray-900`}>ELEKTRİK SATIŞ SÖZLEŞMESİ</div>
+        <div className={`${base.small} text-gray-500`}>Mock • Tek Sayfa</div>
+      </div>
+
+      {/* İçerik */}
+      <div className={`space-y-2 ${base.body} text-gray-800`}>
+        <p>
+          İşbu sözleşme; <strong>{cName}</strong> ({cAddress}, {cDistrict}) ile
+          Enerjisa Satış A.Ş. arasında, elektrik tedariki kapsamındaki hak ve yükümlülükleri belirlemek üzere{" "}
+          {new Date().toLocaleDateString()} tarihinde akdedilmiştir.
+        </p>
+        <ol className="list-decimal ml-5 space-y-1">
+          <li>Teslim noktasında ölçüm değerleri esas alınır.</li>
+          <li>Faturalandırma aylık dönemler itibarıyla yapılır.</li>
+          <li>Ödeme süresi fatura tebliğinden itibaren 10 gündür.</li>
+          <li>Cayma süresi imzadan itibaren 14 gündür.</li>
+          <li>Kişisel veriler 6698 sayılı KVKK kapsamında işlenir.</li>
+        </ol>
+
+        <div className="grid grid-cols-2 gap-4 mt-3">
+          <div className="border rounded p-2">
+            <div className="font-medium mb-1">Müşteri</div>
+            <div className={base.small}>Ad Soyad / Ünvan: {cName}</div>
+            <div className={base.small}>Adres: {cAddress}, {cDistrict}</div>
+            <div className={base.small}>Telefon: {cPhone}</div>
+          </div>
+          <div className="border rounded p-2">
+            <div className="font-medium mb-1">Tedarikçi</div>
+            <div className={base.small}>Enerjisa Satış A.Ş.</div>
+            <div className={base.small}>Mersis: 000000000000000</div>
+            <div className={base.small}>Adres: İstanbul, TR</div>
+          </div>
+        </div>
+      </div>
+
+      {/* İmza alanları */}
+      <div className="absolute" style={{ bottom: "6%", left: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
+        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white relative">
+          {signatureDataUrl ? (
+            <img
+              src={signatureDataUrl}
+              alt="Müşteri İmzası"
+              className="absolute inset-0 m-auto max-h-[90%] max-w-[90%] object-contain"
+            />
+          ) : (
+            <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
+          )}
+        </div>
+        <div className={`${base.small} mt-1 text-gray-500`}>Müşteri İmzası</div>
+      </div>
+
+      <div className="absolute" style={{ bottom: "6%", right: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
+        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white">
+          <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
+        </div>
+        <div className={`${base.small} mt-1 text-gray-500`}>Tedarikçi İmzası</div>
+      </div>
+    </div>
+  );
+};
+
+// ---- Tam ekran sözleşme modalı ----
+const ContractModal: React.FC<{
+  customer: Customer;
+  signatureDataUrl: string | null;
+  onClose: () => void;
+}> = ({ customer, signatureDataUrl, onClose }) => {
+  // Modal açıkken body scroll kilidi
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const htmlStyle = document.documentElement.style;
+    const prev = {
+      overflow: style.overflow,
+      position: style.position,
+      top: style.top,
+      width: style.width,
+      overscroll: htmlStyle.overscrollBehaviorY as string | undefined,
+    };
+    style.overflow = "hidden";
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.width = "100%";
+    htmlStyle.overscrollBehaviorY = "contain";
+    return () => {
+      style.overflow = prev.overflow;
+      style.position = prev.position;
+      style.top = prev.top;
+      style.width = prev.width;
+      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
+        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
+        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
+          Kapat
+        </button>
+      </div>
+
+      {/* A4 oranına yakın gövde */}
+      <div className="flex-1 bg-gray-100 overflow-auto">
+        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
+          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 
 export default VisitFlowScreen;
