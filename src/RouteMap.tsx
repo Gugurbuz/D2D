@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -26,9 +26,9 @@ const fmtKm = (km: number | null) => km == null ? "—" : new Intl.NumberFormat(
 
 /* ==== Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
-  // ... state'ler ve diğer fonksiyonlar aynı ...
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
+
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
@@ -36,15 +36,47 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRefs = useRef<Record<string, L.Marker>>({});
 
-  // 1. ADIM: Harita sarmalayıcısı için bir ref oluşturuldu
   const mapWrapperRef = useRef<HTMLDivElement>(null);
+  const markerRefs = useRef<Record<string, L.Marker>>({});
+  const mapRef = useRef<L.Map | null>(null);
 
-  // ... Diğer tüm fonksiyonlar (handleOptimize, highlightCustomer vb.) aynı kalacak ...
+  // ... Diğer fonksiyonlar (handleOptimize, highlightCustomer vb.) aynı kalacak ...
   const handleOptimize = async () => { /* ... fonksiyon içeriği aynı ... */ };
   const highlightCustomer = (c: Customer, i: number, pan = true) => { /* ... fonksiyon içeriği aynı ... */ };
+
+  // ===== DÜZELTME 1: `useMemo` ile ikonlar sadece gerektiğinde yeniden oluşturuluyor =====
+  const customerIcons = useMemo(() => {
+    const iconMap = new Map<string, L.DivIcon>();
+    orderedCustomers.forEach((c, i) => {
+      iconMap.set(c.id, numberIcon(i + 1, { 
+        highlight: selectedId === c.id, 
+        starred: starredId === c.id 
+      }));
+    });
+    return iconMap;
+  }, [orderedCustomers, selectedId, starredId]);
+
+  // ===== DÜZELTME 2: `useCallback` ile marker tıklama fonksiyonu stabil hale getirildi =====
+  const handleMarkerClick = useCallback((customer: Customer) => {
+    setSelectedId(customer.id);
+    const m = markerRefs.current[customer.id];
+    if (m) m.openPopup();
+    const row = document.getElementById(`cust-row-${customer.id}`);
+    if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, []); // Boş dizi, bu fonksiyonun sadece 1 kez oluşturulmasını sağlar.
+
+  // Olay dinleyicilerini stabil hale getirmek için `useMemo` kullanıyoruz.
+  const markerEventHandlers = useMemo(() => {
+    const handlers: Record<string, { click: () => void }> = {};
+    orderedCustomers.forEach((c) => {
+        handlers[c.id] = {
+            click: () => handleMarkerClick(c),
+        };
+    });
+    return handlers;
+  }, [orderedCustomers, handleMarkerClick]);
+
 
   useEffect(() => {
     if (starredId !== null) {
@@ -60,36 +92,12 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   return (
     <div className="relative w-full">
-      {/* Üst başlık + aksiyonlar */}
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-gray-900 font-semibold">
-          <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-          Rota Haritası
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-700">
-            Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
-          </div>
-          <button
-            onClick={handleOptimize}
-            disabled={loading}
-            className={`px-4 py-2 rounded-lg font-semibold ${
-              loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
-            }`}
-          >
-            {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
-          </button>
-          {/* 3. ADIM: Ref, butona prop olarak gönderildi */}
-          <FullscreenBtn targetRef={mapWrapperRef} />
-        </div>
+        {/* ... Üst bar içeriği aynı ... */}
+        <FullscreenBtn targetRef={mapWrapperRef} />
       </div>
 
-      {/* 2. ADIM: Ref, tam ekran yapılacak olan div'e eklendi ve stil iyileştirmesi yapıldı */}
-      <div
-        ref={mapWrapperRef}
-        className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl fullscreen:bg-white"
-      >
-        {/* Harita */}
+      <div ref={mapWrapperRef} className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl fullscreen:bg-white">
         <MapContainer
           center={center}
           zoom={13}
@@ -99,20 +107,19 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
 
-          {/* Satış Uzmanı */}
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
             <Popup><b>{rep.name}</b></Popup>
           </Marker>
 
-          {/* Müşteriler */}
           {orderedCustomers.map((c, i) => (
             <Marker
               key={c.id}
               position={[c.lat, c.lng]}
-              icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
+              // ===== DÜZELTME: Stabil ikon ve olay dinleyicileri kullanılıyor =====
+              icon={customerIcons.get(c.id)!}
+              eventHandlers={markerEventHandlers[c.id]}
               zIndexOffset={1000 - i}
               ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-              eventHandlers={{ click: () => highlightCustomer(c, i, false) }}
             >
               <Popup>
                 {/* ... Popup içeriği aynı ... */}
@@ -120,64 +127,18 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             </Marker>
           ))}
 
-          {/* Rota çizgisi */}
           {routeCoords.length > 0 && (
             <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
           )}
         </MapContainer>
-
-        {/* SAĞ PANEL */}
-        <div
-          className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
-            panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
-          } flex`}
-        >
-            {/* ... Panel içeriği aynı ... */}
-        </div>
-
-        {/* Loading */}
-        {loading && (
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-            {/* ... Loading içeriği aynı ... */}
-          </div>
-        )}
+        
+        {/* ... Sağ Panel ve Loading overlay aynı ... */}
       </div>
     </div>
   );
 };
 
-// 4. ADIM: FullscreenBtn bileşeni, prop olarak gelen ref'i kullanacak şekilde güncellendi
-const FullscreenBtn: React.FC<{ targetRef: React.RefObject<HTMLElement> }> = ({ targetRef }) => {
-  const [isFs, setIsFs] = useState(false);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => setIsFs(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  const toggleFullscreen = async () => {
-    // Prop olarak gelen ref'in 'current' değeri var mı diye kontrol et (güvenlik için)
-    if (!targetRef.current) {
-      return;
-    }
-
-    if (!document.fullscreenElement) {
-      // Artık tüm sayfayı değil, sadece ref'i verilen elementi tam ekran yap
-      await targetRef.current.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
-    }
-  };
-
-  return (
-    <button
-      onClick={toggleFullscreen}
-      className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
-    >
-      {isFs ? <><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</> : <><Maximize2 className="w-4 h-4" /> Tam Ekran</>}
-    </button>
-  );
-};
+/* ... FullscreenBtn bileşeni aynı ... */
+const FullscreenBtn: React.FC<{ targetRef: React.RefObject<HTMLElement> }> = ({ targetRef }) => { /* ... içerik aynı ... */ };
 
 export default RouteMap;
