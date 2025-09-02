@@ -1,6 +1,15 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+// src/guide/GuideSystem.tsx
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import Joyride, { CallBackProps, STATUS, Step as JoyrideStep } from "react-joyride";
 import { guideConfig, GUIDE_VERSION, AppRole, AppScreen } from "./guideConfig";
+
+// --------- Kurumsal tema (Enerjisa renkleri) ---------
+const BRAND = {
+  primary: "#002D72",   // Lacivert
+  accent:  "#F9C800",   // Sarı
+  text:    "#1F2937",   // Gray-800
+  overlay: "rgba(0,0,0,.35)", // Koyu yarı-şeffaf arkaplan
+};
 
 // ---------- Yardımcılar ----------
 const keyFor = (role: AppRole, screen: AppScreen) => `guide:${GUIDE_VERSION}:${role}:${screen}:done`;
@@ -10,10 +19,15 @@ const mapSteps = (role: AppRole, screen: AppScreen): JoyrideStep[] => {
   if (!cfg) return [];
   return (cfg.tourSteps || []).map(s => ({
     target: s.target,
-    content: <div className="space-y-1"><div className="font-medium">{s.content}</div></div>,
+    content: (
+      <div className="space-y-1 text-[14px] leading-6 text-gray-800">
+        <div className="font-semibold" style={{ color: BRAND.primary }}>İpucu</div>
+        <div className="text-gray-700">{s.content}</div>
+      </div>
+    ),
     placement: s.placement || "auto",
     disableBeacon: s.disableBeacon ?? true,
-    spotlightPadding: 6,
+    spotlightPadding: 10,
   }));
 };
 
@@ -81,40 +95,33 @@ export const GuideProvider: React.FC<ProviderProps> = ({
     if (!enableLongPress) return;
 
     let timer: number | null = null;
-    let moved = false;
 
     const start = (e: TouchEvent) => {
-      moved = false;
       const el = e.target as HTMLElement | null;
-      // İnteraktif elementlerde tetikleme: devre dışı
+      // İnteraktif elementlerde tetikleme devre dışı
       if (el && el.closest('button, a, input, textarea, select, [role="button"], [data-no-help-longpress]')) return;
 
       timer = window.setTimeout(() => {
         setHelpOpen(true);
-        timer && clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         timer = null;
       }, longPressMs) as unknown as number;
     };
 
-    const move = () => {
-      moved = true;
-      if (timer) { clearTimeout(timer); timer = null; }
-    };
-
-    const end = () => {
+    const cancel = () => {
       if (timer) { clearTimeout(timer); timer = null; }
     };
 
     document.addEventListener("touchstart", start, { passive: true });
-    document.addEventListener("touchmove", move, { passive: true });
-    document.addEventListener("touchend", end, { passive: true });
-    document.addEventListener("touchcancel", end, { passive: true });
+    document.addEventListener("touchmove", cancel, { passive: true });
+    document.addEventListener("touchend", cancel, { passive: true });
+    document.addEventListener("touchcancel", cancel, { passive: true });
 
     return () => {
       document.removeEventListener("touchstart", start);
-      document.removeEventListener("touchmove", move);
-      document.removeEventListener("touchend", end);
-      document.removeEventListener("touchcancel", end);
+      document.removeEventListener("touchmove", cancel);
+      document.removeEventListener("touchend", cancel);
+      document.removeEventListener("touchcancel", cancel);
     };
   }, [enableLongPress, longPressMs]);
 
@@ -130,7 +137,55 @@ export const GuideProvider: React.FC<ProviderProps> = ({
         showSkipButton
         hideCloseButton
         locale={{ back: "Geri", close: "Kapat", last: "Bitti", next: "İleri", open: "Aç", skip: "Atla" }}
-        styles={{ options: { zIndex: 10000 } }}
+        styles={{
+          // Genel ayarlar
+          options: {
+            zIndex: 10000,
+            primaryColor: BRAND.primary,     // bazı highlight/ok renkleri
+            textColor: BRAND.text,
+            overlayColor: BRAND.overlay,
+            width: 380,
+            arrowColor: "#ffffff",
+          },
+          // Kart görünümü
+          tooltip: {
+            backgroundColor: "#ffffff",
+            borderRadius: 16,
+            boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+            padding: "16px 16px",
+          },
+          tooltipContainer: {
+            textAlign: "left",
+            fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+            fontSize: 14,
+            lineHeight: 1.55,
+          },
+          tooltipContent: { padding: 0 },
+          tooltipFooter: { display: "flex", gap: 8 },
+
+          // Butonlar
+          buttonNext: {
+            backgroundColor: BRAND.accent,
+            color: "#111827",
+            borderRadius: 9999,
+            padding: "8px 14px",
+            border: "1px solid rgba(0,0,0,.05)",
+          },
+          buttonBack: {
+            color: BRAND.primary,
+            background: "transparent",
+            borderRadius: 9999,
+            padding: "8px 12px",
+          },
+          buttonClose: {
+            color: "#9CA3AF",
+          },
+
+          // Spotlight (hedef vurgusu)
+          spotlight: {
+            borderRadius: 12,
+          },
+        }}
         callback={onJoyride}
       />
 
@@ -146,7 +201,9 @@ export const GuideProvider: React.FC<ProviderProps> = ({
 const DrawerSection: React.FC<{ title: string; bullets: string[] }> = ({ title, bullets }) => (
   <div className="mb-6">
     <div className="font-semibold mb-2">{title}</div>
-    <ul className="list-disc ml-5 space-y-1">{bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
+    <ul className="list-disc ml-5 space-y-1">
+      {bullets.map((b, i) => <li key={i}>{b}</li>)}
+    </ul>
   </div>
 );
 
@@ -163,7 +220,7 @@ const HelpDrawer: React.FC = () => {
         right: 0,
         height: "100vh",
         width: isHelpOpen ? "380px" : "0px",
-        background: "white",
+        background: "#ffffff",
         boxShadow: isHelpOpen ? "-8px 0 24px rgba(0,0,0,.1)" : "none",
         transition: "width .25s ease",
         zIndex: 10001,
@@ -173,7 +230,7 @@ const HelpDrawer: React.FC = () => {
     >
       <div className="p-4 h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
-          <div className="font-bold">Yardım • {role} / {screen}</div>
+          <div className="font-bold" style={{ color: BRAND.primary }}>Yardım • {role} / {screen}</div>
           <button onClick={() => setHelpOpen(false)} className="px-2 py-1 rounded border" aria-label="Yardımı kapat">Kapat</button>
         </div>
 
@@ -184,6 +241,7 @@ const HelpDrawer: React.FC = () => {
             {(cfg.cheatsheet || []).map((c, idx) => (
               <DrawerSection key={idx} title={c.title} bullets={c.bullets} />
             ))}
+
             {!!cfg.tips?.length && <DrawerSection title="İpuçları" bullets={cfg.tips} />}
 
             <div className="mt-6">
@@ -191,6 +249,7 @@ const HelpDrawer: React.FC = () => {
                 onClick={startTour}
                 className="px-3 py-2 rounded border w-full"
                 aria-label="Turu başlat"
+                style={{ background: BRAND.accent, borderColor: "rgba(0,0,0,.05)" }}
               >
                 Turu Başlat
               </button>
@@ -229,12 +288,16 @@ export const HelpFAB: React.FC = () => {
             onClick={openHelp}
             className="px-3 py-2 rounded-lg shadow border bg-white"
             aria-label="Yardımı aç"
-          >Yardım</button>
+          >
+            Yardım
+          </button>
           <button
             onClick={startTour}
             className="px-3 py-2 rounded-lg shadow border bg-white"
             aria-label="Turu başlat"
-          >Tur</button>
+          >
+            Tur
+          </button>
         </>
       )}
 
@@ -249,7 +312,8 @@ export const HelpFAB: React.FC = () => {
           border: "1px solid #e5e7eb",
           background: "#ffffff",
           fontWeight: 700,
-          fontSize: 20
+          fontSize: 20,
+          color: BRAND.primary
         }}
       >
         ?
