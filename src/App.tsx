@@ -38,7 +38,7 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
-s
+
   const currentRepId = role === 'rep' ? 'rep-1' : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
     if (role === 'manager') return true;
