@@ -208,4 +208,8 @@ function App() {
 
         <HelpFAB />
       </AppLayout>
-    </G
+    </GuideProvider>
+  );
+}
+
+export default App;
