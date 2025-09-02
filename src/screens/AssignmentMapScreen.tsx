@@ -440,8 +440,8 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                 <div>
                     <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın.
                     <span className="inline-flex items-center">
-                        Manuel atama için sağdaki paneli kullanın
-                        <Users className="w-3 h-3 mx-1" />.
+                        Manuel atama için sağdaki paneli <Users className="w-3 h-3 mx-1" /> kullanın
+                        .
                     </span>
                     <br />
                     Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
@@ -522,7 +522,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                             {toast.type === 'success' && <CheckCircle2 />}
                             {toast.type === 'error' && <AlertTriangle />}
                             {toast.type === 'info' && <Info className="text-blue-500"/>}
-                            <span className="font-semibold text-sm">{toast.message}</span>
+                            <span className="font-semibolfd text-sm">{toast.message}</span>
                         </div>
                     </div>
                 )}
