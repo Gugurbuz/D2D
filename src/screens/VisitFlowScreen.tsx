@@ -376,9 +376,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
   const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || "");
   const [sigOpen, setSigOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
-
-  // İmza Data URL'i (PNG). Kaydedilince hem önizleme hem modal imza slotu dolar.
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null); // ⬅️ imza
 
   const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl;
 
@@ -390,11 +388,10 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Sol: Sözleşme Önizleme + Onay */}
+        {/* Sol: sözleşme önizleme */}
         <div>
           <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
 
-          {/* Tek sayfa mock sözleşme kartı (minyatür) */}
           <button
             type="button"
             onClick={() => setContractOpen(true)}
@@ -403,7 +400,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
           >
             <ContractMockPage
               customer={customer}
-              signatureDataUrl={signatureDataUrl}
+              signatureDataUrl={signatureDataUrl}  // ⬅️ imza slotuna geçer
               scale="preview"
             />
             <div className="absolute bottom-2 right-2 text-[10px] px-2 py-1 bg-black/60 text-white rounded">
@@ -421,48 +418,27 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
           </label>
         </div>
 
-        {/* Sağ: İmza + SMS */}
+        {/* Sağ: imza + SMS */}
         <div>
           <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
 
-          {/* Önizleme + Aç butonu */}
           <div className="border rounded-lg p-2 bg-gray-50">
             {signatureDataUrl ? (
               <div className="flex items-center gap-3">
-                <img
-                  src={signatureDataUrl}
-                  alt="İmza"
-                  className="h-[120px] w-auto bg-white rounded border"
-                />
+                <img src={signatureDataUrl} alt="İmza" className="h-[120px] w-auto bg-white rounded border" />
                 <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => setSigOpen(true)}
-                    className="px-3 py-2 rounded-lg border bg-white text-sm"
-                  >
-                    İmzayı Düzenle
-                  </button>
-                  <button
-                    onClick={() => setSignatureDataUrl(null)}
-                    className="px-3 py-2 rounded-lg border bg-white text-sm"
-                  >
-                    Temizle
-                  </button>
+                  <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg border bg-white text-sm">İmzayı Düzenle</button>
+                  <button onClick={() => setSignatureDataUrl(null)} className="px-3 py-2 rounded-lg border bg-white text-sm">Temizle</button>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-gray-500">Henüz imza yok.</div>
-                <button
-                  onClick={() => setSigOpen(true)}
-                  className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm"
-                >
-                  İmza Al (Tam Ekran)
-                </button>
+                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm">İmza Al (Tam Ekran)</button>
               </div>
             )}
           </div>
 
-          {/* SMS Onayı */}
           <div className="mt-4">
             <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
             <div className="flex gap-2">
@@ -472,17 +448,13 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
                 className="flex-1 p-2 border rounded-lg"
                 placeholder="5XX XXX XX XX"
               />
-              <button
-                onClick={() => dispatch({ type: "SET_SMS_SENT", payload: true })}
-                className="px-4 py-2 bg-[#F9C800] rounded-lg"
-              >
+              <button onClick={() => dispatch({ type: "SET_SMS_SENT", payload: true })} className="px-4 py-2 bg-[#F9C800] rounded-lg">
                 SMS Gönder
               </button>
             </div>
             {state.smsSent && (
               <div className="mt-2 flex items-center gap-2 text-green-700 text-sm">
-                <ShieldCheck className="w-4 h-4" />
-                Onay SMS'i gönderildi.
+                <ShieldCheck className="w-4 h-4" /> Onay SMS'i gönderildi.
               </div>
             )}
           </div>
@@ -490,35 +462,23 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
       </div>
 
       <div className="mt-6 flex justify-between">
-        <button
-          onClick={() => dispatch({ type: "SET_STEP", payload: 2 })}
-          className="px-4 py-2 rounded-lg bg-white border"
-        >
-          Geri
-        </button>
+        <button onClick={() => dispatch({ type: "SET_STEP", payload: 2 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
         <button
           onClick={() => dispatch({ type: "SET_STEP", payload: 4 })}
           disabled={!canContinue}
-          className={`px-6 py-3 rounded-lg text-white ${
-            canContinue ? "bg-[#0099CB]" : "bg-gray-300"
-          }`}
+          className={`px-6 py-3 rounded-lg text-white ${canContinue ? "bg-[#0099CB]" : "bg-gray-300"}`}
         >
           Sözleşmeyi Onayla ve Bitir
         </button>
       </div>
 
-      {/* Tam ekran imza modalı */}
+      {/* Modallar */}
       {sigOpen && (
         <SignaturePadModal
           onClose={() => setSigOpen(false)}
-          onSave={(dataUrl) => {
-            setSignatureDataUrl(dataUrl); // ⬅️ otomatik sözleşme imza alanına düşer
-            setSigOpen(false);
-          }}
+          onSave={(dataUrl) => { setSignatureDataUrl(dataUrl); setSigOpen(false); }} // ⬅️ sözleşme slotu dolar
         />
       )}
-
-      {/* Tam ekran sözleşme modalı */}
       {contractOpen && (
         <ContractModal
           customer={customer}
@@ -529,6 +489,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
     </div>
   );
 };
+
 
 // --- ADIM 4: Tamamlama ---
 const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
@@ -696,247 +657,6 @@ const SignaturePadModal: React.FC<{
     </div>
   );
 };
-// ---- ortak: modal açıldığında body scroll kilidi ----
-function useScrollLock() {
-  useEffect(() => {
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    const htmlStyle = document.documentElement.style;
-    const prev = {
-      overflow: style.overflow,
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      overscroll: htmlStyle.overscrollBehaviorY,
-    };
-    style.overflow = "hidden";
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.width = "100%";
-    htmlStyle.overscrollBehaviorY = "contain";
-    return () => {
-      style.overflow = prev.overflow;
-      style.position = prev.position;
-      style.top = prev.top;
-      style.width = prev.width;
-      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-}
-
-// ---- Tam ekran imza modalı (scroll lock + pointer events) ----
-const SignaturePadModal: React.FC<{
-  onClose: () => void;
-  onSave: (dataUrl: string) => void;
-}> = ({ onClose, onSave }) => {
-  useScrollLock();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  // Retina uyumlu boyutlandırma
-  const fitCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = Math.max(window.devicePixelRatio || 1, 1);
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.floor(rect.width * dpr);
-    canvas.height = Math.floor(rect.height * dpr);
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, rect.width, rect.height);
-    }
-  };
-
-  useEffect(() => {
-    fitCanvas();
-    const onResize = () => fitCanvas();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  // Çizim (Pointer Events + touch-action none)
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.style.touchAction = "none";
-
-    let drawing = false;
-    const getPos = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    };
-    const down = (e: PointerEvent) => {
-      drawing = true;
-      canvas.setPointerCapture(e.pointerId);
-      const { x, y } = getPos(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    };
-    const move = (e: PointerEvent) => {
-      if (!drawing) return;
-      const { x, y } = getPos(e);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = "#111";
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    };
-    const up = (e: PointerEvent) => {
-      drawing = false;
-      try { canvas.releasePointerCapture(e.pointerId); } catch {}
-    };
-
-    canvas.addEventListener("pointerdown", down);
-    canvas.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      canvas.removeEventListener("pointerdown", down);
-      canvas.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-  }, []);
-
-  const handleClear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-  };
-
-  const handleSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    onSave(canvas.toDataURL("image/png"));
-  };
-
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10050] flex flex-col bg-black/50">
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
-        <div className="font-semibold text-gray-900">İmza</div>
-        <div className="flex gap-2">
-          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm">Temizle</button>
-          <button onClick={handleSave} className="px-3 py-1.5 rounded bg-[#0099CB] text-white text-sm">Kaydet</button>
-          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button>
-        </div>
-      </div>
-      <div className="flex-1 bg-white">
-        <canvas ref={canvasRef} className="h-[calc(100vh-56px)] w-full block" />
-      </div>
-    </div>
-  );
-};
-
-// ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
-const ContractMockPage: React.FC<{
-  customer: Customer;
-  signatureDataUrl: string | null;
-  scale: "preview" | "full";
-}> = ({ customer, signatureDataUrl, scale }) => {
-  // Boyutlandırma: preview için küçük tipografi
-  const base = scale === "full" ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
-                                : { pad: "p-3", title: "text-base", body: "text-[11px]", small: "text-[10px]" };
-
-  return (
-    <div className={`relative h-full w-full ${base.pad} bg-white`}>
-      {/* Başlık */}
-      <div className="text-center mb-2">
-        <div className={`font-semibold ${base.title} text-gray-900`}>ELEKTRİK SATIŞ SÖZLEŞMESİ</div>
-        <div className={`${base.small} text-gray-500`}>Mock • Tek Sayfa</div>
-      </div>
-
-      {/* İçerik */}
-      <div className={`space-y-2 ${base.body} text-gray-800`}>
-        <p>
-          İşbu sözleşme; <strong>{customer.name}</strong> ({customer.address}, {customer.district}) ile
-          Enerjisa Satış A.Ş. arasında, elektrik tedariki kapsamındaki hak ve yükümlülükleri belirlemek üzere
-          { " " }{new Date().toLocaleDateString()} tarihinde akdedilmiştir.
-        </p>
-        <ol className="list-decimal ml-5 space-y-1">
-          <li>Teslim noktasında ölçüm değerleri esas alınır.</li>
-          <li>Faturalandırma aylık dönemler itibarıyla yapılır.</li>
-          <li>Ödeme süresi fatura tebliğinden itibaren 10 gündür.</li>
-          <li>Cayma süresi imzadan itibaren 14 gündür.</li>
-          <li>Kişisel veriler 6698 sayılı KVKK kapsamında işlenir.</li>
-        </ol>
-
-        <div className="grid grid-cols-2 gap-4 mt-3">
-          <div className="border rounded p-2">
-            <div className="font-medium mb-1">Müşteri</div>
-            <div className={base.small}>Ad Soyad / Ünvan: {customer.name}</div>
-            <div className={base.small}>Adres: {customer.address}, {customer.district}</div>
-            <div className={base.small}>Telefon: {customer.phone || "-"}</div>
-          </div>
-          <div className="border rounded p-2">
-            <div className="font-medium mb-1">Tedarikçi</div>
-            <div className={base.small}>Enerjisa Satış A.Ş.</div>
-            <div className={base.small}>Mersis: 000000000000000</div>
-            <div className={base.small}>Adres: İstanbul, TR</div>
-          </div>
-        </div>
-      </div>
-
-      {/* İmza alanları (absolute, yüzde ile konumlandırma) */}
-      <div className="absolute" style={{ bottom: "6%", left: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
-        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white relative">
-          {/* İmza görseli (varsa) */}
-          {signatureDataUrl ? (
-            <img
-              src={signatureDataUrl}
-              alt="Müşteri İmzası"
-              className="absolute inset-0 m-auto max-h-[90%] max-w-[90%] object-contain"
-            />
-          ) : (
-            <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
-          )}
-        </div>
-        <div className={`${base.small} mt-1 text-gray-500`}>Müşteri İmzası</div>
-      </div>
-
-      <div className="absolute" style={{ bottom: "6%", right: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
-        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white">
-          <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
-        </div>
-        <div className={`${base.small} mt-1 text-gray-500`}>Tedarikçi İmzası</div>
-      </div>
-    </div>
-  );
-};
-
-// ---- Tam ekran sözleşme modalı ----
-const ContractModal: React.FC<{
-  customer: Customer;
-  signatureDataUrl: string | null;
-  onClose: () => void;
-}> = ({ customer, signatureDataUrl, onClose }) => {
-  useScrollLock();
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
-        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
-        <div className="flex gap-2">
-          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
-            Kapat
-          </button>
-        </div>
-      </div>
-
-      {/* A4 oranına yakın tam ekran gövde */}
-      <div className="flex-1 bg-gray-100 overflow-auto">
-        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
-          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
-        </div>
-      </div>
-    </div>
-  );
-
 
 
 export default VisitFlowScreen;
