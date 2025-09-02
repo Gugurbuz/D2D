@@ -409,7 +409,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
     <Maximize2 className="h-4 w-4" />
   </div>
   <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-[#F9C800] text-gray-900 rounded shadow ring-1 ring-black/10">
-   
+
   </div>
 </div>
 
@@ -442,7 +442,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-gray-500">Henüz imza yok.</div>
-                <button onClick={() => setSigOpen(true)} 0099CBİmza Al </button>
+                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm">İmza Al (Tam Ekran)</button>
               </div>
             )}
           </div>
