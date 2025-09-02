@@ -257,7 +257,7 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
   const [form, setForm] = useState<ManagerUser>({ ...defaultManager, ...(user as ManagerUser) });
   const [tab, setTab] = useState<string>("personal");
   const set = <K extends keyof ManagerUser>(k: K, v: ManagerUser[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const onSave = () => { alert("Profil kaydedildi (Saha Yönticisi)"); };
+  const onSave = () => { alert("Profil kaydedildi (Saha Yöneticisi)"); };
 
   const items = [
     { key: "personal", label: "Kişisel Bilgiler" },
@@ -267,6 +267,20 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
     { key: "notifs", label: "Bildirimler" },
     { key: "reports", label: "Rapor & Dışa Aktarım" },
   ];
+
+  // ===== DEĞİŞİKLİK: Bildirim ayarlarını daha güvenli bir şekilde güncelleyen fonksiyon =====
+  const handleNotificationChange = (key: keyof Notifications, value: boolean) => {
+    // Önce mevcut bildirim ayarlarını al. Eğer yoksa (undefined veya null ise), varsayılanı kullan.
+    const currentNotifications = form.notifications ?? defaultBase.notifications;
+    
+    set("notifications", {
+      // Varsayılan ayarların üzerine mevcut ayarları ve en son değişikliği ekle.
+      ...defaultBase.notifications!,
+      ...currentNotifications,
+      [key]: value,
+    });
+  };
+
 
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
@@ -281,6 +295,7 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
       <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
+          {/* ... Diğer sekmeler (personal, assign, team) aynı kalacak ... */}
           {tab === "personal" && (
             <Section title="Kişisel Bilgiler">
               <div className="grid gap-4 md:grid-cols-2">
@@ -320,9 +335,7 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
             <Section title="Uygulama Tercihleri">
               <div className="grid gap-4 md:grid-cols-3">
                 <FieldRow label="Dil"><Select value={form.language} onChange={(e) => set("language", e.target.value as any)}><option value="tr">Türkçe</option><option value="en">English</option></Select></FieldRow>
-                {/* ===== DÜZELTME 1: </Row> -> </FieldRow> ===== */}
                 <FieldRow label="Birim"><Select value={form.units} onChange={(e) => set("units", e.target.value as any)}><option value="metric">Metrik (km, °C)</option><option value="imperial">Imperial (mi, °F)</option></Select></FieldRow>
-                {/* ===== DÜZELTME 2: </Row> -> </FieldRow> ===== */}
                 <FieldRow label="Tema"><Select value={form.theme} onChange={(e) => set("theme", e.target.value as any)}><option value="system">Sistem</option><option value="light">Açık</option><option value="dark">Koyu</option></Select></FieldRow>
               </div>
             </Section> 
@@ -331,9 +344,10 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
           {tab === "notifs" && ( 
             <Section title="Bildirimler">
               <div className="grid gap-3 md:grid-cols-3">
-                <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), email: v })} compact />
-                <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), sms: v })} compact />
-                <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), push: v })} compact />
+                {/* ===== DEĞİŞİKLİK: Yeni ve daha güvenli fonksiyonu kullanıyoruz ===== */}
+                <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => handleNotificationChange('email', v)} compact />
+                <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => handleNotificationChange('sms', v)} compact />
+                <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => handleNotificationChange('push', v)} compact />
               </div>
             </Section> 
           )}
@@ -353,7 +367,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
     </div>
   );
 };
-
 // ===== Wrapper =====
 const ProfileScreens: React.FC<{ role: Role; salesUser?: Partial<SalesUser>; managerUser?: Partial<ManagerUser> }> = ({ role, salesUser, managerUser }) => {
   return role === "sales" ? <SalesProfile user={salesUser} /> : <ManagerProfile user={managerUser} />;
