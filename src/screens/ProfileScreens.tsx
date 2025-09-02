@@ -152,7 +152,8 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
   ];
 
   return (
-    <div className="mx-auto max-w-5xl p-4">
+    // ===== DEĞİŞİKLİK 1.1: Boşluklar azaltıldı =====
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <div className="mb-4 flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-yellow-100"><User className="h-5 w-5 text-[#0099CB]" /></div>
         <div>
@@ -161,7 +162,8 @@ export const SalesProfile: React.FC<{ user?: Partial<SalesUser> }> = ({ user }) 
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[14rem_1fr]">
+       {/* ===== DEĞİŞİKLİK 1.2: Bölümler arası boşluk artırıldı ===== */}
+      <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
           {tab === "personal" && (
@@ -267,7 +269,8 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
   ];
 
   return (
-    <div className="mx-auto max-w-5xl p-4">
+    // ===== DEĞİŞİKLİK 1.1: Boşluklar azaltıldı =====
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <div className="mb-4 flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-yellow-100"><User className="h-5 w-5 text-[#0099CB]" /></div>
         <div>
@@ -276,7 +279,8 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[14rem_1fr]">
+       {/* ===== DEĞİŞİKLİK 1.2: Bölümler arası boşluk artırıldı ===== */}
+      <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
           {tab === "personal" && (
@@ -304,11 +308,45 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
               </div>
             </Section>
           )}
+          
+          {/* ===== DEĞİŞİKLİK 2: Boş bölümler dolduruldu ===== */}
+          {tab === "team" && ( 
+            <Section title="Ekip Hedefleri">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldRow label="Günlük Ziyaret Hedefi (SLA)"><Input type="number" min={0} value={form.slaDailyVisitTarget ?? 0} onChange={(e) => set("slaDailyVisitTarget", Number(e.target.value))} /></FieldRow>
+                <FieldRow label="Kapsama Alanı Hedefi (%)"><Input type="number" min={0} max={100} value={form.coverageGoalPct ?? 0} onChange={(e) => set("coverageGoalPct", Number(e.target.value))} /></FieldRow>
+              </div>
+            </Section> 
+          )}
 
-          {tab === "team" && ( <Section title="Ekip Hedefleri"> {/* ... */} </Section> )}
-          {tab === "prefs" && ( <Section title="Uygulama Tercihleri"> {/* ... */} </Section> )}
-          {tab === "notifs" && ( <Section title="Bildirimler"> {/* ... */} </Section> )}
-          {tab === "reports" && ( <Section title="Rapor & Dışa Aktarım"> {/* ... */} </Section> )}
+          {tab === "prefs" && ( 
+            <Section title="Uygulama Tercihleri">
+              <div className="grid gap-4 md:grid-cols-3">
+                <FieldRow label="Dil"><Select value={form.language} onChange={(e) => set("language", e.target.value as any)}><option value="tr">Türkçe</option><option value="en">English</option></Select></FieldRow>
+                <FieldRow label="Birim"><Select value={form.units} onChange={(e) => set("units", e.target.value as any)}><option value="metric">Metrik (km, °C)</option><option value="imperial">Imperial (mi, °F)</option></Select></Row>
+                <FieldRow label="Tema"><Select value={form.theme} onChange={(e) => set("theme", e.target.value as any)}><option value="system">Sistem</option><option value="light">Açık</option><option value="dark">Koyu</option></Select></Row>
+              </div>
+            </Section> 
+          )}
+
+          {tab === "notifs" && ( 
+            <Section title="Bildirimler">
+              <div className="grid gap-3 md:grid-cols-3">
+                <ToggleLine label="E-posta" checked={!!form.notifications?.email} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), email: v })} compact />
+                <ToggleLine label="SMS" checked={!!form.notifications?.sms} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), sms: v })} compact />
+                <ToggleLine label="Push" checked={!!form.notifications?.push} onChange={(v) => set("notifications", { ...(form.notifications||defaultBase.notifications!), push: v })} compact />
+              </div>
+            </Section> 
+          )}
+
+          {tab === "reports" && ( 
+            <Section title="Rapor & Dışa Aktarım">
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldRow label="Dışa Aktarma Formatı"><Select value={form.exportFormat} onChange={(e) => set("exportFormat", e.target.value as any)}><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (.csv)</option><option value="pdf">PDF (.pdf)</option></Select></FieldRow>
+                <FieldRow label="Günlük Rapor Saati"><Input type="time" value={form.reportTime} onChange={(e) => set("reportTime", e.target.value)} /></FieldRow>
+              </div>
+            </Section> 
+          )}
         </main>
       </div>
 
