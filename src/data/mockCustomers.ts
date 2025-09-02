@@ -334,3 +334,33 @@ export const newAtasehirCustomers: Customer[] = [
 
 // Mevcut listenin sonuna eklemek istersen:
 mockCustomers.push(...newAtasehirCustomers);
+// Örnek: 4 satıcıya eşit atama (rep-1..rep-4 kendi ID'lerinle değiştir)
+export const newAtasehirAssignments: Record<string, string> = {
+  // rep-1
+  "AT-021": "rep-1",
+  "AT-025": "rep-1",
+  "AT-029": "rep-1",
+  "AT-033": "rep-1",
+  "AT-037": "rep-1",
+
+  // rep-2
+  "AT-022": "rep-2",
+  "AT-026": "rep-2",
+  "AT-030": "rep-2",
+  "AT-034": "rep-2",
+  "AT-038": "rep-2",
+
+  // rep-3
+  "AT-023": "rep-3",
+  "AT-027": "rep-3",
+  "AT-031": "rep-3",
+  "AT-035": "rep-3",
+  "AT-039": "rep-3",
+
+  // rep-4
+  "AT-024": "rep-4",
+  "AT-028": "rep-4",
+  "AT-032": "rep-4",
+  "AT-036": "rep-4",
+  "AT-040": "rep-4",
+};
