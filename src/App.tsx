@@ -25,8 +25,8 @@ import TeamMapScreen from './screens/TeamMapScreen';
 import ProfileScreens from './screens/ProfileScreens';
 
 // ✅ Guide sistemi (tablet uyumlu)
-import { GuideProvider, HelpFAB } from "./guide/GuideSystem";
-import type { AppRole, AppScreen } from "./guide/guideConfig";
+import { GuideProvider, HelpFAB, useGuide } from "./guide/GuideSystem";
+import { GUIDE_VERSION } from "./guide/guideConfig";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
