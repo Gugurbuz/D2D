@@ -46,6 +46,22 @@ function ForceStartOnce() {
       startTour();
     });
 
+    return (
+  <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
+    {DEBUG_GUIDE && <ForceStartOnce />}  {/* ⬅️ Sadece debug için */}
+    <AppLayout
+      agentName={agentName}
+      role={role}
+      currentScreen={currentScreen}
+      setCurrentScreen={setCurrentScreen}
+    >
+      {/* ... senin mevcut ekranların ... */}
+      <HelpFAB />
+    </AppLayout>
+  </GuideProvider>
+);
+
+
     return () => cancelAnimationFrame(id);
   }, [role, screen, startTour, setHelpOpen]);
 
