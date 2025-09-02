@@ -442,7 +442,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-gray-500">Henüz imza yok.</div>
-                <button onClick={() => setSigOpen(true)} className="px-4 py-2 rounded-lg bg-[#0099CB] text-white text-sm">İmza Al </button>
+                <button onClick={() => setSigOpen(true)} className="px-4 py-2 bg-[#0099CB] rounded-lg">İmza Al </button>
               </div>
             )}
           </div>
