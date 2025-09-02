@@ -491,7 +491,44 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
 
       <div className="mt-6 flex justify-between">
         <button
-          onClick={() => dispatch({ ty
+          onClick={() => dispatch({ type: "SET_STEP", payload: 2 })}
+          className="px-4 py-2 rounded-lg bg-white border"
+        >
+          Geri
+        </button>
+        <button
+          onClick={() => dispatch({ type: "SET_STEP", payload: 4 })}
+          disabled={!canContinue}
+          className={`px-6 py-3 rounded-lg text-white ${
+            canContinue ? "bg-[#0099CB]" : "bg-gray-300"
+          }`}
+        >
+          Sözleşmeyi Onayla ve Bitir
+        </button>
+      </div>
+
+      {/* Tam ekran imza modalı */}
+      {sigOpen && (
+        <SignaturePadModal
+          onClose={() => setSigOpen(false)}
+          onSave={(dataUrl) => {
+            setSignatureDataUrl(dataUrl); // ⬅️ otomatik sözleşme imza alanına düşer
+            setSigOpen(false);
+          }}
+        />
+      )}
+
+      {/* Tam ekran sözleşme modalı */}
+      {contractOpen && (
+        <ContractModal
+          customer={customer}
+          signatureDataUrl={signatureDataUrl}
+          onClose={() => setContractOpen(false)}
+        />
+      )}
+    </div>
+  );
+};
 
 // --- ADIM 4: Tamamlama ---
 const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
