@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Joyride, { CallBackProps, STATUS, Step as JoyrideStep } from "react-joyride";
-import hotkeys from "hotkeys-js";
 import { guideConfig, GUIDE_VERSION, AppRole, AppScreen } from "./guideConfig";
 
 // ---------- Yardımcılar ----------
@@ -11,9 +10,7 @@ const mapSteps = (role: AppRole, screen: AppScreen): JoyrideStep[] => {
   if (!cfg) return [];
   return (cfg.tourSteps || []).map(s => ({
     target: s.target,
-    content: <div className="space-y-1">
-      <div className="font-medium">{s.content}</div>
-    </div>,
+    content: <div className="space-y-1"><div className="font-medium">{s.content}</div></div>,
     placement: s.placement || "auto",
     disableBeacon: s.disableBeacon ?? true,
     spotlightPadding: 6,
@@ -31,7 +28,6 @@ type GuideContextType = {
 };
 
 const GuideContext = createContext<GuideContextType | null>(null);
-
 export const useGuide = () => {
   const ctx = useContext(GuideContext);
   if (!ctx) throw new Error("useGuide must be used within <GuideProvider/>");
@@ -42,24 +38,24 @@ export const useGuide = () => {
 type ProviderProps = {
   role: AppRole;
   screen: AppScreen;
-  autoStart?: boolean; // ilk girişte tur otomatik başlasın mı?
+  autoStart?: boolean;        // ilk girişte tur otomatik başlasın mı?
+  enableLongPress?: boolean;  // uzun basma ile yardım aç
+  longPressMs?: number;       // uzun basma eşiği
   children: React.ReactNode;
 };
 
-export const GuideProvider: React.FC<ProviderProps> = ({ role, screen, autoStart = true, children }) => {
+export const GuideProvider: React.FC<ProviderProps> = ({
+  role,
+  screen,
+  autoStart = true,
+  enableLongPress = true,
+  longPressMs = 700,
+  children
+}) => {
   const [run, setRun] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const steps = useMemo(() => mapSteps(role, screen), [role, screen]);
   const storageKey = useMemo(() => keyFor(role, screen), [role, screen]);
-
-  // Kısayol: Shift + ?
-  useEffect(() => {
-    hotkeys("shift+?", (e) => {
-      e.preventDefault();
-      setHelpOpen(true);
-    });
-    return () => hotkeys.unbind("shift+?");
-  }, []);
 
   // İlk girişte otomatik tur (tamamlanmamışsa)
   useEffect(() => {
@@ -80,6 +76,48 @@ export const GuideProvider: React.FC<ProviderProps> = ({ role, screen, autoStart
   const openHelp = () => setHelpOpen(true);
   const startTour = () => setRun(true);
 
+  // Dokunmatik uzun basma: ekran boş bir yerine ~700ms basılı tut → Yardım aç
+  useEffect(() => {
+    if (!enableLongPress) return;
+
+    let timer: number | null = null;
+    let moved = false;
+
+    const start = (e: TouchEvent) => {
+      moved = false;
+      const el = e.target as HTMLElement | null;
+      // İnteraktif elementlerde tetikleme: devre dışı
+      if (el && el.closest('button, a, input, textarea, select, [role="button"], [data-no-help-longpress]')) return;
+
+      timer = window.setTimeout(() => {
+        setHelpOpen(true);
+        timer && clearTimeout(timer);
+        timer = null;
+      }, longPressMs) as unknown as number;
+    };
+
+    const move = () => {
+      moved = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+    };
+
+    const end = () => {
+      if (timer) { clearTimeout(timer); timer = null; }
+    };
+
+    document.addEventListener("touchstart", start, { passive: true });
+    document.addEventListener("touchmove", move, { passive: true });
+    document.addEventListener("touchend", end, { passive: true });
+    document.addEventListener("touchcancel", end, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
+      document.removeEventListener("touchend", end);
+      document.removeEventListener("touchcancel", end);
+    };
+  }, [enableLongPress, longPressMs]);
+
   return (
     <GuideContext.Provider value={{ role, screen, openHelp, startTour, isHelpOpen: helpOpen, setHelpOpen }}>
       {/* Joyride (Tour) */}
@@ -91,17 +129,8 @@ export const GuideProvider: React.FC<ProviderProps> = ({ role, screen, autoStart
         showProgress
         showSkipButton
         hideCloseButton
-        locale={{
-          back: "Geri",
-          close: "Kapat",
-          last: "Bitti",
-          next: "İleri",
-          open: "Aç",
-          skip: "Atla",
-        }}
-        styles={{
-          options: { zIndex: 10000 }
-        }}
+        locale={{ back: "Geri", close: "Kapat", last: "Bitti", next: "İleri", open: "Aç", skip: "Atla" }}
+        styles={{ options: { zIndex: 10000 } }}
         callback={onJoyride}
       />
 
@@ -117,14 +146,12 @@ export const GuideProvider: React.FC<ProviderProps> = ({ role, screen, autoStart
 const DrawerSection: React.FC<{ title: string; bullets: string[] }> = ({ title, bullets }) => (
   <div className="mb-6">
     <div className="font-semibold mb-2">{title}</div>
-    <ul className="list-disc ml-5 space-y-1">
-      {bullets.map((b, i) => <li key={i}>{b}</li>)}
-    </ul>
+    <ul className="list-disc ml-5 space-y-1">{bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
   </div>
 );
 
 const HelpDrawer: React.FC = () => {
-  const { role, screen, isHelpOpen, setHelpOpen } = useGuide();
+  const { role, screen, isHelpOpen, setHelpOpen, startTour } = useGuide();
   const cfg = guideConfig[role]?.[screen];
 
   return (
@@ -147,13 +174,7 @@ const HelpDrawer: React.FC = () => {
       <div className="p-4 h-full flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <div className="font-bold">Yardım • {role} / {screen}</div>
-          <button
-            onClick={() => setHelpOpen(false)}
-            className="px-2 py-1 rounded border"
-            aria-label="Yardımı kapat"
-          >
-            Kapat
-          </button>
+          <button onClick={() => setHelpOpen(false)} className="px-2 py-1 rounded border" aria-label="Yardımı kapat">Kapat</button>
         </div>
 
         {!cfg ? (
@@ -163,19 +184,17 @@ const HelpDrawer: React.FC = () => {
             {(cfg.cheatsheet || []).map((c, idx) => (
               <DrawerSection key={idx} title={c.title} bullets={c.bullets} />
             ))}
-
             {!!cfg.tips?.length && <DrawerSection title="İpuçları" bullets={cfg.tips} />}
 
-            {!!cfg.hotkeys?.length && (
-              <div className="mb-6">
-                <div className="font-semibold mb-2">Kısayollar</div>
-                <ul className="ml-1 space-y-1">
-                  {cfg.hotkeys.map((h, i) => (
-                    <li key={i}><code className="px-1 py-0.5 bg-gray-100 rounded">{h.combo}</code> — {h.desc}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="mt-6">
+              <button
+                onClick={startTour}
+                className="px-3 py-2 rounded border w-full"
+                aria-label="Turu başlat"
+              >
+                Turu Başlat
+              </button>
+            </div>
 
             <div className="text-xs text-gray-500 mt-4">Guide v{GUIDE_VERSION}</div>
           </div>
@@ -185,7 +204,61 @@ const HelpDrawer: React.FC = () => {
   );
 };
 
-// ---------- Yardım butonu (UI'ya ekleyin) ----------
+// ---------- Floating Help FAB (tablet) ----------
+export const HelpFAB: React.FC = () => {
+  const { openHelp, startTour } = useGuide();
+  const [expanded, setExpanded] = useState(false);
+  const toggle = () => setExpanded(v => !v);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        right: 16,
+        bottom: 16,
+        zIndex: 10002,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+        alignItems: "flex-end"
+      }}
+    >
+      {expanded && (
+        <>
+          <button
+            onClick={openHelp}
+            className="px-3 py-2 rounded-lg shadow border bg-white"
+            aria-label="Yardımı aç"
+          >Yardım</button>
+          <button
+            onClick={startTour}
+            className="px-3 py-2 rounded-lg shadow border bg-white"
+            aria-label="Turu başlat"
+          >Tur</button>
+        </>
+      )}
+
+      <button
+        onClick={toggle}
+        aria-label="Yardım menüsü"
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 9999,
+          boxShadow: "0 6px 18px rgba(0,0,0,.15)",
+          border: "1px solid #e5e7eb",
+          background: "#ffffff",
+          fontWeight: 700,
+          fontSize: 20
+        }}
+      >
+        ?
+      </button>
+    </div>
+  );
+};
+
+// (Opsiyonel) Topbar butonu hâlâ kullanılabilir
 export const HelpButton: React.FC<{ className?: string }> = ({ className }) => {
   const { openHelp, startTour } = useGuide();
   return (
