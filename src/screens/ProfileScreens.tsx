@@ -257,7 +257,7 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
   const [form, setForm] = useState<ManagerUser>({ ...defaultManager, ...(user as ManagerUser) });
   const [tab, setTab] = useState<string>("personal");
   const set = <K extends keyof ManagerUser>(k: K, v: ManagerUser[K]) => setForm((f) => ({ ...f, [k]: v }));
-  const onSave = () => { alert("Profil kaydedildi (Saha Yöneticisi)"); };
+  const onSave = () => { alert("Profil kaydedildi (Saha Yönticisi)"); };
 
   const items = [
     { key: "personal", label: "Kişisel Bilgiler" },
@@ -269,7 +269,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
   ];
 
   return (
-    // ===== DEĞİŞİKLİK 1.1: Boşluklar azaltıldı =====
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <div className="mb-4 flex items-center gap-3">
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-yellow-100"><User className="h-5 w-5 text-[#0099CB]" /></div>
@@ -279,7 +278,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
         </div>
       </div>
 
-       {/* ===== DEĞİŞİKLİK 1.2: Bölümler arası boşluk artırıldı ===== */}
       <div className="grid gap-4 md:gap-6 md:grid-cols-[14rem_1fr]">
         <SideNav items={items} active={tab} onChange={setTab} />
         <main>
@@ -309,7 +307,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
             </Section>
           )}
           
-          {/* ===== DEĞİŞİKLİK 2: Boş bölümler dolduruldu ===== */}
           {tab === "team" && ( 
             <Section title="Ekip Hedefleri">
               <div className="grid gap-4 md:grid-cols-2">
@@ -323,8 +320,10 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
             <Section title="Uygulama Tercihleri">
               <div className="grid gap-4 md:grid-cols-3">
                 <FieldRow label="Dil"><Select value={form.language} onChange={(e) => set("language", e.target.value as any)}><option value="tr">Türkçe</option><option value="en">English</option></Select></FieldRow>
-                <FieldRow label="Birim"><Select value={form.units} onChange={(e) => set("units", e.target.value as any)}><option value="metric">Metrik (km, °C)</option><option value="imperial">Imperial (mi, °F)</option></Select></Row>
-                <FieldRow label="Tema"><Select value={form.theme} onChange={(e) => set("theme", e.target.value as any)}><option value="system">Sistem</option><option value="light">Açık</option><option value="dark">Koyu</option></Select></Row>
+                {/* ===== DÜZELTME 1: </Row> -> </FieldRow> ===== */}
+                <FieldRow label="Birim"><Select value={form.units} onChange={(e) => set("units", e.target.value as any)}><option value="metric">Metrik (km, °C)</option><option value="imperial">Imperial (mi, °F)</option></Select></FieldRow>
+                {/* ===== DÜZELTME 2: </Row> -> </FieldRow> ===== */}
+                <FieldRow label="Tema"><Select value={form.theme} onChange={(e) => set("theme", e.target.value as any)}><option value="system">Sistem</option><option value="light">Açık</option><option value="dark">Koyu</option></Select></FieldRow>
               </div>
             </Section> 
           )}
@@ -354,16 +353,6 @@ export const ManagerProfile: React.FC<{ user?: Partial<ManagerUser> }> = ({ user
     </div>
   );
 };
-
-const ToggleLine: React.FC<{ label: string; checked: boolean; onChange: (v: boolean) => void; hint?: string; compact?: boolean }> = ({ label, checked, onChange, hint, compact }) => (
-  <div className={`flex items-center justify-between ${compact ? "" : "rounded-lg border border-gray-200 p-3"}`}>
-    <div>
-      <div className="text-sm font-medium text-gray-900">{label}</div>
-      {hint && <div className="text-xs text-gray-500">{hint}</div>}
-    </div>
-    <Switch checked={checked} onChange={onChange} />
-  </div>
-);
 
 // ===== Wrapper =====
 const ProfileScreens: React.FC<{ role: Role; salesUser?: Partial<SalesUser>; managerUser?: Partial<ManagerUser> }> = ({ role, salesUser, managerUser }) => {
