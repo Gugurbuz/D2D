@@ -22,3 +22,32 @@ img, video, canvas { max-width: 100%; height: auto; }
   will-change: transform;
   backface-visibility: hidden;
 }
+/* leaflet-draw ikonlarının görünürlüğünü artırma */
+.leaflet-draw-toolbar a {
+    color: #333; /* Daha koyu bir ikon rengi */
+    background-color: #f8f8f8; /* Hafif gri arka plan */
+    border: 1px solid #ccc; /* İkon etrafına ince kenarlık */
+    border-radius: 4px; /* Hafif yuvarlak köşeler */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Hafif gölge */
+    transition: all 0.2s ease-in-out;
+}
+
+.leaflet-draw-toolbar a:hover {
+    background-color: #e8e8e8; /* Hover durumunda daha koyu gri */
+    border-color: #bbb;
+}
+
+/* Aktif (seçili) ikonlar için */
+.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled {
+    background-color: #d1ecf1; /* Aktifken daha belirgin bir renk */
+    border-color: #bee5eb;
+    color: #0c5460;
+}
+
+/* Çöp kutusu (silme) ikonu için özel ayar */
+.leaflet-draw-toolbar .leaflet-draw-edit-remove a {
+    color: #dc3545; /* Kırmızı renk */
+}
+.leaflet-draw-toolbar .leaflet-draw-edit-remove a:hover {
+    background-color: #f8d7da;
+}
