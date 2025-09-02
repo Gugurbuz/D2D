@@ -286,7 +286,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             >
              <Popup>
   <div className="space-y-1">
-   <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2">
   <b>{i + 1}. {c.name}</b>
   <button
     onClick={(e) => {
@@ -300,6 +300,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
   </button>
 </div>
+
     <div>{c.address}, {c.district}</div>
     <div>Saat: {c.plannedTime}</div>
     <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
