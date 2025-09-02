@@ -446,9 +446,14 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     {/* İkon */}
     <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
 
-    {/* Metin Bloğu */}
+   {/* Metin Bloğu */}
     <div>
-        <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın. Manuel atama için sağdaki paneli kullanın.
+        <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın.
+        {/* İkonun eklendiği bölüm */}
+        <span className="inline-flex items-center">
+            Manuel atama için sağdaki paneli kullanın
+            <Users className="w-3 h-3 mx-1" />.
+        </span>
         <br />
         Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
     </div>
