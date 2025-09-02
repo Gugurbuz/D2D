@@ -46,6 +46,8 @@ function App() {
     return !assigned || assigned === currentRepId;
   };
   const visibleCustomers = customers.filter(isVisibleForCurrentRole);
+  const role: AppRole = /* login'den sonra */ "satisUzmani";
+  const screen: AppScreen = /* router'dan */ "routeMap";
 
   const handleSpeechToText = () => { /* ... Fonksiyon içeriği değişmedi ... */ };
   const handleLogin = () => {
