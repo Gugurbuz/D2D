@@ -936,7 +936,7 @@ const ContractModal: React.FC<{
       </div>
     </div>
   );
-};
+
 
 
 export default VisitFlowScreen;
