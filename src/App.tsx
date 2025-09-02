@@ -38,6 +38,8 @@ function App() {
   const [isListening, setIsListening] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
+  const role: AppRole = /* login'den sonra */ "satisUzmani";
+  const screen: AppScreen = /* router'dan */ "routeMap";
 
   const currentRepId = role === 'rep' ? 'rep-1' : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
@@ -46,8 +48,6 @@ function App() {
     return !assigned || assigned === currentRepId;
   };
   const visibleCustomers = customers.filter(isVisibleForCurrentRole);
-  const role: AppRole = /* login'den sonra */ "satisUzmani";
-  const screen: AppScreen = /* router'dan */ "routeMap";
 
   const handleSpeechToText = () => { /* ... Fonksiyon içeriği değişmedi ... */ };
   const handleLogin = () => {
