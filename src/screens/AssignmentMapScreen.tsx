@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, useMap } from "react-leaflet";
 import L, { LatLngBounds, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -59,22 +59,20 @@ const createRepIcon = (rep: Rep) => L.divIcon({ className: "rep-marker", html: `
 const createCustomerIcon = (color: string, highlighted = false) => { const ring = highlighted ? "box-shadow:0 0 0 6px rgba(0,0,0,.08);" : ""; return L.divIcon({ className: "cust-marker", html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);${ring}"></div>`, iconSize: [22, 22], iconAnchor: [11, 22], popupAnchor: [0, -18] }); };
 const convexHull = (points: LatLng[]): LatLng[] => { if (points.length < 3) return points.slice(); const pts = points.slice().sort((a, b) => (a[1] === b[1] ? a[0] - b[0] : a[1] - b[1])); const cross = (o: LatLng, a: LatLng, b: LatLng) => (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]); const lower: LatLng[] = []; for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop(); lower.push(p); } const upper: LatLng[] = []; for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop(); upper.push(p); } upper.pop(); lower.pop(); return lower.concat(upper); };
 
-// YENİ: İstekler arasına gecikme koymak için yardımcı fonksiyon
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 
 // =================================================================================
 // Alt Bileşenler (Child Components)
 // =================================================================================
 
+// YENİ BİLEŞEN: Haritayı verilen sınırlara göre otomatik olarak sığdıran bileşen.
 const MapAutoFitter = ({ bounds }: { bounds: LatLngBounds }) => {
     const map = useMap();
     useEffect(() => {
         if (bounds.isValid()) {
-            map.fitBounds(bounds, { padding: [50, 50] });
+            map.fitBounds(bounds, { padding: [50, 50] }); // Kenarlarda 50px boşluk bırak
         }
     }, [map, bounds]);
-    return null;
+    return null; // Bu bileşen ekranda bir şey çizmez.
 };
 
 const DrawControl = ({ onPolygonCreated, onDeleted, drawColor }: { onPolygonCreated: (layer: L.Polygon) => void, onDeleted: () => void, drawColor: string }) => {
@@ -305,13 +303,14 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     const displayRegions = pendingOptimization?.regions ?? regions;
     const displayRoutes = pendingOptimization?.routes ?? optimizedRoutes;
 
+    // YENİ EKLEME: Tüm marker'ları (müşteri ve rep) içeren harita sınırlarını hesaplar.
     const mapBounds = useMemo(() => {
         const points: LatLng[] = [];
         customers.forEach(c => points.push([c.lat, c.lng]));
         reps.forEach(r => points.push([r.lat, r.lng]));
         
         if (points.length === 0) {
-            return null;
+            return null; // Eğer hiç marker yoksa null dön.
         }
         
         return L.latLngBounds(points);
@@ -349,13 +348,11 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         handleClearSelection();
     }, [selectedIds, selectedRepId, reps, setAssignments, showToast, handleClearSelection]);
 
-    // GÜNCELLENMİŞ OPTİMİZASYON FONKSİYONU
     const handleOptimize = useCallback(async () => {
         setLoading(true);
         setRegions({});
         setOptimizedRoutes({});
         try {
-            // --- 1. Adım: Müşterileri Kümeleme (Clustering) ---
             const K = reps.length;
             const pts: LatLng[] = customers.map(c => [c.lat, c.lng]);
             if (customers.length === 0 || K === 0) return;
@@ -387,53 +384,23 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
             const nextAssignments: Record<string, string> = {};
             const customersPerRep: Record<string, Customer[]> = Object.fromEntries(reps.map(r => [r.id, []]));
             customers.forEach((c, i) => { const repId = reps[assignmentsResult[i]]?.id || reps[0].id; nextAssignments[c.id] = repId; if (customersPerRep[repId]) customersPerRep[repId].push(c); });
-
-            // --- 2. Adım: Rotaları Sıralı Olarak Hesaplama (DEĞİŞTİRİLDİ) ---
-            showToast("Rotalar hesaplanıyor...", 'info', 10000); // Kullanıcıya bilgi ver
-            const results = [];
-            for (const rep of reps) {
+            const routePromises = reps.map(async (rep) => {
                 const repCustomers = customersPerRep[rep.id];
-                if (repCustomers.length === 0) {
-                    results.push({ repId: rep.id, repName: rep.name, customerCount: 0, totalKm: null, coords: [] });
-                    continue; // Müşterisi olmayanları atla
-                }
-
+                if (repCustomers.length === 0) return { repId: rep.id, repName: rep.name, customerCount: 0, totalKm: null, coords: [] };
                 try {
-                    // Her istek arasında 250ms bekle (API rate limit için)
-                    await sleep(250); 
-                    
-                    const coords = [[rep.lat, rep.lng], ...repCustomers.map(c => [c.lat, c.lng] as LatLng)]
-                        .map(p => `${p[1]},${p[0]}`)
-                        .join(';');
-                    
+                    const coords = [[rep.lat, rep.lng], ...repCustomers.map(c => [c.lat, c.lng] as LatLng)].map(p => `${p[1]},${p[0]}`).join(';');
                     const tripData = await osrmTrip(coords);
-                    
-                    results.push({ 
-                        repId: rep.id, 
-                        repName: rep.name, 
-                        customerCount: repCustomers.length, 
-                        totalKm: tripData.trips[0].distance / 1000, 
-                        coords: tripData.trips[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as LatLng) 
-                    });
-
-                } catch (error) {
-                    // ÖNEMLİ: Hata durumunda konsola detaylı bilgi yazdır.
-                    console.error(`Rota hesaplama hatası (${rep.name}):`, error);
-                    results.push({ repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: null, coords: [] });
-                }
-            }
-            
-            // --- 3. Adım: Sonuçları İşleme ---
+                    return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: tripData.trips[0].distance / 1000, coords: tripData.trips[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as LatLng) };
+                } catch (error) { return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: null, coords: [] }; }
+            });
+            const results = await Promise.all(routePromises);
             const newOptimizedRoutes: Record<string, { coords: LatLng[], distance: number }> = {};
             results.forEach(res => { if (res.coords.length > 0) newOptimizedRoutes[res.repId] = { coords: res.coords, distance: res.totalKm ?? 0 }; });
-            
             const hulls: Record<string, LatLng[]> = {};
             reps.forEach(r => { hulls[r.id] = customersPerRep[r.id].length ? convexHull(customersPerRep[r.id].map(c => [c.lat, c.lng])) : []; });
-            
             setPendingOptimization({ assignments: nextAssignments, regions: hulls, routes: newOptimizedRoutes, summary: results });
-
         } catch (error) {
-            console.error("Optimizasyon sırasında genel hata:", error);
+            console.error("Optimizasyon sırasında hata:", error);
             showToast("Optimizasyon başarısız oldu.", 'error');
         } finally {
             setLoading(false);
@@ -485,6 +452,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                 <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} style={{ height: "100%", width: "100%" }} className="z-0">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
                     
+                    {/* YENİ EKLEME: Eğer sınırlar hesaplandıysa, haritayı otomatik sığdır. */}
                     {mapBounds && <MapAutoFitter bounds={mapBounds} />}
 
                     <DrawControl onPolygonCreated={handlePolygonCreated} onDeleted={handleClearSelection} drawColor={selectedRepDrawColor} />
@@ -523,8 +491,8 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     <button
                         onClick={() => setPanelOpen(true)}
                         className="absolute top-4 right-4 z-[1000] bg-[#0099CB] text-white shadow-lg p-3 rounded-full 
-                                     hover:bg-amber-400 hover:text-gray-800 
-                                     transition-colors duration-200"
+                                   hover:bg-amber-400 hover:text-gray-800 
+                                   transition-colors duration-200"
                         title="Paneli Aç"
                     >
                         <Users className="w-5 h-5" />
