@@ -5,7 +5,7 @@ import React, { useReducer, useState, useRef, useEffect } from 'react';
 import {
   IdCard, Camera, Smartphone, FileText, PenLine, Send,
   ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
-  Loader2, ScanLine, Nfc,
+Loader2, ScanLine, Nfc, Maximize2,
 } from 'lucide-react';
 import { Customer } from '../RouteMap';
 
