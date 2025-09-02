@@ -373,7 +373,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 
 // --- ADIM 3: Sözleşme ve İmza ---
 const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
-  const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || "");
+ const [flowSmsPhone, setFlowSmsPhone] = useState(() => customer?.phone ?? "");
   const [sigOpen, setSigOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null); // ⬅️ imza
