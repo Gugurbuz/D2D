@@ -499,7 +499,7 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     >
         <Users className="w-5 h-5" />
     </button>
-)}
+
                 )}
 
                 {loading && (
