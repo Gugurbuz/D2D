@@ -42,3 +42,26 @@ export const teamReps: TeamRep[] = [
   },
   // ... diğer temsilciler
 ];
+  { 
+    id: 'rep-3', 
+    name: 'Şöhret Demir',
+    phone: '0555 000 00 03', 
+    lat: 41.0255, 
+    lng: 29.0653, 
+    completedToday: 2, 
+    totalToday: 5,
+    color: '#f97316',                  // Turuncu
+    fillColor: 'rgba(249,115,22,.18)'
+  },
+  { 
+    id: 'rep-4', 
+    name: 'Mert Yıldırım', 
+    phone: '0555 000 00 04', 
+    lat: 40.9497, 
+    lng: 29.1228, 
+    completedToday: 0, 
+    totalToday: 4,
+    color: '#8b5cf6',                  // Mor (yeni eklendi)
+    fillColor: 'rgba(139,92,246,.18)'
+  },
+];
