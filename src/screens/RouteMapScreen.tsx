@@ -294,16 +294,16 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                   <div>Saat: {c.plannedTime}</div>
                   <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
 
-                  {/* ==== DEĞİŞİKLİK BURADA ==== */}
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    <span>Navigasyon Başlat</span>
-                  </a>
+                  {/* ==== GÜNCELLENMİŞ BUTON STİLİ ==== */}
+    <a
+      href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+    >
+      <Navigation className="w-4 h-4" />
+      <span>Navigasyonu Başlat</span>
+    </a>
                   {/* ==== DEĞİŞİKLİK SONU ==== */}
                   
                 </div>
