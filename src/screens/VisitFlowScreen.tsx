@@ -373,79 +373,135 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 
 // --- ADIM 3: Sözleşme ve İmza ---
 const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
-    const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
-    const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || '');
+  const [flowSmsPhone, setFlowSmsPhone] = useState(customer.phone || "");
+  const [sigOpen, setSigOpen] = useState(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
-    // İmza canvas'ı için useEffect buraya eklenebilir.
-    useEffect(() => {
-     const canvas = signatureCanvasRef.current;
-     if (!canvas) return;
-     const ctx = canvas.getContext('2d');
-     if (!ctx) return;
-     let drawing = false;
-     const getPos = (e: any, c: HTMLCanvasElement) => {
-       const rect = c.getBoundingClientRect();
-       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-       return { x: clientX - rect.left, y: clientY - rect.top };
-     };
-     const start = (e: MouseEvent | TouchEvent) => { drawing = true; const { x, y } = getPos(e, canvas); ctx.beginPath(); ctx.moveTo(x, y); };
-     const move = (e: MouseEvent | TouchEvent) => { if (!drawing) return; const { x, y } = getPos(e, canvas); ctx.lineTo(x, y); ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); };
-     const end = () => { drawing = false; };
-     canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
-     canvas.addEventListener('touchstart', start); canvas.addEventListener('touchmove', move); window.addEventListener('touchend', end);
-     return () => {
-       canvas.removeEventListener('mousedown', start); canvas.removeEventListener('mousemove', move); window.removeEventListener('mouseup', end);
-       canvas.removeEventListener('touchstart', start); canvas.removeEventListener('touchmove', move); window.removeEventListener('touchend', end);
-     };
-    }, []);
+  const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl;
 
-    return (
-        <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-             <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-5 h-5 text-[#0099CB]" />
-                <h3 className="text-lg font-semibold">3. Sözleşme Onayı</h3>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
-                <div className="h-64 border rounded-lg bg-gray-50 flex items-center justify-center">
-                  <p className="text-gray-500">Sözleşme PDF'i burada görüntülenecek.</p>
-                </div>
-                <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
-                  <input type="checkbox" checked={state.contractAccepted} onChange={(e) => dispatch({type: 'SET_CONTRACT_ACCEPTED', payload: e.target.checked})} />
-                  Sözleşme koşullarını okudum ve onaylıyorum.
-                </label>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
-                <div className="border rounded-lg p-2 bg-gray-50">
-                  <canvas ref={signatureCanvasRef} width={520} height={180} className="w-full h-[180px] bg-white rounded" />
-                </div>
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
-                  <div className="flex gap-2">
-                    <input value={flowSmsPhone} onChange={(e)=>setFlowSmsPhone(e.target.value)} className="flex-1 p-2 border rounded-lg" placeholder="5XX XXX XX XX" />
-                    <button onClick={() => dispatch({type: 'SET_SMS_SENT', payload: true})} className="px-4 py-2 bg-[#F9C800] rounded-lg">SMS Gönder</button>
-                  </div>
-                  {state.smsSent && <div className="mt-2 flex items-center gap-2 text-green-700 text-sm"><ShieldCheck className="w-4 h-4" />Onay SMS'i gönderildi.</div>}
-                </div>
-              </div>
-            </div>
-             <div className="mt-6 flex justify-between">
-                <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-                <button
-                  onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })}
-                  disabled={!state.contractAccepted || !state.smsSent}
-                  className={`px-6 py-3 rounded-lg text-white ${(!state.contractAccepted || !state.smsSent) ? 'bg-gray-300' : 'bg-[#0099CB]'}`}
-                >
-                  Sözleşmeyi Onayla ve Bitir
-                </button>
-            </div>
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+      <div className="flex items-center gap-3 mb-4">
+        <FileText className="w-5 h-5 text-[#0099CB]" />
+        <h3 className="text-lg font-semibold">3. Sözleşme Onayı</h3>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Sol: PDF Önizleme + Onay */}
+        <div>
+          <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
+          <div className="h-64 border rounded-lg bg-gray-50 flex items-center justify-center">
+            <p className="text-gray-500">Sözleşme PDF'i burada görüntülenecek.</p>
+          </div>
+          <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={state.contractAccepted}
+              onChange={(e) => dispatch({ type: "SET_CONTRACT_ACCEPTED", payload: e.target.checked })}
+            />
+            Sözleşme koşullarını okudum ve onaylıyorum.
+          </label>
         </div>
-    );
-};
 
+        {/* Sağ: İmza + SMS */}
+        <div>
+          <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
+
+          {/* Önizleme + Aç butonu */}
+          <div className="border rounded-lg p-2 bg-gray-50">
+            {signatureDataUrl ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={signatureDataUrl}
+                  alt="İmza"
+                  className="h-[120px] w-auto bg-white rounded border"
+                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => setSigOpen(true)}
+                    className="px-3 py-2 rounded-lg border bg-white text-sm"
+                  >
+                    İmzayı Düzenle
+                  </button>
+                  <button
+                    onClick={() => setSignatureDataUrl(null)}
+                    className="px-3 py-2 rounded-lg border bg-white text-sm"
+                  >
+                    Temizle
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm text-gray-500">Henüz imza yok.</div>
+                <button
+                  onClick={() => setSigOpen(true)}
+                  className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm"
+                >
+                  İmza Al (Tam Ekran)
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* SMS Onayı */}
+          <div className="mt-4">
+            <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
+            <div className="flex gap-2">
+              <input
+                value={flowSmsPhone}
+                onChange={(e) => setFlowSmsPhone(e.target.value)}
+                className="flex-1 p-2 border rounded-lg"
+                placeholder="5XX XXX XX XX"
+              />
+              <button
+                onClick={() => dispatch({ type: "SET_SMS_SENT", payload: true })}
+                className="px-4 py-2 bg-[#F9C800] rounded-lg"
+              >
+                SMS Gönder
+              </button>
+            </div>
+            {state.smsSent && (
+              <div className="mt-2 flex items-center gap-2 text-green-700 text-sm">
+                <ShieldCheck className="w-4 h-4" />
+                Onay SMS'i gönderildi.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex justify-between">
+        <button
+          onClick={() => dispatch({ type: "SET_STEP", payload: 2 })}
+          className="px-4 py-2 rounded-lg bg-white border"
+        >
+          Geri
+        </button>
+        <button
+          onClick={() => dispatch({ type: "SET_STEP", payload: 4 })}
+          disabled={!canContinue}
+          className={`px-6 py-3 rounded-lg text-white ${
+            canContinue ? "bg-[#0099CB]" : "bg-gray-300"
+          }`}
+        >
+          Sözleşmeyi Onayla ve Bitir
+        </button>
+      </div>
+
+      {/* Tam ekran imza modalı */}
+      {sigOpen && (
+        <SignaturePadModal
+          onClose={() => setSigOpen(false)}
+          onSave={(dataUrl) => {
+            setSignatureDataUrl(dataUrl);
+            setSigOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+};
 // --- ADIM 4: Tamamlama ---
 const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
     <div className="bg-white rounded-xl shadow-sm p-6 text-center animate-fade-in">
