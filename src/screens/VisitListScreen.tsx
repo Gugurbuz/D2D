@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // useState ve useEffect'i import ediyoruz
 import { Search, Mic, Clock, MapPin } from 'lucide-react';
 import { Customer } from '../RouteMap';
 import { getPriorityColor, getStatusColor } from '../utils/ui';
@@ -21,6 +21,17 @@ const VisitListScreen: React.FC<Props> = ({
   customers, filter, setFilter, searchQuery, setSearchQuery, isListening, onMicClick,
   assignments, allReps, onDetail, onStart
 }) => {
+  // YENİ EKLENEN KISIM BAŞLANGICI
+  // 1. Sayfa durumunu ve sayfa başına öğe sayısını tanımlıyoruz
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 3; // Her sayfada 3 öğe görünecek
+
+  // Filtre veya arama sorgusu değiştiğinde kullanıcıyı ilk sayfaya yönlendiriyoruz.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
+  // YENİ EKLENEN KISIM SONU
+
   let filtered = customers;
   if (filter === 'Tamamlandı') filtered = filtered.filter(c => c.status === 'Tamamlandı');
   if (searchQuery.trim()) {
@@ -31,6 +42,14 @@ const VisitListScreen: React.FC<Props> = ({
       c.district.toLowerCase().includes(q)
     );
   }
+  
+  // YENİ EKLENEN KISIM BAŞLANGICI
+  // 2. Sayfalama için hesaplamalar
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedCustomers = filtered.slice(startIndex, endIndex); // Sadece mevcut sayfanın verisini alıyoruz
+  // YENİ EKLENEN KISIM SONU
 
   return (
     <div className="p-6">
@@ -68,7 +87,8 @@ const VisitListScreen: React.FC<Props> = ({
       </div>
 
       <div className="space-y-4">
-        {filtered.map(c => {
+        {/* DEĞİŞTİRİLEN KISIM: Artık 'filtered' yerine 'paginatedCustomers' dizisini map'liyoruz */}
+        {paginatedCustomers.map(c => {
           const rid = assignments[c.id];
           const who = rid ? (allReps.find(r=>r.id===rid)?.name || rid) : 'Atanmamış';
           return (
@@ -99,6 +119,29 @@ const VisitListScreen: React.FC<Props> = ({
           );
         })}
       </div>
+
+      {/* YENİ EKLENEN KISIM: Sayfalama navigasyon kontrolleri */}
+      {totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-center space-x-4">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+          >
+            Geri
+          </button>
+          <span className="text-gray-700">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+          >
+            İleri
+          </button>
+        </div>
+      )}
     </div>
   );
 };
