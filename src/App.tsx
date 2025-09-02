@@ -23,10 +23,10 @@ import TeamMapScreen from './screens/TeamMapScreen';
 
 // ✅ Profil ekranı
 import ProfileScreens from './screens/ProfileScreens';
-// ✅ Guide ekranı
-import { GuideProvider, HelpButton } from "./guide/GuideSystem";
-import type { AppRole, AppScreen } from "./guide/guideConfig";
 
+// ✅ Guide sistemi (tablet uyumlu)
+import { GuideProvider, HelpFAB } from "./guide/GuideSystem";
+import type { AppRole, AppScreen } from "./guide/guideConfig";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -47,6 +47,37 @@ function App() {
   };
   const visibleCustomers = customers.filter(isVisibleForCurrentRole);
 
+  // --- GUIDE eşleştirmeleri ---
+  const toAppRole = (r: Role): AppRole =>
+    r === 'manager' ? 'sahaYonetici' : 'satisUzmani';
+
+  const toAppScreen = (s: Screen, r: Role): AppScreen => {
+    // guideConfig’te olmayan ekranları en yakın rehbere eşleştir
+    switch (s) {
+      case 'dashboard':
+        return 'dashboard';
+      case 'routeMap':
+        return 'routeMap';
+      case 'visitList':
+        return 'visitList';
+      case 'assignmentMap':
+        return 'assignmentMap';
+      // Yakın eşleştirmeler:
+      case 'assignment':
+        return 'assignmentMap';
+      case 'visitDetail':
+      case 'visitFlow':
+        return 'visitList';
+      case 'teamMap':
+      case 'messages':
+      case 'reports':
+      case 'profile':
+      default:
+        // Yöneticide raporlama ağırlıklı olduğu için dashboard mantıklı
+        return 'dashboard';
+    }
+  };
+
   const handleSpeechToText = () => { /* ... Fonksiyon içeriği değişmedi ... */ };
   const handleLogin = () => {
     setAgentName('Serkan Özkan');
@@ -65,6 +96,7 @@ function App() {
     setSelectedCustomer({ ...cust });
   };
 
+  // Login ve rol seçimi ekranlarında rehbere gerek yok, direkt render
   if (currentScreen === 'login') return <LoginScreen onLogin={handleLogin} />;
 
   if (currentScreen === 'roleSelect') {
@@ -78,94 +110,103 @@ function App() {
     );
   }
 
+  // Rehber sağlayıcısı: rol + ekran eşlemesi (tablet için autoStart + long-press açık)
+  const guideRole = toAppRole(role);
+  const guideScreen = toAppScreen(currentScreen, role);
+
   return (
-    <AppLayout
-      agentName={agentName}
-      role={role}
-      currentScreen={currentScreen}
-      setCurrentScreen={setCurrentScreen}
-    >
-      {/* ✅ PROFIL */}
-      {currentScreen === 'profile' && (
-        <ProfileScreens role={role === 'manager' ? 'manager' : 'sales'} />
-      )}
+    <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
+      <AppLayout
+        agentName={agentName}
+        role={role}
+        currentScreen={currentScreen}
+        setCurrentScreen={setCurrentScreen}
+      >
+        {/* ✅ PROFIL */}
+        {currentScreen === 'profile' && (
+          <ProfileScreens role={role === 'manager' ? 'manager' : 'sales'} />
+        )}
 
-      {currentScreen === 'assignmentMap' && role === 'manager' && (
-        <AssignmentMapScreen
-          customers={customers}
-          assignments={assignments}
-          setAssignments={setAssignments}
-          allReps={allReps}
-          onBack={() => setCurrentScreen('assignment')}
-        />
-      )}
+        {currentScreen === 'assignmentMap' && role === 'manager' && (
+          <AssignmentMapScreen
+            customers={customers}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            allReps={allReps}
+            onBack={() => setCurrentScreen('assignment')}
+          />
+        )}
 
-      {currentScreen === 'assignment' && role === 'manager' && (
-        <AssignmentScreen
-          customers={customers}
-          assignments={assignments}
-          setAssignments={setAssignments}
-          allReps={allReps}
-          setCurrentScreen={setCurrentScreen}
-        />
-      )}
+        {currentScreen === 'assignment' && role === 'manager' && (
+          <AssignmentScreen
+            customers={customers}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
+          />
+        )}
 
-      {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
+        {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
 
-      {/* Mesajlar */}
-      {currentScreen === 'messages' && <MessagesScreen />}
+        {/* Mesajlar */}
+        {currentScreen === 'messages' && <MessagesScreen />}
 
-      {currentScreen === 'dashboard' && (
-        <DashboardScreen
-          customers={visibleCustomers}
-          assignments={assignments}
-          allReps={allReps}
-          setCurrentScreen={setCurrentScreen}
-          setSelectedCustomer={setSelectedCustomer}
-        />
-      )}
+        {currentScreen === 'dashboard' && (
+          <DashboardScreen
+            customers={visibleCustomers}
+            assignments={assignments}
+            allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
+            setSelectedCustomer={setSelectedCustomer}
+          />
+        )}
 
-      {currentScreen === 'visitList' && (
-        <VisitListScreen
-          customers={visibleCustomers}
-          filter={filter}
-          setFilter={setFilter}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isListening={isListening}
-          onMicClick={handleSpeechToText}
-          assignments={assignments}
-          allReps={allReps}
-          onDetail={(c) => {
-            setSelectedCustomer(c);
-            setCurrentScreen('visitDetail');
-          }}
-          onStart={handleStartVisit}
-        />
-      )}
+        {currentScreen === 'visitList' && (
+          <VisitListScreen
+            customers={visibleCustomers}
+            filter={filter}
+            setFilter={setFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            isListening={isListening}
+            onMicClick={handleSpeechToText}
+            assignments={assignments}
+            allReps={allReps}
+            onDetail={(c) => {
+              setSelectedCustomer(c);
+              setCurrentScreen('visitDetail');
+            }}
+            onStart={handleStartVisit}
+          />
+        )}
 
-      {currentScreen === 'visitDetail' && selectedCustomer && (
-        <VisitDetailScreen
-          customer={selectedCustomer}
-          onBack={() => setCurrentScreen('visitList')}
-          onStartVisit={handleStartVisit}
-        />
-      )}
+        {currentScreen === 'visitDetail' && selectedCustomer && (
+          <VisitDetailScreen
+            customer={selectedCustomer}
+            onBack={() => setCurrentScreen('visitList')}
+            onStartVisit={handleStartVisit}
+          />
+        )}
 
-      {currentScreen === 'visitFlow' && selectedCustomer && (
-        <VisitFlowScreen
-          customer={selectedCustomer}
-          onCloseToList={() => setCurrentScreen('visitList')}
-          onCompleteVisit={handleCompleteVisit}
-        />
-      )}
+        {currentScreen === 'visitFlow' && selectedCustomer && (
+          <VisitFlowScreen
+            customer={selectedCustomer}
+            onCloseToList={() => setCurrentScreen('visitList')}
+            onCompleteVisit={handleCompleteVisit}
+          />
+        )}
 
-      {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
+        {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
 
-      {currentScreen === 'routeMap' && (
-        <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
-      )}
-    </AppLayout>
+        {currentScreen === 'routeMap' && (
+          <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
+        )}
+
+        {/* ✅ Tablet: sağ altta “?” yardım menüsü */}
+        <HelpFAB />
+      </AppLayout>
+    </GuideProvider>
   );
 }
 
