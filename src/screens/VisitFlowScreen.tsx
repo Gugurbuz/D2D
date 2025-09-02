@@ -759,6 +759,58 @@ const ContractMockPage: React.FC<{
   );
 };
 
+// ---- Tam ekran sözleşme modalı ----
+const ContractModal: React.FC<{
+  customer: Customer;
+  signatureDataUrl: string | null;
+  onClose: () => void;
+}> = ({ customer, signatureDataUrl, onClose }) => {
+  // Modal açıkken body scroll kilidi
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const htmlStyle = document.documentElement.style;
+    const prev = {
+      overflow: style.overflow,
+      position: style.position,
+      top: style.top,
+      width: style.width,
+      overscroll: htmlStyle.overscrollBehaviorY as string | undefined,
+    };
+    style.overflow = "hidden";
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.width = "100%";
+    htmlStyle.overscrollBehaviorY = "contain";
+    return () => {
+      style.overflow = prev.overflow;
+      style.position = prev.position;
+      style.top = prev.top;
+      style.width = prev.width;
+      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
+        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
+        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
+          Kapat
+        </button>
+      </div>
+
+      {/* A4 oranına yakın gövde */}
+      <div className="flex-1 bg-gray-100 overflow-auto">
+        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
+          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 
 export default VisitFlowScreen;
