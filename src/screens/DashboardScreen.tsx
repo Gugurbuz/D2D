@@ -1,3 +1,4 @@
+// src/screens/DashboardScreen.tsx
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import { Chip } from '../utils/ui';
@@ -34,7 +35,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   return (
     <div className="px-6">
       {/* KPI Kartları */}
-      <div className="py-4 grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div data-tour-id="kpi-cards" className="py-4 grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
           ['Toplam Ziyaret', planned],
           ['Yolda', onTheWay],
@@ -52,10 +53,15 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
       {/* Bugünkü Ziyaretler */}
       <div className="py-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <div data-tour-id="actions" className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="font-semibold text-gray-900">Bugünkü Ziyaretler</div>
-            <button onClick={() => setCurrentScreen('visitList')} className="text-xs text-[#0099CB] hover:underline">Tamamını Gör</button>
+            <button
+              onClick={() => setCurrentScreen('visitList')}
+              className="text-xs text-[#0099CB] hover:underline"
+            >
+              Tamamını Gör
+            </button>
           </div>
           <div className="space-y-3">
             {todayList.map(c => (
@@ -76,11 +82,19 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
                   <div className="text-sm text-gray-900">{c.plannedTime}</div>
                   <div className="text-xs text-gray-500">{c.distance}</div>
                   <div className="mt-2 flex gap-2">
-                    <button onClick={() => { setSelectedCustomer(c); setCurrentScreen('visitDetail'); }}
-                            className="px-3 py-1.5 rounded-lg bg-[#0099CB] text-white text-xs">Detay</button>
+                    <button
+                      onClick={() => { setSelectedCustomer(c); setCurrentScreen('visitDetail'); }}
+                      className="px-3 py-1.5 rounded-lg bg-[#0099CB] text-white text-xs"
+                    >
+                      Detay
+                    </button>
                     {c.status === 'Bekliyor' && (
-                      <button onClick={() => { setSelectedCustomer(c); setCurrentScreen('visitFlow'); }}
-                              className="px-3 py-1.5 rounded-lg bg-[#F9C800] text-gray-900 text-xs">Başlat</button>
+                      <button
+                        onClick={() => { setSelectedCustomer(c); setCurrentScreen('visitFlow'); }}
+                        className="px-3 py-1.5 rounded-lg bg-[#F9C800] text-gray-900 text-xs"
+                      >
+                        Başlat
+                      </button>
                     )}
                   </div>
                 </div>
