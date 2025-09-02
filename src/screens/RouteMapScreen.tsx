@@ -286,10 +286,20 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             >
              <Popup>
   <div className="space-y-1">
-    <div className="flex items-center gap-2">
-      <b>{i + 1}. {c.name}</b>
-      {starredId === c.id && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
-    </div>
+   <div className="flex items-center gap-2">
+  <b>{i + 1}. {c.name}</b>
+  <button
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setStarredId(prev => (prev === c.id ? null : c.id));
+    }}
+    aria-label={starredId === c.id ? "Yıldızı kaldır" : "Yıldızla"}
+    className="p-1 rounded hover:bg-gray-100"
+  >
+    <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
+  </button>
+</div>
     <div>{c.address}, {c.district}</div>
     <div>Saat: {c.plannedTime}</div>
     <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
