@@ -409,7 +409,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
     <Maximize2 className="h-4 w-4" />
   </div>
   <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-[#F9C800] text-gray-900 rounded shadow ring-1 ring-black/10">
-    Tam ekran
+   
   </div>
 </div>
 
