@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, Polygon, useMap } from "react-leaflet";
-import L, { LatLngExpression } from "leaflet";
+import L, { LatLngBounds, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet-draw/dist/leaflet.draw.css";
 // @ts-ignore
@@ -43,8 +43,8 @@ type ToastState = { message: string; type: 'success' | 'error' | 'info' };
 // =================================================================================
 // Sabitler (Constants)
 // =================================================================================
-const MAP_CENTER: LatLng = [40.9368, 29.1553];
-const MAP_ZOOM = 13;
+const MAP_CENTER: LatLng = [40.9368, 29.1553]; // Fallback center
+const MAP_ZOOM = 13; // Fallback zoom
 const OPTIMIZATION_ITERATIONS = 10;
 
 // =================================================================================
@@ -64,41 +64,37 @@ const convexHull = (points: LatLng[]): LatLng[] => { if (points.length < 3) retu
 // Alt Bileşenler (Child Components)
 // =================================================================================
 
-// GÜNCELLEME: DrawControl bileşeni dinamik renk alacak şekilde güncellendi.
+// YENİ BİLEŞEN: Haritayı verilen sınırlara göre otomatik olarak sığdıran bileşen.
+const MapAutoFitter = ({ bounds }: { bounds: LatLngBounds }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (bounds.isValid()) {
+            map.fitBounds(bounds, { padding: [50, 50] }); // Kenarlarda 50px boşluk bırak
+        }
+    }, [map, bounds]);
+    return null; // Bu bileşen ekranda bir şey çizmez.
+};
+
 const DrawControl = ({ onPolygonCreated, onDeleted, drawColor }: { onPolygonCreated: (layer: L.Polygon) => void, onDeleted: () => void, drawColor: string }) => {
     const map = useMap();
-
     useEffect(() => {
         const drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
-
         const drawControl = new (L as any).Control.Draw({
             draw: {
                 polygon: {
                     allowIntersection: false,
                     showArea: false,
-                    shapeOptions: {
-                        color: drawColor,
-                        fillColor: drawColor,
-                        fillOpacity: 0.5,
-                        weight: 2.5
-                    }
+                    shapeOptions: { color: drawColor, fillColor: drawColor, fillOpacity: 0.5, weight: 2.5 }
                 },
-                rectangle: false,
-                circle: false,
-                circlemarker: false,
-                marker: false,
-                polyline: false
+                rectangle: false, circle: false, circlemarker: false, marker: false, polyline: false
             },
             edit: { featureGroup: drawnItems, remove: true, edit: false },
         });
         map.addControl(drawControl);
-
         let currentPolygon: L.Polygon | null = null;
         const handleCreated = (e: any) => {
-            if (currentPolygon) {
-                drawnItems.removeLayer(currentPolygon);
-            }
+            if (currentPolygon) { drawnItems.removeLayer(currentPolygon); }
             currentPolygon = e.layer as L.Polygon;
             drawnItems.addLayer(currentPolygon);
             onPolygonCreated(currentPolygon);
@@ -107,21 +103,18 @@ const DrawControl = ({ onPolygonCreated, onDeleted, drawColor }: { onPolygonCrea
             currentPolygon = null;
             onDeleted();
         };
-
         map.on((L as any).Draw.Event.CREATED, handleCreated);
         map.on((L as any).Draw.Event.DELETED, handleDeleted);
-
         return () => {
             map.removeControl(drawControl);
             if (map.hasLayer(drawnItems)) map.removeLayer(drawnItems);
             map.off((L as any).Draw.Event.CREATED, handleCreated);
             map.off((L as any).Draw.Event.DELETED, handleDeleted);
         };
-    }, [map, onPolygonCreated, onDeleted, drawColor]); // drawColor bağımlılıklara eklendi
+    }, [map, onPolygonCreated, onDeleted, drawColor]);
     return null;
 };
 
-// Harita Katmanları Bileşeni (Değişiklik yok)
 const MapLayers = React.memo(({ customers, reps, assignments, selectedIds, onToggleSelection, colorLookups, displayRegions, displayRoutes, repIcons, customerIcons }: any) => {
     const currentAssignments = assignments;
     return <>
@@ -159,7 +152,6 @@ const MapLayers = React.memo(({ customers, reps, assignments, selectedIds, onTog
     </>
 });
 
-// Manuel Atama Paneli (Değişiklik yok)
 const ManualAssignmentPanel = React.memo(({ isOpen, onClose, reps, selectedRepId, onRepChange, selectedCustomers, onToggleSelection, onAssign, onClearSelection }: any) => {
     if (!isOpen) return null;
     return (
@@ -209,7 +201,6 @@ const ManualAssignmentPanel = React.memo(({ isOpen, onClose, reps, selectedRepId
     );
 });
 
-// Optimizasyon Önizleme Kartı (Değişiklik yok)
 const OptimizationPreview = React.memo(({ result, onConfirm, onCancel, colorLookups }: { result: OptimizationResult, onConfirm: () => void, onCancel: () => void, colorLookups: any }) => {
     const [isExpanded, setIsExpanded] = useState(true);
     return (
@@ -287,10 +278,9 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         return { colors: colorMap, fills: fillMap };
     }, [reps]);
 
-    // GÜNCELLEME: Çizim rengi için seçili temsilcinin rengini hesaplıyoruz.
     const selectedRepDrawColor = useMemo(() => {
         const rep = reps.find(r => r.id === selectedRepId);
-        return rep ? rep.color : '#9ca3af'; // Varsayılan renk
+        return rep ? rep.color : '#9ca3af';
     }, [selectedRepId, reps]);
 
     const repIcons = useMemo(() => Object.fromEntries(
@@ -313,6 +303,18 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
     const displayRegions = pendingOptimization?.regions ?? regions;
     const displayRoutes = pendingOptimization?.routes ?? optimizedRoutes;
 
+    // YENİ EKLEME: Tüm marker'ları (müşteri ve rep) içeren harita sınırlarını hesaplar.
+    const mapBounds = useMemo(() => {
+        const points: LatLng[] = [];
+        customers.forEach(c => points.push([c.lat, c.lng]));
+        reps.forEach(r => points.push([r.lat, r.lng]));
+        
+        if (points.length === 0) {
+            return null; // Eğer hiç marker yoksa null dön.
+        }
+        
+        return L.latLngBounds(points);
+    }, [customers, reps]);
 
     // --- Callbacks & Handlers ---
     const showToast = useCallback((message: string, type: ToastState['type'] = 'info', duration = 3000) => {
@@ -350,16 +352,13 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
         setLoading(true);
         setRegions({});
         setOptimizedRoutes({});
-
         try {
             const K = reps.length;
             const pts: LatLng[] = customers.map(c => [c.lat, c.lng]);
             if (customers.length === 0 || K === 0) return;
-
             const targetCapacity = Math.ceil(customers.length / K);
             let centroids: LatLng[] = reps.map(r => [r.lat, r.lng]);
             let assignmentsResult: number[] = new Array(customers.length).fill(-1);
-
             for (let i = 0; i < OPTIMIZATION_ITERATIONS; i++) {
                 const buckets: number[][] = Array.from({ length: K }, () => []);
                 const customerOrder = [...customers.keys()].sort(() => Math.random() - 0.5);
@@ -382,11 +381,9 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     return [sum[0] / bucket.length, sum[1] / bucket.length];
                 });
             }
-
             const nextAssignments: Record<string, string> = {};
             const customersPerRep: Record<string, Customer[]> = Object.fromEntries(reps.map(r => [r.id, []]));
             customers.forEach((c, i) => { const repId = reps[assignmentsResult[i]]?.id || reps[0].id; nextAssignments[c.id] = repId; if (customersPerRep[repId]) customersPerRep[repId].push(c); });
-
             const routePromises = reps.map(async (rep) => {
                 const repCustomers = customersPerRep[rep.id];
                 if (repCustomers.length === 0) return { repId: rep.id, repName: rep.name, customerCount: 0, totalKm: null, coords: [] };
@@ -396,14 +393,11 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: tripData.trips[0].distance / 1000, coords: tripData.trips[0].geometry.coordinates.map(([lng, lat]: number[]) => [lat, lng] as LatLng) };
                 } catch (error) { return { repId: rep.id, repName: rep.name, customerCount: repCustomers.length, totalKm: null, coords: [] }; }
             });
-
             const results = await Promise.all(routePromises);
             const newOptimizedRoutes: Record<string, { coords: LatLng[], distance: number }> = {};
             results.forEach(res => { if (res.coords.length > 0) newOptimizedRoutes[res.repId] = { coords: res.coords, distance: res.totalKm ?? 0 }; });
-
             const hulls: Record<string, LatLng[]> = {};
             reps.forEach(r => { hulls[r.id] = customersPerRep[r.id].length ? convexHull(customersPerRep[r.id].map(c => [c.lat, c.lng])) : []; });
-
             setPendingOptimization({ assignments: nextAssignments, regions: hulls, routes: newOptimizedRoutes, summary: results });
         } catch (error) {
             console.error("Optimizasyon sırasında hata:", error);
@@ -424,7 +418,6 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
 
     const handleCancelOptimization = useCallback(() => setPendingOptimization(null), []);
 
-
     // --- Render ---
     return (
         <div className="p-4">
@@ -442,28 +435,26 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                 </button>
             </div>
 
-       <div className="flex items-start gap-2 mb-3 text-xs text-gray-600 p-3 bg-blue-50 rounded-lg border border-blue-200">
-    {/* İkon */}
-    <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-
-   {/* Metin Bloğu */}
-    <div>
-        <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın.
-        {/* İkonun eklendiği bölüm */}
-        <span className="inline-flex items-center">
-            Manuel atama için sağdaki paneli kullanın
-            <Users className="w-3 h-3 mx-1" />.
-        </span>
-        <br />
-        Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
-    </div>
-</div>
+            <div className="flex items-start gap-2 mb-3 text-xs text-gray-600 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                <div>
+                    <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın.
+                    <span className="inline-flex items-center">
+                        Manuel atama için sağdaki paneli kullanın
+                        <Users className="w-3 h-3 mx-1" />.
+                    </span>
+                    <br />
+                    Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
+                </div>
+            </div>
 
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
                 <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} style={{ height: "100%", width: "100%" }} className="z-0">
                     <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
                     
-                    {/* GÜNCELLEME: DrawControl'e dinamik renk prop'u geçiliyor. */}
+                    {/* YENİ EKLEME: Eğer sınırlar hesaplandıysa, haritayı otomatik sığdır. */}
+                    {mapBounds && <MapAutoFitter bounds={mapBounds} />}
+
                     <DrawControl onPolygonCreated={handlePolygonCreated} onDeleted={handleClearSelection} drawColor={selectedRepDrawColor} />
 
                     <MapLayers
@@ -496,18 +487,16 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                     onClearSelection={handleClearSelection}
                 />
 
-     {!panelOpen && (
-    <button 
-        onClick={() => setPanelOpen(true)} 
-        className="absolute top-4 right-4 z-[1000] bg-[#0099CB] text-white shadow-lg p-3 rounded-full 
-                   hover:bg-amber-400 hover:text-gray-800 
-                   transition-colors duration-200"
-        title="Paneli Aç"
-    >
-        <Users className="w-5 h-5" />
-    </button>
-
-
+                {!panelOpen && (
+                    <button
+                        onClick={() => setPanelOpen(true)}
+                        className="absolute top-4 right-4 z-[1000] bg-[#0099CB] text-white shadow-lg p-3 rounded-full 
+                                   hover:bg-amber-400 hover:text-gray-800 
+                                   transition-colors duration-200"
+                        title="Paneli Aç"
+                    >
+                        <Users className="w-5 h-5" />
+                    </button>
                 )}
 
                 {loading && (
