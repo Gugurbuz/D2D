@@ -40,8 +40,7 @@ export const teamReps: TeamRep[] = [
     color: '#22c55e',
     fillColor: 'rgba(34,197,94,.18)'
   },
-  // ... diğer temsilciler
-];
+
   { 
     id: 'rep-3', 
     name: 'Şöhret Demir',
