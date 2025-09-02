@@ -516,5 +516,158 @@ const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Ac
         </div>
     </div>
 );
+// ---- Tam ekran imza modalı (scroll lock + pointer events) ----
+const SignaturePadModal: React.FC<{
+  onClose: () => void;
+  onSave: (dataUrl: string) => void;
+}> = ({ onClose, onSave }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Body scroll kilitle
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const htmlStyle = document.documentElement.style;
+    const prev = {
+      overflow: style.overflow,
+      position: style.position,
+      top: style.top,
+      width: style.width,
+      overscroll: htmlStyle.overscrollBehaviorY,
+    };
+
+    style.overflow = "hidden";
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.width = "100%";
+    htmlStyle.overscrollBehaviorY = "contain"; // rubber-band engelle
+
+    return () => {
+      style.overflow = prev.overflow;
+      style.position = prev.position;
+      style.top = prev.top;
+      style.width = prev.width;
+      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  // Canvas boyutlandırma (retina netliği)
+  const fitCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(rect.height * dpr);
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // beyaz arkaplan
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+    }
+  };
+
+  useEffect(() => {
+    fitCanvas();
+    const onResize = () => fitCanvas();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // Çizim (Pointer Events + touch-action none)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    canvas.style.touchAction = "none"; // kritik: sayfa scroll'unu kapatır (modaldaki canvas için)
+
+    let drawing = false;
+
+    const getPos = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    };
+
+    const down = (e: PointerEvent) => {
+      drawing = true;
+      canvas.setPointerCapture(e.pointerId);
+      const { x, y } = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    };
+
+    const move = (e: PointerEvent) => {
+      if (!drawing) return;
+      const { x, y } = getPos(e);
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = "#111";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.stroke();
+    };
+
+    const up = (e: PointerEvent) => {
+      drawing = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+    };
+
+    canvas.addEventListener("pointerdown", down);
+    canvas.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+
+    return () => {
+      canvas.removeEventListener("pointerdown", down);
+      canvas.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+  }, []);
+
+  const handleClear = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    // beyaz arkaplanı koru
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+  };
+
+  const handleSave = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    onSave(canvas.toDataURL("image/png")); // backend'e PNG veri URL’i hazır
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[10050] flex flex-col bg-black/50"
+    >
+      {/* Üst çubuk */}
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
+        <div className="font-semibold text-gray-900">İmza</div>
+        <div className="flex gap-2">
+          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm">Temizle</button>
+          <button onClick={handleSave} className="px-3 py-1.5 rounded bg-[#0099CB] text-white text-sm">Kaydet</button>
+          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button>
+        </div>
+      </div>
+
+      {/* Canvas alanı */}
+      <div className="flex-1 bg-white">
+        <div className="h-full w-full">
+          <canvas ref={canvasRef} className="h-[calc(100vh-56px)] w-full block" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
 export default VisitFlowScreen;
