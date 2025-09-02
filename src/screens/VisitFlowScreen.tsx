@@ -659,15 +659,21 @@ const SignaturePadModal: React.FC<{
 };
 
 // ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
+// ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
 const ContractMockPage: React.FC<{
   customer: Customer;
   signatureDataUrl: string | null;
   scale: "preview" | "full";
 }> = ({ customer, signatureDataUrl, scale }) => {
-  // Boyutlandırma: preview için daha küçük tipografi
-  const base = scale === "full"
-    ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
-    : { pad: "p-3", title: "text-base", body: "text-[11px]", small: "text-[10px]" };
+  // Tipografi ölçekleri
+  const base =
+    scale === "full"
+      ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
+      : { pad: "p-3", title: "text-base", body: "text-[10.5px]", small: "text-[9.5px]" };
+
+  // Boyutlar: preview daha küçük
+  const sigH = scale === "full" ? 100 : 44; // imza kutusu yüksekliği (px)
+  const imgMaxH = Math.floor(sigH * 0.8);  // imza görseli max yükseklik
 
   // Null-güvenli alanlar
   const cName     = customer?.name     ?? "—";
@@ -714,78 +720,39 @@ const ContractMockPage: React.FC<{
         </div>
       </div>
 
-      {/* İmza alanları */}
-      <div className="absolute" style={{ bottom: "6%", left: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
-        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white relative">
-          {signatureDataUrl ? (
-            <img
-              src={signatureDataUrl}
-              alt="Müşteri İmzası"
-              className="absolute inset-0 m-auto max-h-[90%] max-w-[90%] object-contain"
-            />
-          ) : (
-            <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
-          )}
-        </div>
-        <div className={`${base.small} mt-1 text-gray-500`}>Müşteri İmzası</div>
-      </div>
+      {/* İmzalar — AKIŞ İÇİ (absolute DEĞİL) */}
+      <div className="mt-6 pt-4 border-t">
+        <div className="grid grid-cols-2 gap-4">
+          {/* Müşteri imzası */}
+          <div className="flex flex-col">
+            <div
+              className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center"
+              style={{ height: sigH }}
+            >
+              {signatureDataUrl ? (
+                <img
+                  src={signatureDataUrl}
+                  alt="Müşteri İmzası"
+                  style={{ maxHeight: imgMaxH, maxWidth: "90%" }}
+                  className="object-contain"
+                />
+              ) : (
+                <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
+              )}
+            </div>
+            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Müşteri İmzası</div>
+          </div>
 
-      <div className="absolute" style={{ bottom: "6%", right: "6%", width: "40%", height: scale === "full" ? "120px" : "60px" }}>
-        <div className="h-full w-full border-2 border-dashed border-gray-300 rounded flex items-center justify-center bg-white">
-          <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
-        </div>
-        <div className={`${base.small} mt-1 text-gray-500`}>Tedarikçi İmzası</div>
-      </div>
-    </div>
-  );
-};
-
-// ---- Tam ekran sözleşme modalı ----
-const ContractModal: React.FC<{
-  customer: Customer;
-  signatureDataUrl: string | null;
-  onClose: () => void;
-}> = ({ customer, signatureDataUrl, onClose }) => {
-  // Modal açıkken body scroll kilidi
-  useEffect(() => {
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    const htmlStyle = document.documentElement.style;
-    const prev = {
-      overflow: style.overflow,
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      overscroll: htmlStyle.overscrollBehaviorY as string | undefined,
-    };
-    style.overflow = "hidden";
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.width = "100%";
-    htmlStyle.overscrollBehaviorY = "contain";
-    return () => {
-      style.overflow = prev.overflow;
-      style.position = prev.position;
-      style.top = prev.top;
-      style.width = prev.width;
-      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
-        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
-        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
-          Kapat
-        </button>
-      </div>
-
-      {/* A4 oranına yakın gövde */}
-      <div className="flex-1 bg-gray-100 overflow-auto">
-        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
-          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
+          {/* Tedarikçi imzası */}
+          <div className="flex flex-col">
+            <div
+              className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center"
+              style={{ height: sigH }}
+            >
+              <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
+            </div>
+            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Tedarikçi İmzası</div>
+          </div>
         </div>
       </div>
     </div>
