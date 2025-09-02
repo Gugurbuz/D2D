@@ -442,9 +442,11 @@ const AssignmentMapScreen: React.FC<Props> = ({ customers, assignments, setAssig
                 </button>
             </div>
 
-            <div className="mb-3 text-xs text-gray-600">
-                <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın. Manuel atama için sağdaki paneli kullanın. Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
-            </div>
+        <div className="mb-3 text-xs text-gray-600">
+    <b>İpucu:</b> Seçim yapmak için haritadan çokgen çizin veya müşterilere tıklayın. Manuel atama için sağdaki paneli kullanın.
+    <br />
+    Tüm müşterileri otomatik dağıtmak için <b>Optimize Et</b> butonuna basın.
+</div>
 
             <div className="relative h-[620px] w-full rounded-2xl overflow-hidden shadow">
                 <MapContainer center={MAP_CENTER} zoom={MAP_ZOOM} style={{ height: "100%", width: "100%" }} className="z-0">
