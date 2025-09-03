@@ -53,51 +53,39 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     const lines = text.split("\n").map((l) => l.trim());
     
     const companyName = pickCompanyName(lines.filter(Boolean));
-    
-    let customerName = "";
-    let address = "";
-    let installationNumber = "";
-    let consumption = "";
-    let unitPrice = "";
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
+    const getValue = (regex: RegExp): string => {
+        const match = text.match(regex);
+        return match && match[1] ? match[1].replace(/^[:\s,]+/, '').trim() : "";
+    };
 
-        if (/Ad Soyad/i.test(line)) {
-            customerName = line.split(':')[1]?.trim() || "";
-        }
-        else if (/Adres/i.test(line)) {
-            address = line.split(':')[1]?.replace(/^,/, '').trim() || "";
-        }
-        else if (/Tekil Kod\/Tesisat No/i.test(line) && lines[i + 1]) {
-            installationNumber = lines[i + 1].trim();
-        }
-        else if (/Enerji Tük\. Bedeli \(E\.T\.B\.\)/i.test(line)) {
-            const parts = line.split(':');
-            if (parts.length > 1) {
-                const numbers = parts[1].trim().match(/[\d.,]+/);
-                if (numbers) {
-                    consumption = normalizeDecimal(numbers[0]);
-                }
-            }
-        }
-        else if (/E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line)) {
-            const numbers = line.match(/[\d.,]+/g);
-            if (numbers && numbers.length >= 2 && unitPrice === "") {
-                unitPrice = numbers[1].replace(',', '.');
-            }
-        }
-    }
-    
-    // Tesisat no için bir fallback (eğer ilk kural çalışmazsa)
+    const customerName = getValue(/Ad Soyad\s*:\s*(.+)/);
+    const address = getValue(/Adres\s*:\s*(.+)/);
+
+    let installationNumber = getValue(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/) || getValue(/Sözleşme Hesap No\s*\n\s*(\d+)/);
     if (!installationNumber) {
-       const instMatch = text.match(/Sözleşme Hesap No\s*\n\s*(\d+)/i);
-       if (instMatch && instMatch[1]) {
-           installationNumber = instMatch[1].trim();
-       }
+        installationNumber = getValue(/Tesisat No\s*:\s*(\d+)/);
+    }
+    
+    const consumption = getValue(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+
+    let unitPrice = "";
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) {
+        const numbers = priceLine.match(/[\d.,]+/g);
+        if (numbers && numbers.length >= 2) {
+            unitPrice = numbers[1].replace(',', '.');
+        }
     }
 
-    return { customerName, address, installationNumber, consumption, unitPrice, companyName };
+    return { 
+        customerName, 
+        address, 
+        installationNumber, 
+        consumption: normalizeDecimal(consumption), 
+        unitPrice, 
+        companyName 
+    };
 }
 
 // ====== ANA KOMPONENT ======
