@@ -1,18 +1,18 @@
-// tailwind.config.js
+/** @type {import('tailwindcss').Config} */
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         brand: {
-          yellow: "#F9C800",
-          turq: "#0099CB",
-          navy: "#002D72",
+          yellow: '#F9C800',
+          turq: '#0099CB',
+          navy: '#002D72',
         },
       },
     },
   },
   plugins: [
-    require('@tailwindcss/forms'), // opsiyonel ama tavsiye edilir
+    require('@tailwindcss/forms'), // (önerilir) form elemanlarını normalize eder
   ],
 };
