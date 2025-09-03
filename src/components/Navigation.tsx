@@ -9,6 +9,7 @@ import {
   Bell,
   BellDot,
   MessageSquare,
+  ScanLine, // YENİ: Fatura OCR ikonu
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from '../data/messages';
@@ -114,6 +115,12 @@ const Navigation: React.FC<Props> = ({
             <Btn onClick={() => setCurrentScreen("dashboard")} active={currentScreen === "dashboard"} label="Dashboard"><Home className="w-5 h-5" /></Btn>
             <Btn onClick={() => setCurrentScreen("routeMap")} active={currentScreen === "routeMap"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
             <Btn onClick={() => setCurrentScreen("visitList")} active={currentScreen === "visitList"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
+
+            {/* YENİ: Fatura OCR sekmesi */}
+            <Btn onClick={() => setCurrentScreen("invoiceOcr")} active={currentScreen === "invoiceOcr"} label="Fatura OCR">
+              <ScanLine className="w-5 h-5" />
+            </Btn>
+
             <Btn onClick={() => setCurrentScreen("reports")} active={currentScreen === "reports"} label="Raporlar"><BarChart3 className="w-5 h-5" /></Btn>
             {role === "manager" && (
               <>
