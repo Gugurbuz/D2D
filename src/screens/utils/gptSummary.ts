@@ -1,30 +1,38 @@
-// src/screens/utils/gptSummary.ts
+// server/routes/gpt-summary.js
+import express from "express";
 import OpenAI from "openai";
-import { InvoiceData } from "../InvoiceOcrPage";
+
+const router = express.Router();
 
 const openai = new OpenAI({
-  apiKey: "sk-proj-...", // API KEY buraya
-  dangerouslyAllowBrowser: true,
+  apiKey: process.env.OPENAI_API_KEY, // Buraya .env'den çekilecek
 });
 
-export async function generateInvoiceSummary(data: InvoiceData): Promise<string> {
+router.post("/", async (req, res) => {
+  const { customerName, companyName, installationNumber, address, consumption, unitPrice } = req.body;
+
   const prompt = `
-Aşağıdaki fatura bilgilerini kısa, resmi ve kullanıcı dostu bir dille özetle:
+Aşağıdaki fatura bilgilerini kısa ve resmi dille Türkçe olarak özetle:
 
-- Müşteri: ${data.customerName || "Bilinmiyor"}
-- Firma: ${data.companyName || "Bilinmiyor"}
-- Tesisat No: ${data.installationNumber || "Yok"}
-- Adres: ${data.address || "Yok"}
-- Tüketim: ${data.consumption || "Yok"} kWh
-- Birim Fiyat: ${data.unitPrice || "Yok"} TL/kWh
-
-Türkçe, sade ve resmi şekilde açıkla.
+- Müşteri: ${customerName}
+- Firma: ${companyName}
+- Tesisat No: ${installationNumber}
+- Adres: ${address}
+- Tüketim: ${consumption} kWh
+- Birim Fiyat: ${unitPrice} TL/kWh
 `;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
-    messages: [{ role: "user", content: prompt }],
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [{ role: "user", content: prompt }],
+    });
 
-  return response.choices[0]?.message?.content?.trim() || "GPT özeti alınamadı.";
-}
+    return res.json({ summary: completion.choices[0].message.content });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "GPT çağrısı başarısız oldu." });
+  }
+});
+
+export default router;
