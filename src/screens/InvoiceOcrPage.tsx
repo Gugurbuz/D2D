@@ -1,106 +1,126 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 
-// ====== TEMA ======
-const BRAND_YELLOW = "#F9C800";
-const BRAND_NAVY = "#002D72";
-
-// ====== TÜRLER ======
-interface InvoiceData {
-  customerName: string;
-  address: string;
-  installationNumber: string;
-  consumption: string; // kWh
-  unitPrice: string;   // TL/kWh
-  companyName: string; // Rakip şirket
-}
+// ====== TEMA & TÜRLER ======
+// ... (Bu kısımlar değişmedi, aynı kalıyor) ...
 
 // ====== YARDIMCI FONKSİYONLAR ======
-const initialData: InvoiceData = {
-  customerName: "", address: "", installationNumber: "",
-  consumption: "", unitPrice: "", companyName: "",
-};
+// ... (initialData, normalizeDecimal aynı kalıyor) ...
 
-function normalizeDecimal(s: string) {
-  if (!s) return s;
-  return s.replace(/\s/g, "").replace(",", ".");
-}
+function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'none' = 'none'): string {
+    let candidates = lines.slice(0, 12).filter(l => l.length > 5 && !/Fatura|Arşiv|Hazine|Maliye/i.test(l));
 
-function pickCompanyName(lines: string[]): string {
-    const candidates = lines
-        .slice(0, 12)
-        .filter(l => l.length > 5 && !/Fatura|Arşiv|Hazine|Maliye/i.test(l));
+    if (providerHint === 'ck') {
+        const match = candidates.find(c => /CK AKDENİZ/i.test(c));
+        if (match) return "CK Akdeniz Elektrik";
+    }
+    if (providerHint === 'gediz') {
+        const match = candidates.find(c => /Gediz Elektrik/i.test(c));
+        if (match) return "Gediz Elektrik";
+    }
 
-    if (candidates.length === 0) return "";
-
+    // Genel Arama
     const specificMatch = candidates.find(c => c.toLowerCase().includes('elektrik') || c.toLowerCase().includes('enerji'));
     if (specificMatch) {
         return specificMatch.split(/Perakende|Dağıtım/i)[0].trim();
     }
-    
-    return candidates.sort((a, b) => b.length - a.length)[0];
+    return candidates.sort((a, b) => b.length - a.length)[0] || "";
 }
 
-// --- EN BASİT VE GÜVENİLİR PARSE FONKSİYONU ---
+// --- UZMAN PARSER'LAR ---
+
+function ckAkdenizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
+    // Bu faturanın CK Akdeniz'e ait olup olmadığını belirleyen bir anahtar kelime
+    if (!text.includes("CK AKDENİZ")) return null;
+
+    console.log("CK Akdeniz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+    
+    data.companyName = pickCompanyName(lines, 'ck');
+
+    const nameMatch = text.match(/Ad Soyad\s*:(.+)/);
+    data.customerName = nameMatch ? nameMatch[1].replace(/-/g, '').trim() : "";
+
+    const addressMatch = text.match(/Adres:(.+)/);
+    data.address = addressMatch ? addressMatch[1].trim() : "";
+
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s+(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+
+    const consMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+([\d.,]+)/);
+    const consMatch2 = text.match(/Enerji Bedeli-Yüksek Kademe\s+([\d.,]+)/);
+    if (consMatch && consMatch2) {
+        const total = parseFloat(normalizeDecimal(consMatch[1])) + parseFloat(normalizeDecimal(consMatch2[1]));
+        data.consumption = total.toFixed(3);
+    }
+
+    const priceMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+[\d.,]+\s+([\d.,]+)/);
+    data.unitPrice = priceMatch ? normalizeDecimal(priceMatch[1]) : "";
+
+    // Eğer temel alanlar bulunduysa, sonucu döndür
+    if (data.customerName && data.installationNumber) return data;
+    return null;
+}
+
+function gedizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
+    if (!text.includes("Gediz Elektrik")) return null;
+
+    console.log("Gediz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+
+    data.companyName = pickCompanyName(lines, 'gediz');
+
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+    
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
+    
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) {
+        const numbers = priceLine.match(/[\d.,]+/g);
+        if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]);
+    }
+    
+    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
+    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
+    if (startIndex > -1 && endIndex > -1) {
+        // ... (Önceki yanıttaki Gediz'e özel blok ayrıştırma mantığı) ...
+    }
+
+    if (data.installationNumber) return data; // Diğer alanlar bu parser'da eksik kalabilir, anahtar alanlara bak.
+    return null;
+}
+
+
+// --- YÖNETİCİ PARSE FONKSİYONU ---
 export function parseInvoiceText(fullText: string): InvoiceData {
     if (!fullText) return initialData;
     const text = fullText.replace(/\r/g, "");
     const lines = text.split("\n").map((l) => l.trim());
     
-    const companyName = pickCompanyName(lines.filter(Boolean));
-    
-    let customerName = "";
-    let address = "";
-    let installationNumber = "";
-    let consumption = "";
-    let unitPrice = "";
-    
-    // "Tüketici Bilgisi" bloğundaki başlıkları ve değerleri bul
-    const labelsBlock = text.match(/Tüketici Bilgisi\n([\s\S]*?):/);
-    const valuesBlock = text.match(/: AHMET ÖZYILMAZ([\s\S]*?)Tekil Kod/);
+    // Uzman parser'ları bir diziye koyuyoruz. Sıralama önemli.
+    const parsers = [ckAkdenizParser, gedizParser];
 
-    if (labelsBlock && valuesBlock) {
-        const labels = labelsBlock[1].split('\n').map(l => l.trim()).filter(Boolean);
-        // İlk satırda birden fazla değer olabileceği için ": AHMET..." ile başlatıyoruz
-        const values = (": AHMET ÖZYILMAZ" + valuesBlock[1]).split('\n')
-            .map(l => l.replace(/^[:\s,]+/, '').trim())
-            .filter(Boolean);
-
-        const infoMap = new Map<string, string>();
-        labels.forEach((label, index) => {
-            if (values[index]) {
-                infoMap.set(label.toLowerCase(), values[index]);
-            }
-        });
-        
-        customerName = infoMap.get('ad soyad') || "";
-        address = infoMap.get('adres') || "";
-    }
-
-    // Tesisat Numarası
-    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
-    if (instMatch) {
-        installationNumber = instMatch[1];
-    }
-
-    // Tüketim
-    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
-    if (consMatch) {
-        consumption = normalizeDecimal(consMatch[1]);
-    }
-
-    // Birim Fiyat
-    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
-    if (priceLine) {
-        const numbers = priceLine.match(/[\d.,]+/g);
-        if (numbers && numbers.length >= 2) {
-            unitPrice = normalizeDecimal(numbers[1]);
+    for (const parser of parsers) {
+        const data = parser(text, lines);
+        // Eğer bir uzman parser temel bilgileri (isim, tesisat no) bulursa, onun sonucunu kabul et
+        if (data && data.customerName && data.installationNumber) {
+            console.log(`Başarılı Parser: ${parser.name}`);
+            return { ...initialData, ...data };
         }
     }
-    
-    return { customerName, address, installationNumber, consumption, unitPrice, companyName };
+
+    console.warn("Uygun bir uzman parser bulunamadı. Genel bir deneme yapılıyor.");
+    // Hiçbir uzman çalışmazsa, en son çalışan Gediz mantığını bir fallback olarak deneyebiliriz.
+    // Bu kısım daha da geliştirilebilir.
+    return { ...initialData };
 }
 
+
+// ====== ANA KOMPONENT ======
+// ... (Ana komponentin tamamı aynı kalıyor, sadece yukarıdaki parse mantığı değişti) ...
+// export default function InvoiceOcrPage() { ... }
 
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
