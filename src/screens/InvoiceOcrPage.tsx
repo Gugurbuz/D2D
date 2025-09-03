@@ -55,6 +55,7 @@ function pickCompanyName(lines: string[]): string {
   return lines[0] || "";
 }
 
+// YENİ VE BASİTLEŞTİRİLMİŞ AYRIŞTIRMA FONKSİYONU
 export function parseInvoiceText(fullText: string): InvoiceData {
     if (!fullText) return initialData;
     const text = fullText.replace(/\r/g, "");
@@ -62,67 +63,38 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     
     const companyName = pickCompanyName(lines.filter(Boolean));
 
-    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
-    const endIndex = lines.findIndex(line => /Sözleşme Hesap No|Okuma Günü/i.test(line));
-    
-    let customerName = "";
-    let address = "";
+    // Bu fonksiyon, bir etiketi arar ve DEĞERİ AYNI SATIRDAN alır.
+    const getValueFromLine = (regex: RegExp): string => {
+        const match = text.match(regex);
+        return match && match[1] ? match[1].replace(/^[:\s,]+/, '').trim() : "";
+    };
 
-    if (startIndex > -1 && endIndex > -1) {
-        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean);
-        const labels: string[] = [];
-        const values: string[] = [];
+    const customerName = getValueFromLine(/Ad Soyad\s*[:;]?\s*(.+)/i);
+    const address = getValueFromLine(/Adres\s*[:;]?\s*(.+)/i);
 
-        blockLines.forEach(line => {
-            if (line.trim().startsWith(':')) {
-                values.push(line.replace(/^[:\s,]+/, '').trim());
-            } else {
-                labels.push(line.trim());
-            }
-        });
-
-        const infoMap = new Map<string, string>();
-        for (let i = 0; i < labels.length; i++) {
-            if (values[i]) {
-                infoMap.set(labels[i].toLowerCase(), values[i]);
-            }
-        }
-        
-        customerName = infoMap.get('ad soyad') || "";
-        address = infoMap.get('adres') || "";
-    }
-    
-    const instRegexes = [
-        /(?:TEK[İI]L KODU?\/)?\s*TES[İI]SAT\s*(?:NO|NUMARASI|KODU)?\s*[:\s]?\s*(\d{7,})/i,
-        /Sözleşme Hesap No\s*\n\s*(\d{7,})/i,
-    ];
+    // Tesisat no gibi değerler alt satırda olabildiği için farklı bir regex kullanıyoruz.
     let installationNumber = "";
-    for (const rx of instRegexes) {
-        const m = text.match(rx);
-        if (m && m[1]) {
-            installationNumber = m[1].trim();
-            break;
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/i) || text.match(/Sözleşme Hesap No\s*\n\s*(\d+)/i);
+    if(instMatch && instMatch[1]) {
+        installationNumber = instMatch[1].trim();
+    }
+    
+    let consumption = "";
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/i);
+    if(consMatch && consMatch[1]){
+        consumption = normalizeDecimal(consMatch[1]);
+    }
+
+    let unitPrice = "";
+    // Birim fiyatı bulmak için Tüketim tablosunda gezinebiliriz.
+    const priceLine = lines.find(line => /E\.T\.B\. Gündüz|E\.T\.B\. Puant/.test(line));
+    if(priceLine){
+        const numbers = priceLine.match(/([\d.,]+)/g);
+        if(numbers && numbers.length >= 2){
+            unitPrice = normalizeDecimal(numbers[1]);
         }
     }
 
-    let consumption = "";
-    let unitPrice = "";
-    const consumptionKeywords = [/Enerji Tük. Bedeli/i, /AKT[İI]F TÜKET[İI]M TOPLAMI/i, /ENERJ[İI] BEDEL[İI].*DÜŞÜK KADEME/i, /ENERJ[İI] BEDEL[İI]/i, /TÜKETİM\s*\(kWh\)\s*([\d.,]+)/i, /TOPLAM\s*\(?kWh\)?/i];
-    for (const keywordRegex of consumptionKeywords) {
-        const targetLine = lines.find(line => line && keywordRegex.test(line));
-        if (targetLine) {
-            const numbers = (targetLine.match(/\b(\d{1,}[\d.,\s]+\d)\b/g) || []).map(normalizeDecimal);
-            if (numbers.length > 0) {
-                consumption = numbers[0];
-                if (numbers.length > 1) {
-                    const potentialUnitPrice = parseFloat(numbers[1]);
-                    if (potentialUnitPrice > 0.1 && potentialUnitPrice < 10.0) unitPrice = potentialUnitPrice.toString();
-                }
-                break;
-            }
-        }
-    }
-    
     return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
 
