@@ -1,26 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-  Camera,
-  Upload,
-  Wand2,
-  Building2,
-  Home,
-  Hash,
-  Gauge,
-  Percent,
-  Loader2,
-  FileText,
-  ShieldAlert,
-  Zap,
-} from "lucide-react";
-
-// ✅ Doğru import yolu
+import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 import { generateInvoiceSummary } from "../utils/gptSummary";
 
+
+
+// ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
-
-// ... devamı aşağıda
 
 
 // ====== TÜRLER ======
@@ -332,7 +318,7 @@ const [summarizing, setSummarizing] = useState(false);
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button disabled={loading} onClick={() => fileInputRef.current?.click()} className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 cursor-pointer">
-                  <Upload className="w-4 h-4" /><span>Fotoğraf Yükle</span>
+                  <Upload className="w-4 h-4" /><span>Cihazdan Yükle</span>
                   <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={onFile} />
                 </button>
                 <button disabled={loading} onClick={cameraOn ? stopCamera : startCamera} className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">
@@ -375,7 +361,7 @@ const [summarizing, setSummarizing] = useState(false);
     disabled={summarizing || loading}
     className="px-4 py-2 mt-2 rounded-lg bg-yellow-400 text-blue-900 font-semibold hover:bg-yellow-300 transition disabled:opacity-50"
   >
-    {summarizing ? "GPT özet oluşturuluyor..." : "GPT ile Fatura Özeti Oluştur"}
+    {summarizing ? "GPT özet oluşturuluyor..." : "Fatura Özeti Oluştur"}
   </button>
 
   {summary && (
