@@ -7,7 +7,9 @@ import { Customer } from './RouteMap';
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
 
-// Kullanıcı verilerini team.ts dosyasından import ediyoruz
+import CompetitorBillScreen from "./screens/CompetitorBillScreen";
+
+// Kullanıcı verileri
 import { teamReps, managerUser } from './data/team';
 
 // Screens
@@ -26,7 +28,6 @@ import ProfileScreens from './screens/ProfileScreens';
 
 // Guide sistemi
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
-import { GUIDE_VERSION } from "./guide/guideConfig";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -39,10 +40,9 @@ function App() {
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
 
-  // Varsayılan satış temsilcisi olarak mock data dizisindeki ilk kişiyi alıyoruz.
   const salesUser = teamReps[0];
-
   const currentRepId = role === 'sales' ? salesUser.id : undefined;
+
   const isVisibleForCurrentRole = (c: Customer) => {
     if (role === 'manager') return true;
     const assigned = assignments[c.id];
@@ -50,11 +50,10 @@ function App() {
   };
   const visibleCustomers = customers.filter(isVisibleForCurrentRole);
 
-  // --- GUIDE eşleştirmeleri ---
   const toAppRole = (r: Role): AppRole =>
     r === 'manager' ? 'sahaYonetici' : 'satisUzmani';
 
-  const toAppScreen = (s: Screen, r: Role): AppScreen => {
+  const toAppScreen = (s: Screen): AppScreen => {
     switch (s) {
       case 'dashboard': return 'dashboard';
       case 'routeMap': return 'routeMap';
@@ -67,16 +66,14 @@ function App() {
       case 'messages':
       case 'reports':
       case 'profile':
+      case 'competitorBill':
       default:
         return 'dashboard';
     }
   };
 
-  const handleSpeechToText = () => { /* Fonksiyon içeriği değişmedi */ };
-  
-  const handleLogin = () => {
-    setCurrentScreen('roleSelect');
-  };
+  const handleSpeechToText = () => {};
+  const handleLogin = () => setCurrentScreen('roleSelect');
 
   const handleStartVisit = (customer: Customer) => {
     const updated = customers.map((c) =>
@@ -92,7 +89,6 @@ function App() {
     setSelectedCustomer({ ...cust });
   };
 
-  // Login ve rol seçimi ekranları
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -104,7 +100,7 @@ function App() {
           if (selectedRole === 'manager') {
             setRole('manager');
             setAgentName(managerUser.name);
-          } else { // 'sales'
+          } else {
             setRole('sales');
             setAgentName(salesUser.name);
           }
@@ -114,9 +110,11 @@ function App() {
     );
   }
 
-  // Guide sağlayıcısı ve ana uygulama düzeni
   const guideRole = toAppRole(role);
-  const guideScreen = toAppScreen(currentScreen, role);
+  const guideScreen = toAppScreen(currentScreen);
+
+  // Kurumsal renkler (tema değişkeni varsa ona bağla)
+  const C_NAVY = 'var(--brand-navy, #002D72)';
 
   return (
     <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
@@ -126,10 +124,14 @@ function App() {
         currentScreen={currentScreen}
         setCurrentScreen={setCurrentScreen}
       >
-        {/* Ekranların koşullu olarak render edilmesi */}
-        {currentScreen === 'profile' && (
-          <ProfileScreens role={role} />
-        )}
+
+        {/* NAVBAR İÇİN: AppLayout’a “Rakip Fatura” sekmesi eklendi (bkz. 2. adım) */}
+        {/* Router/Link YOK. Ekranlar STATE ile gösteriliyor. */}
+
+        {/* Ekranların koşullu render edilmesi */}
+        {currentScreen === 'competitorBill' && <CompetitorBillScreen />}
+
+        {currentScreen === 'profile' && <ProfileScreens role={role} />}
 
         {currentScreen === 'assignmentMap' && role === 'manager' && (
           <AssignmentMapScreen
@@ -152,17 +154,19 @@ function App() {
         )}
 
         {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
-        
+
         {currentScreen === 'messages' && <MessagesScreen />}
 
         {currentScreen === 'dashboard' && (
-          <DashboardScreen
-            customers={visibleCustomers}
-            assignments={assignments}
-            allReps={allReps}
-            setCurrentScreen={setCurrentScreen}
-            setSelectedCustomer={setSelectedCustomer}
-          />
+          <div>
+            <DashboardScreen
+              customers={visibleCustomers}
+              assignments={assignments}
+              allReps={allReps}
+              setCurrentScreen={setCurrentScreen}
+              setSelectedCustomer={setSelectedCustomer}
+            />
+          </div>
         )}
 
         {currentScreen === 'visitList' && (
