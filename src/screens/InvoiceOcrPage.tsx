@@ -6,8 +6,6 @@ import { generateInvoiceSummary } from "./utils/gptSummary";
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
-const [summary, setSummary] = useState<string | null>(null);
-const [summarizing, setSummarizing] = useState(false);
 
 
 // ====== TÜRLER ======
@@ -179,6 +177,10 @@ export default function InvoiceOcrPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [summary, setSummary] = useState<string | null>(null);
+const [summarizing, setSummarizing] = useState(false);
+
 
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
