@@ -6,6 +6,9 @@ import { generateInvoiceSummary } from "./utils/gptSummary";
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
+const [summary, setSummary] = useState<string | null>(null);
+const [summarizing, setSummarizing] = useState(false);
+
 
 // ====== TÜRLER ======
 interface InvoiceData {
@@ -57,8 +60,6 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
     }
     return candidates.sort((a, b) => b.length - a.length)[0] || "";
 }
-const [summary, setSummary] = useState<string | null>(null);
-const [summarizing, setSummarizing] = useState(false);
 
 
 // --- UZMAN PARSER'LAR ---
