@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
+import { generateInvoiceSummary } from "./utils/gptSummary";
+
 
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
