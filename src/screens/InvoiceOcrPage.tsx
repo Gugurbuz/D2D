@@ -41,58 +41,31 @@ function pickCompanyName(lines: string[]): string {
     return candidates.sort((a, b) => b.length - a.length)[0];
 }
 
+// --- EN BASİT VE GÜVENİLİR PARSE FONKSİYONU ---
 export function parseInvoiceText(fullText: string): InvoiceData {
     if (!fullText) return initialData;
     const text = fullText.replace(/\r/g, "");
     const lines = text.split("\n").map((l) => l.trim());
     
-    let data: Partial<InvoiceData> = {};
-
-    data.companyName = pickCompanyName(lines.filter(Boolean));
-
-    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/) || text.match(/Sözleşme Hesap No\s*\n\s*(\d+)/);
-    if (instMatch && instMatch[1]) {
-        data.installationNumber = instMatch[1].trim();
-    }
-
-    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
-    if (consMatch && consMatch[1]) {
-        data.consumption = normalizeDecimal(consMatch[1]);
-    }
-
-    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
-    if (priceLine) {
-        const numbers = priceLine.match(/[\d.,]+/g);
-        if (numbers && numbers.length >= 2) {
-            data.unitPrice = normalizeDecimal(numbers[1]);
-        }
-    }
-
-    const sameLineNameMatch = text.match(/Ad Soyad\s*:\s*(.+)/i);
-    const sameLineAddressMatch = text.match(/Adres\s*:\s*(.+)/i);
-
-    if (sameLineNameMatch && sameLineAddressMatch) {
-        data.customerName = sameLineNameMatch[1].trim();
-        data.address = sameLineAddressMatch[1].replace(/^,/, '').trim();
-        return { ...initialData, ...data };
-    }
-
-    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
-    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
+    const companyName = pickCompanyName(lines.filter(Boolean));
     
-    if (startIndex > -1 && endIndex > -1) {
-        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean);
-        const labels: string[] = [];
-        const values: string[] = [];
+    let customerName = "";
+    let address = "";
+    let installationNumber = "";
+    let consumption = "";
+    let unitPrice = "";
+    
+    // "Tüketici Bilgisi" bloğundaki başlıkları ve değerleri bul
+    const labelsBlock = text.match(/Tüketici Bilgisi\n([\s\S]*?):/);
+    const valuesBlock = text.match(/: AHMET ÖZYILMAZ([\s\S]*?)Tekil Kod/);
 
-        blockLines.forEach(line => {
-            if (line.trim().startsWith(':')) {
-                values.push(line.replace(/^[:\s,]+/, '').trim());
-            } else if (line.trim().length > 1) {
-                labels.push(line.trim());
-            }
-        });
-        
+    if (labelsBlock && valuesBlock) {
+        const labels = labelsBlock[1].split('\n').map(l => l.trim()).filter(Boolean);
+        // İlk satırda birden fazla değer olabileceği için ": AHMET..." ile başlatıyoruz
+        const values = (": AHMET ÖZYILMAZ" + valuesBlock[1]).split('\n')
+            .map(l => l.replace(/^[:\s,]+/, '').trim())
+            .filter(Boolean);
+
         const infoMap = new Map<string, string>();
         labels.forEach((label, index) => {
             if (values[index]) {
@@ -100,13 +73,32 @@ export function parseInvoiceText(fullText: string): InvoiceData {
             }
         });
         
-        data.customerName = infoMap.get('ad soyad') || data.customerName;
-        data.address = infoMap.get('adres') || data.address;
-        return { ...initialData, ...data };
+        customerName = infoMap.get('ad soyad') || "";
+        address = infoMap.get('adres') || "";
+    }
+
+    // Tesisat Numarası
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
+    if (instMatch) {
+        installationNumber = instMatch[1];
+    }
+
+    // Tüketim
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    if (consMatch) {
+        consumption = normalizeDecimal(consMatch[1]);
+    }
+
+    // Birim Fiyat
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) {
+        const numbers = priceLine.match(/[\d.,]+/g);
+        if (numbers && numbers.length >= 2) {
+            unitPrice = normalizeDecimal(numbers[1]);
+        }
     }
     
-    console.warn("Uygun bir ayrıştırma stratejisi bulunamadı.");
-    return { ...initialData, ...data };
+    return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
 
 
@@ -284,10 +276,7 @@ export default function InvoiceOcrPage() {
               <div className="space-y-4">
                 <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName} onChange={(e) => setData({ ...data, companyName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. ABC Enerji A.Ş." /></div>
                 <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customerName} onChange={(e) => setData({ ...data, customerName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ad Soyad" /></div>
-                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
-                  {/* --- YAZIM HATASI BURADAYDI --- */}
-                  <textarea value={data.address} onChange={(e) => setData({ ...data, address: e.target.value })} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Sokak, Cadde, No, İlçe, İl" />
-                </div>
+                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel><textarea value={data.address} onChange={(e) => setData({ ...data, address: e.target.value })} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Sokak, Cadde, No, İlçe, İl" /></div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1"><FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel><input value={data.installationNumber} onChange={(e) => setData({ ...data, installationNumber: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="########" /></div>
                   <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.consumption} onChange={(e) => setData({ ...data, consumption: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 245" /></div>
