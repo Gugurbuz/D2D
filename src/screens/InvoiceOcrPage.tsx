@@ -305,7 +305,7 @@ const [summarizing, setSummarizing] = useState(false);
       <header className="sticky top-0 z-20 border-b bg-white border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
-          <h1 className="text-xl font-semibold tracking-wide text-gray-800">Fatura OCR • Rakipten Geçiş</h1>
+          <h1 className="text-xl font-semibold tracking-wide text-gray-800">Bölge Dışı Ziyaret</h1>
         </div>
       </header>
       <main className="mx-auto max-w-6xl p-4 md:p-6">
@@ -344,7 +344,7 @@ const [summarizing, setSummarizing] = useState(false);
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
-              <div className="flex items-center gap-2 mb-4"><Wand2 /><h2 className="text-lg font-semibold">2. Otomatik Doldurulan Form</h2></div>
+              <div className="flex items-center gap-2 mb-4"><Wand2 /><h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu</h2></div>
               <div className="space-y-4">
                 <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName} onChange={(e) => setData({ ...data, companyName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. ABC Enerji A.Ş." /></div>
                 <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customerName} onChange={(e) => setData({ ...data, customerName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ad Soyad" /></div>
@@ -354,7 +354,7 @@ const [summarizing, setSummarizing] = useState(false);
                   <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.consumption} onChange={(e) => setData({ ...data, consumption: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 245" /></div>
                   <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.unitPrice} onChange={(e) => setData({ ...data, unitPrice: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 3,245" /></div>
                 </div>
-                {rawText && <div className="pt-2"><details><summary className="cursor-pointer text-sm text-gray-600 select-none">Ham OCR Metnini Göster</summary><pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre></details></div>}
+                {rawText && <div className="pt-2"><details><summary className="cursor-pointer text-sm text-gray-600 select-none">Fatura Metnini Göster</summary><pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre></details></div>}
                 <div className="pt-4 border-t">
   <button
     onClick={handleGenerateSummary}
@@ -366,7 +366,7 @@ const [summarizing, setSummarizing] = useState(false);
 
   {summary && (
     <div className="mt-4 p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
-      <strong>GPT Fatura Özeti:</strong><br />
+      <strong>Akıllı Fatura Özeti:</strong><br />
       {summary}
     </div>
   )}
