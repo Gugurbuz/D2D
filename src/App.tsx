@@ -206,6 +206,10 @@ function App() {
         {currentScreen === 'routeMap' && (
           <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
         )}
+        {currentScreen === 'invoiceOcr' && (
+  <InvoiceOcrPage />
+)}
+
 
         <HelpFAB />
       </AppLayout>
