@@ -42,6 +42,7 @@ export type Screen =
   | 'assignment'
   | 'profile'
   | 'assignmentMap'; 
+  | 'competitorBill'; 
 
 // src/types.ts
 export type Rep = {
