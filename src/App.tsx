@@ -7,7 +7,6 @@ import { Customer } from './RouteMap';
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
 
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import CompetitorBillScreen from "./screens/CompetitorBillScreen";
 
 // Kullanıcı verileri
@@ -68,6 +67,7 @@ function App() {
       case 'messages':
       case 'reports':
       case 'profile':
+      case 'competitorBill':
       default:
         return 'dashboard';
     }
@@ -90,6 +90,7 @@ function App() {
     setSelectedCustomer({ ...cust });
   };
 
+  // Login ve rol seçimi ekranları
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -114,111 +115,123 @@ function App() {
   const guideRole = toAppRole(role);
   const guideScreen = toAppScreen(currentScreen);
 
+  // Enerjisa renkleri
+  const C_NAVY = '#002D72';
+  const C_YELLOW = '#F9C800';
+
   return (
-    <BrowserRouter>
-      <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
-        <AppLayout
-          agentName={agentName}
-          role={role}
-          currentScreen={currentScreen}
-          setCurrentScreen={setCurrentScreen}
-        >
-          <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-            <Link to="/rakip-fatura" className="px-3 py-1 rounded bg-[#002D72] text-white">Rakip Fatura</Link>
-            <Link to="/" className="px-3 py-1 rounded border">Uygulama</Link>
-          </div>
+    <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
+      <AppLayout
+        agentName={agentName}
+        role={role}
+        currentScreen={currentScreen}
+        setCurrentScreen={setCurrentScreen}
+      >
+        {/* NAVBAR / Üst Butonlar (Router'sız) */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <button
+            onClick={() => setCurrentScreen('dashboard')}
+            className="px-3 py-1 rounded-md"
+            style={{ background: '#fff', border: `1px solid ${C_NAVY}`, color: C_NAVY }}
+          >
+            Uygulama
+          </button>
+          <button
+            onClick={() => setCurrentScreen('competitorBill')}
+            className="px-3 py-1 rounded-md text-white"
+            style={{ background: C_NAVY }}
+          >
+            Rakip Fatura
+          </button>
+        </div>
 
-          <Routes>
-            <Route path="/rakip-fatura" element={<CompetitorBillScreen />} />
-            <Route
-              path="*"
-              element={
-                <>
-                  {currentScreen === 'profile' && (<ProfileScreens role={role} />)}
+        {/* Ekranların koşullu render edilmesi */}
+        {currentScreen === 'competitorBill' && (
+          <CompetitorBillScreen />
+        )}
 
-                  {currentScreen === 'assignmentMap' && role === 'manager' && (
-                    <AssignmentMapScreen
-                      customers={customers}
-                      assignments={assignments}
-                      setAssignments={setAssignments}
-                      allReps={allReps}
-                      onBack={() => setCurrentScreen('assignment')}
-                    />
-                  )}
+        {currentScreen === 'profile' && (
+          <ProfileScreens role={role} />
+        )}
 
-                  {currentScreen === 'assignment' && role === 'manager' && (
-                    <AssignmentScreen
-                      customers={customers}
-                      assignments={assignments}
-                      setAssignments={setAssignments}
-                      allReps={allReps}
-                      setCurrentScreen={setCurrentScreen}
-                    />
-                  )}
+        {currentScreen === 'assignmentMap' && role === 'manager' && (
+          <AssignmentMapScreen
+            customers={customers}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            allReps={allReps}
+            onBack={() => setCurrentScreen('assignment')}
+          />
+        )}
 
-                  {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
+        {currentScreen === 'assignment' && role === 'manager' && (
+          <AssignmentScreen
+            customers={customers}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
+          />
+        )}
 
-                  {currentScreen === 'messages' && <MessagesScreen />}
+        {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
 
-                  {currentScreen === 'dashboard' && (
-                    <DashboardScreen
-                      customers={visibleCustomers}
-                      assignments={assignments}
-                      allReps={allReps}
-                      setCurrentScreen={setCurrentScreen}
-                      setSelectedCustomer={setSelectedCustomer}
-                    />
-                  )}
+        {currentScreen === 'messages' && <MessagesScreen />}
 
-                  {currentScreen === 'visitList' && (
-                    <VisitListScreen
-                      customers={visibleCustomers}
-                      filter={filter}
-                      setFilter={setFilter}
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      isListening={isListening}
-                      onMicClick={handleSpeechToText}
-                      assignments={assignments}
-                      allReps={allReps}
-                      onDetail={(c) => {
-                        setSelectedCustomer(c);
-                        setCurrentScreen('visitDetail');
-                      }}
-                      onStart={handleStartVisit}
-                    />
-                  )}
+        {currentScreen === 'dashboard' && (
+          <DashboardScreen
+            customers={visibleCustomers}
+            assignments={assignments}
+            allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
+            setSelectedCustomer={setSelectedCustomer}
+          />
+        )}
 
-                  {currentScreen === 'visitDetail' && selectedCustomer && (
-                    <VisitDetailScreen
-                      customer={selectedCustomer}
-                      onBack={() => setCurrentScreen('visitList')}
-                      onStartVisit={handleStartVisit}
-                    />
-                  )}
+        {currentScreen === 'visitList' && (
+          <VisitListScreen
+            customers={visibleCustomers}
+            filter={filter}
+            setFilter={setFilter}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            isListening={isListening}
+            onMicClick={handleSpeechToText}
+            assignments={assignments}
+            allReps={allReps}
+            onDetail={(c) => {
+              setSelectedCustomer(c);
+              setCurrentScreen('visitDetail');
+            }}
+            onStart={handleStartVisit}
+          />
+        )}
 
-                  {currentScreen === 'visitFlow' && selectedCustomer && (
-                    <VisitFlowScreen
-                      customer={selectedCustomer}
-                      onCloseToList={() => setCurrentScreen('visitList')}
-                      onCompleteVisit={handleCompleteVisit}
-                    />
-                  )}
+        {currentScreen === 'visitDetail' && selectedCustomer && (
+          <VisitDetailScreen
+            customer={selectedCustomer}
+            onBack={() => setCurrentScreen('visitList')}
+            onStartVisit={handleStartVisit}
+          />
+        )}
 
-                  {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
+        {currentScreen === 'visitFlow' && selectedCustomer && (
+          <VisitFlowScreen
+            customer={selectedCustomer}
+            onCloseToList={() => setCurrentScreen('visitList')}
+            onCompleteVisit={handleCompleteVisit}
+          />
+        )}
 
-                  {currentScreen === 'routeMap' && (
-                    <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
-                  )}
+        {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
 
-                  <HelpFAB />
-                </>
-              }
-            />
-          </Routes>
-        </AppLayout>
-      </GuideProvider>
-    </BrowserRouter>
+        {currentScreen === 'routeMap' && (
+          <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
+        )}
+
+        <HelpFAB />
+      </AppLayout>
+    </GuideProvider>
   );
 }
 
