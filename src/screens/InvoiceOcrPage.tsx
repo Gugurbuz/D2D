@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 
-// Tesseract ve OpenCV artık kullanılmıyor.
-
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
@@ -60,33 +58,43 @@ function pickCompanyName(lines: string[]): string {
 export function parseInvoiceText(fullText: string): InvoiceData {
     if (!fullText) return initialData;
     const text = fullText.replace(/\r/g, "");
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-    const companyName = pickCompanyName(lines);
+    const lines = text.split("\n").map((l) => l.trim());
+    
+    const companyName = pickCompanyName(lines.filter(Boolean));
 
-    const findValueAfterLabel = (labelRegex: RegExp): string => {
-        const labelIndex = lines.findIndex(line => labelRegex.test(line));
-        if (labelIndex === -1) return "";
+    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
+    const endIndex = lines.findIndex(line => /Sözleşme Hesap No|Okuma Günü/i.test(line));
+    
+    let customerName = "";
+    let address = "";
 
-        const sameLineMatch = lines[labelIndex].match(new RegExp(labelRegex.source + "\\s*[:;]?\\s*(.+)", "i"));
-        if (sameLineMatch && sameLineMatch[1]) {
-            return sameLineMatch[1].trim();
-        }
+    if (startIndex > -1 && endIndex > -1) {
+        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean);
+        const labels: string[] = [];
+        const values: string[] = [];
 
-        if (labelIndex + 1 < lines.length) {
-            const nextLine = lines[labelIndex + 1];
-            if (!/Tüketici Grubu|Fatura Dönemi|Adres|Ad Soyad|Sözleşme/i.test(nextLine) || labelRegex.test(nextLine)) {
-                return nextLine.replace(/^[:\s,]+/, '').trim();
+        blockLines.forEach(line => {
+            if (line.trim().startsWith(':')) {
+                values.push(line.replace(/^[:\s,]+/, '').trim());
+            } else {
+                labels.push(line.trim());
+            }
+        });
+
+        const infoMap = new Map<string, string>();
+        for (let i = 0; i < labels.length; i++) {
+            if (values[i]) {
+                infoMap.set(labels[i].toLowerCase(), values[i]);
             }
         }
-        return "";
-    };
-
-    const customerName = findValueAfterLabel(/Ad Soyad/i);
-    const address = findValueAfterLabel(/Adres/i);
-
+        
+        customerName = infoMap.get('ad soyad') || "";
+        address = infoMap.get('adres') || "";
+    }
+    
     const instRegexes = [
         /(?:TEK[İI]L KODU?\/)?\s*TES[İI]SAT\s*(?:NO|NUMARASI|KODU)?\s*[:\s]?\s*(\d{7,})/i,
-        /(?:SÖZLEŞME|ABONE|MÜŞTER[İI])\s*(?:HESAP\s*)?NO(?:SU)?\s*[:\s]?\s*(\d{7,})/i,
+        /Sözleşme Hesap No\s*\n\s*(\d{7,})/i,
     ];
     let installationNumber = "";
     for (const rx of instRegexes) {
@@ -101,7 +109,7 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     let unitPrice = "";
     const consumptionKeywords = [/Enerji Tük. Bedeli/i, /AKT[İI]F TÜKET[İI]M TOPLAMI/i, /ENERJ[İI] BEDEL[İI].*DÜŞÜK KADEME/i, /ENERJ[İI] BEDEL[İI]/i, /TÜKETİM\s*\(kWh\)\s*([\d.,]+)/i, /TOPLAM\s*\(?kWh\)?/i];
     for (const keywordRegex of consumptionKeywords) {
-        const targetLine = lines.find(line => keywordRegex.test(line));
+        const targetLine = lines.find(line => line && keywordRegex.test(line));
         if (targetLine) {
             const numbers = (targetLine.match(/\b(\d{1,}[\d.,\s]+\d)\b/g) || []).map(normalizeDecimal);
             if (numbers.length > 0) {
@@ -117,6 +125,7 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     
     return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
+
 
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
