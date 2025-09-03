@@ -1,11 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 
-// ====== TEMA ======
-const BRAND_YELLOW = "#F9C800";
-const BRAND_NAVY = "#002D72";
-
-// ====== TÜRLER ======
+// ====== TEMA & TÜRLER & SABİTLER ======
+// ... (Bu kısımlar değişmedi, aynı kalıyor) ...
 interface InvoiceData {
   customerName: string;
   address: string;
@@ -15,12 +12,13 @@ interface InvoiceData {
   companyName: string; // Rakip şirket
 }
 
-// ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
 const initialData: InvoiceData = {
   customerName: "", address: "", installationNumber: "",
   consumption: "", unitPrice: "", companyName: "",
 };
 
+
+// ====== YARDIMCI FONKSİYONLAR ======
 function normalizeDecimal(s: string): string {
   if (!s) return "";
   return s.replace(/\s/g, "").replace(",", ".");
@@ -51,6 +49,7 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
 
 // --- UZMAN PARSER'LAR ---
 
+// **** SADECE BU FONKSİYON GÜNCELLENDİ ****
 function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null {
     if (!text.includes("Aydem Elektrik")) return null;
 
@@ -58,10 +57,19 @@ function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null
     const data: Partial<InvoiceData> = {};
     data.companyName = pickCompanyName(lines, 'aydem');
 
+    // İsim ve Adres için daha güvenilir mantık
     const musteriBilgileriIndex = lines.findIndex(line => /Müşteri Bilgileri/i.test(line));
     if (musteriBilgileriIndex > -1) {
-        data.customerName = lines[musteriBilgileriIndex + 1];
-        data.address = lines[musteriBilgileriIndex + 2];
+        // "Müşteri Bilgileri" satırından sonraki ilk dolu satırı İSİM olarak al
+        const nameLineIndex = lines.findIndex((line, index) => index > musteriBilgileriIndex && line.length > 0);
+        if (nameLineIndex > -1) {
+            data.customerName = lines[nameLineIndex];
+            // İsim satırından sonraki ilk dolu satırı ADRES olarak al
+            const addressLineIndex = lines.findIndex((line, index) => index > nameLineIndex && line.length > 0);
+            if (addressLineIndex > -1) {
+                data.address = lines[addressLineIndex];
+            }
+        }
     }
     
     const instMatch = text.match(/Tesisat No\/Tekil Kod\s*\n\s*(\d+)/);
