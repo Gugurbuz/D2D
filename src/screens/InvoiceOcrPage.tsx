@@ -43,14 +43,43 @@ function normalizeDecimal(s: string) {
 }
 
 function pickCompanyName(lines: string[]): string {
+  // 1. Faturanın başındaki (ilk 12 satır) potansiyel adayları al.
+  // Anahtar kelime listesini "PERAKENDE", "DAĞITIM" gibi ifadelerle genişletiyoruz.
   const candidates = lines
     .slice(0, 12)
-    .filter((l) => /ELEKTRIK|ELEKTRİK|ENERJI|ENERJİ|A\.Ş\.|AS\.|AŞ|Ş\.|SAN\.|TIC\.|TİC\./i.test(l));
-  if (candidates.length > 0) return candidates.sort((a, b) => b.length - a.length)[0];
-  const upperish = lines.find(
-    (l) => l === l.toUpperCase() && l.replace(/[^A-ZÇĞİÖŞÜ]/g, "").length >= 5
-  );
-  return upperish || lines[0] || "";
+    .filter((l) => /ELEKTR[İI]K|ENERJ[İI]|A\.Ş|PERAKENDE|DA[ĞG]ITIM/i.test(l))
+    .filter(l => l.length > 5); // OCR'dan gelebilecek anlamsız, çok kısa satırları ele.
+
+  // Eğer hiç aday bulunamazsa, eski fallback mantığına dönülür.
+  if (candidates.length === 0) {
+    const upperish = lines.find(
+      (l) => l === l.toUpperCase() && l.replace(/[^A-ZÇĞİÖŞÜ]/g, "").length >= 5
+    );
+    return upperish || lines[0] || "";
+  }
+
+  // 2. Sadece jenerik unvan içeren adayları tespit etmek için bir regex tanımla.
+  // Örn: "PERAKENDE SATIŞ A.Ş." veya "ELEKTRİK PERAKENDE SATIŞ A.Ş."
+  // Bu regex, başında başka bir marka adı (Gediz, Aydem vb.) olmayanları hedefler.
+  const genericRegex = /^(?:ELEKTR[İI]K\s*)?(?:PERAKENDE|DA[ĞG]ITIM)\s*SATIŞ\s*(?:A\.?Ş\.?|ANON[İI]M\s*Ş[İI]RKET[İI])\s*$/i;
+  
+  // 3. Jenerik OLMAYAN, yani büyük ihtimalle marka adını içeren adayları bul.
+  const specificCandidates = candidates.filter(c => !genericRegex.test(c));
+
+  // 4. Eğer spesifik bir aday varsa, faturanın en üstündeki ilk adayı seç.
+  // Bu, "CK Boğaziçi Elektrik" isminin her zaman "Perakende Satış A.Ş."den önce gelmesi kuralını uygular.
+  if (specificCandidates.length > 0) {
+    return specificCandidates[0];
+  }
+  
+  // 5. Eğer tüm adaylar jenerik ise (bu durumda bile bir sonuç döndürmek gerekir),
+  // en azından ilk bulduğunu döndür.
+  if (candidates.length > 0) {
+    return candidates[0];
+  }
+
+  // 6. Hiçbir şey bulunamazsa son çare.
+  return lines[0] || "";
 }
 
 function extractBetween(source: string, startLabel: RegExp, nextStop: RegExp): string {
