@@ -48,18 +48,13 @@ function pickCompanyName(lines: string[]): string {
   const genericRegex = /^(?:ELEKTR[İI]K\s*)?(?:PERAKENDE|DA[ĞG]ITIM)\s*SATIŞ\s*(?:A\.?Ş\.?|ANON[İI]M\s*Ş[İI]RKET[İI])\s*$/i;
   const specificCandidates = candidates.filter(c => !genericRegex.test(c));
 
-  if (specificCandidates.length > 0) return specificCandidates[0];
-  if (candidates.length > 0) return candidates[0];
+  if (specificCandidates.length > 0) {
+    return specificCandidates.sort((a, b) => b.length - a.length)[0];
+  }
+  if (candidates.length > 0) {
+    return candidates.sort((a, b) => b.length - a.length)[0];
+  }
   return lines[0] || "";
-}
-
-function extractBetween(source: string, startLabel: RegExp, nextStop: RegExp): string {
-  const start = startLabel.exec(source);
-  if (!start) return "";
-  const rest = source.slice(start.index + start[0].length);
-  const stop = nextStop.exec(rest);
-  const seg = stop ? rest.slice(0, stop.index) : rest;
-  return seg.split("\n").map((s) => s.trim()).filter(Boolean).join(" ");
 }
 
 export function parseInvoiceText(fullText: string): InvoiceData {
@@ -68,30 +63,26 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
     const companyName = pickCompanyName(lines);
 
-    const nameRegexes = [
-        /(?:MÜŞTERİ|ABONE)\s*(?:ADI|ADI SOYADI)\s*[:\s]?\s*(.+)/i,
-        /AD SOYAD\s*[:\s]?\s*(.+)/i, /UNVAN\s*[:\s]?\s*(.+)/i, /SAYIN\s+([^,\n]+)/i,
-    ];
-    let customerName = "";
-    for (const rx of nameRegexes) {
-        const m = text.match(rx);
-        if (m && m[1]) {
-        customerName = m[1].split(/TCKN|VERG[İI]/i)[0].trim();
-        break;
-        }
-    }
-    if (!customerName) {
-        const i = lines.findIndex((l) => /(MÜŞTERİ|ABONE|AD SOYAD|UNVAN)/i.test(l));
-        if (i > -1 && lines[i + 1] && !/ADRES|TCKN|NO:|TAR[İI]H/i.test(lines[i + 1])) {
-        customerName = lines[i + 1].trim();
-        }
-    }
+    const findValueAfterLabel = (labelRegex: RegExp): string => {
+        const labelIndex = lines.findIndex(line => labelRegex.test(line));
+        if (labelIndex === -1) return "";
 
-    let address = extractBetween(text, /ADRES\s*[:\s]?/i, /(TES[İI]SAT|SÖZLEŞME|FATURA|VERG[İI]|TAR[İI]H|SAYAÇ|TÜKET[İI]M|TCKN|EIC)/i);
-    if (!address) {
-        const idx = lines.findIndex((l) => /ADRES/i.test(l));
-        if (idx >= 0) address = [lines[idx + 1], lines[idx + 2]].filter(Boolean).join(" ");
-    }
+        const sameLineMatch = lines[labelIndex].match(new RegExp(labelRegex.source + "\\s*[:;]?\\s*(.+)", "i"));
+        if (sameLineMatch && sameLineMatch[1]) {
+            return sameLineMatch[1].trim();
+        }
+
+        if (labelIndex + 1 < lines.length) {
+            const nextLine = lines[labelIndex + 1];
+            if (!/Tüketici Grubu|Fatura Dönemi|Adres|Ad Soyad|Sözleşme/i.test(nextLine) || labelRegex.test(nextLine)) {
+                return nextLine.replace(/^[:\s,]+/, '').trim();
+            }
+        }
+        return "";
+    };
+
+    const customerName = findValueAfterLabel(/Ad Soyad/i);
+    const address = findValueAfterLabel(/Adres/i);
 
     const instRegexes = [
         /(?:TEK[İI]L KODU?\/)?\s*TES[İI]SAT\s*(?:NO|NUMARASI|KODU)?\s*[:\s]?\s*(\d{7,})/i,
@@ -101,14 +92,14 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     for (const rx of instRegexes) {
         const m = text.match(rx);
         if (m && m[1]) {
-        installationNumber = m[1].trim();
-        break;
+            installationNumber = m[1].trim();
+            break;
         }
     }
 
     let consumption = "";
     let unitPrice = "";
-    const consumptionKeywords = [/TOPLAM ENERJ[İI] BEDEL[İI]/i, /AKT[İI]F TÜKET[İI]M TOPLAMI/i, /ENERJ[İI] BEDEL[İI].*DÜŞÜK KADEME/i, /ENERJ[İI] BEDEL[İI]/i, /TÜKETİM\s*\(kWh\)\s*([\d.,]+)/i, /TOPLAM\s*\(?kWh\)?/i];
+    const consumptionKeywords = [/Enerji Tük. Bedeli/i, /AKT[İI]F TÜKET[İI]M TOPLAMI/i, /ENERJ[İI] BEDEL[İI].*DÜŞÜK KADEME/i, /ENERJ[İI] BEDEL[İI]/i, /TÜKETİM\s*\(kWh\)\s*([\d.,]+)/i, /TOPLAM\s*\(?kWh\)?/i];
     for (const keywordRegex of consumptionKeywords) {
         const targetLine = lines.find(line => keywordRegex.test(line));
         if (targetLine) {
@@ -116,14 +107,14 @@ export function parseInvoiceText(fullText: string): InvoiceData {
             if (numbers.length > 0) {
                 consumption = numbers[0];
                 if (numbers.length > 1) {
-                const potentialUnitPrice = parseFloat(numbers[1]);
-                if (potentialUnitPrice > 0.1 && potentialUnitPrice < 10.0) unitPrice = numbers[1];
+                    const potentialUnitPrice = parseFloat(numbers[1]);
+                    if (potentialUnitPrice > 0.1 && potentialUnitPrice < 10.0) unitPrice = potentialUnitPrice.toString();
                 }
                 break;
             }
         }
     }
-
+    
     return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
 
