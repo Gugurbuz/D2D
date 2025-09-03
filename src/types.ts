@@ -41,6 +41,7 @@ export type Screen =
   | 'routeMap'
   | 'assignment'
   | 'profile'
+   | 'invoiceOcr'
   | 'assignmentMap'; 
 
 // src/types.ts
