@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, Eye, EyeOff, ShieldAlert } from "lucide-react";
+import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert } from "lucide-react";
 import Tesseract from "tesseract.js";
 
 // ====== THEME (Enerjisa) ======
@@ -118,7 +118,6 @@ export default function InvoiceOcrPage() {
   const [data, setData] = useState<InvoiceData>(initialData);
   const [loading, setLoading] = useState(false);
   const [rawText, setRawText] = useState<string>("");
-  const [showRaw, setShowRaw] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -322,4 +321,5 @@ export default function InvoiceOcrPage() {
                 <div className="space-y-1">
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel>
                   <input
-                    value={data.customerName
+                    value={data.customerName}
+                    onChange={(e) => setData({ ...data, customerName: e.target.value
