@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 
-// ====== TEMA & TÜRLER & SABİTLER ======
+// ====== TEMA ======
+const BRAND_YELLOW = "#F9C800";
+const BRAND_NAVY = "#002D72";
+
+// ====== TÜRLER ======
 interface InvoiceData {
   customerName: string;
   address: string;
@@ -11,12 +15,19 @@ interface InvoiceData {
   companyName: string; // Rakip şirket
 }
 
+// ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
 const initialData: InvoiceData = {
   customerName: "", address: "", installationNumber: "",
   consumption: "", unitPrice: "", companyName: "",
 };
 
-// ====== YARDIMCI FONKSİYONLAR ======
+const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>{icon}</span>
+      {children}
+    </label>
+);
+
 function normalizeDecimal(s: string): string {
   if (!s) return "";
   return s.replace(/\s/g, "").replace(",", ".");
@@ -29,7 +40,14 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
         const match = candidates.find(c => /Aydem Elektrik/i.test(c));
         if (match) return "Aydem Elektrik";
     }
-    // ... Diğer provider'lar için benzer kontroller eklenebilir ...
+    if (providerHint === 'ck') {
+        const match = candidates.find(c => /CK AKDENİZ/i.test(c));
+        if (match) return "CK Akdeniz Elektrik";
+    }
+    if (providerHint === 'gediz') {
+        const match = candidates.find(c => /Gediz Elektrik/i.test(c));
+        if (match) return "Gediz Elektrik";
+    }
     
     const specificMatch = candidates.find(c => c.toLowerCase().includes('elektrik') || c.toLowerCase().includes('enerji'));
     if (specificMatch) {
@@ -40,18 +58,22 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
 
 // --- UZMAN PARSER'LAR ---
 
-function aydem2parser(text: string, lines: string[]): Partial<InvoiceData> | null {
+function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null {
     if (!text.includes("Aydem Elektrik")) return null;
-
-    console.log("aydem2parser (Nihai Yöntem) denendi.");
+    console.log("Aydem Parser denendi.");
     const data: Partial<InvoiceData> = {};
     data.companyName = pickCompanyName(lines, 'aydem');
-    
-    // Bu tek ve güçlü Regex, Müşteri Bilgileri bloğunu tek seferde çözer.
-    const customerInfoMatch = text.match(/Müşteri Bilgileri\s*[\d*]+\s*\n(.+)\n(.+)/);
-    if (customerInfoMatch) {
-        data.customerName = customerInfoMatch[1].trim(); // 1. yakalanan grup: İsim
-        data.address = customerInfoMatch[2].trim();      // 2. yakalanan grup: Adres
+
+    const musteriBilgileriIndex = lines.findIndex(line => /Müşteri Bilgileri/i.test(line));
+    if (musteriBilgileriIndex > -1) {
+        const nameLineIndex = lines.findIndex((line, index) => index > musteriBilgileriIndex && line.length > 0);
+        if (nameLineIndex > -1) {
+            data.customerName = lines[nameLineIndex];
+            const addressLineIndex = lines.findIndex((line, index) => index > nameLineIndex && line.length > 0);
+            if (addressLineIndex > -1) {
+                data.address = lines[addressLineIndex];
+            }
+        }
     }
     
     const instMatch = text.match(/Tesisat No\/Tekil Kod\s*\n\s*(\d+)/);
@@ -66,17 +88,56 @@ function aydem2parser(text: string, lines: string[]): Partial<InvoiceData> | nul
         if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]);
     }
 
-    // Eğer bu parser en kritik bilgileri bulduysa, sonucu döndür.
     if (data.customerName && data.installationNumber) return data;
-    
-    // Eğer bu parser başarısız olursa, bir sonraki denensin diye null döndür.
     return null;
 }
 
-// Diğer parser'lar (ckAkdeniz, Gediz) fallback olarak kalabilir.
-function ckAkdenizParser(text: string, lines: string[]): Partial<InvoiceData> | null { /* ... */ return null; }
-function gedizParser(text: string, lines: string[]): Partial<InvoiceData> | null { /* ... */ return null; }
+function ckAkdenizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
+    if (!text.includes("CK AKDENİZ")) return null;
+    console.log("CK Akdeniz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+    data.companyName = pickCompanyName(lines, 'ck');
+    const nameMatch = text.match(/Ad Soyad\s*:(.+)/);
+    data.customerName = nameMatch ? nameMatch[1].replace(/-/g, '').trim() : "";
+    const addressMatch = text.match(/Adres:(.+)/);
+    data.address = addressMatch ? addressMatch[1].trim() : "";
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s+(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+    const consMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+([\d.,]+)/);
+    const consMatch2 = text.match(/Enerji Bedeli-Yüksek Kademe\s+([\d.,]+)/);
+    if (consMatch && consMatch[1] && consMatch2 && consMatch2[1]) {
+        const total = parseFloat(normalizeDecimal(consMatch[1])) + parseFloat(normalizeDecimal(consMatch2[1]));
+        data.consumption = total.toFixed(3);
+    }
+    const priceMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+[\d.,]+\s+([\d.,]+)/);
+    data.unitPrice = priceMatch ? normalizeDecimal(priceMatch[1]) : "";
+    if (data.customerName && data.installationNumber) return data;
+    return null;
+}
 
+function gedizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
+    if (!text.includes("Gediz Elektrik")) return null;
+    console.log("Gediz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+    data.companyName = pickCompanyName(lines, 'gediz');
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) { const numbers = priceLine.match(/[\d.,]+/g); if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]); }
+    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
+    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
+    if (startIndex > -1 && endIndex > -1) {
+        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean); const labels: string[] = []; const values: string[] = [];
+        blockLines.forEach(line => { if (line.trim().startsWith(':')) { values.push(line.replace(/^[:\s,]+/, '').trim()); } else if (line.trim().length > 1) { labels.push(line.trim()); } });
+        const infoMap = new Map<string, string>();
+        labels.forEach((label, index) => { if (values[index]) { infoMap.set(label.toLowerCase(), values[index]); } });
+        data.customerName = infoMap.get('ad soyad') || ""; data.address = infoMap.get('adres') || "";
+    }
+    if (data.customerName && data.installationNumber) return data;
+    return null;
+}
 
 // --- YÖNETİCİ PARSE FONKSİYONU ---
 export function parseInvoiceText(fullText: string): InvoiceData {
@@ -84,8 +145,7 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     const text = fullText.replace(/\r/g, "");
     const lines = text.split("\n").map((l) => l.trim());
     
-    // Uzman parser'lar listesi. En spesifik olanı en başa koyuyoruz.
-    const parsers = [aydem2parser, ckAkdenizParser, gedizParser];
+    const parsers = [aydemParser, ckAkdenizParser, gedizParser];
 
     for (const parser of parsers) {
         const data = parser(text, lines);
@@ -217,13 +277,6 @@ export default function InvoiceOcrPage() {
     await runCloudVisionOcr(file);
     stopCamera();
   }
-
-  const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
-    <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-      <span className="inline-flex items-center justify-center w-5 h-5 rounded" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>{icon}</span>
-      {children}
-    </label>
-  );
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
