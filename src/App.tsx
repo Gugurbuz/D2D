@@ -235,4 +235,3 @@ return (
 );
 
 
-export default App;
