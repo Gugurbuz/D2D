@@ -118,7 +118,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [starredId, setStarredId] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -350,7 +350,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 </div>
               )}
             </button>
-            <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[300px] max-w-sm h-full">
+        <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full">
+
               <div className="flex items-center gap-2">
                 <RouteIcon className="w-5 h-5 text-[#0099CB]" />
                 <span className="font-semibold text-gray-700 text-base select-none">
