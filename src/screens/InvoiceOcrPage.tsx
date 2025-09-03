@@ -36,26 +36,20 @@ function pickCompanyName(lines: string[]): string {
   const candidates = lines
     .slice(0, 12)
     .filter((l) => /ELEKTR[İI]K|ENERJ[İI]|A\.Ş|PERAKENDE|DA[ĞG]ITIM/i.test(l))
-    .filter(l => l.length > 5);
+    .filter(l => l.length > 5 && !/Fatura|Arşiv/i.test(l));
 
-  if (candidates.length === 0) {
-    const upperish = lines.find((l) => l === l.toUpperCase() && l.replace(/[^A-ZÇĞİÖŞÜ]/g, "").length >= 5);
-    return upperish || lines[0] || "";
-  }
+  if (candidates.length === 0) return lines[0] || "";
 
-  const genericRegex = /^(?:ELEKTR[İI]K\s*)?(?:PERAKENDE|DA[ĞG]ITIM)\s*SATIŞ\s*(?:A\.?Ş\.?|ANON[İI]M\s*Ş[İI]RKET[İI])\s*$/i;
+  const genericRegex = /^(?:PERAKENDE|DA[ĞG]ITIM)\s*SATIŞ\s*A\.?Ş\.?$/i;
   const specificCandidates = candidates.filter(c => !genericRegex.test(c));
 
   if (specificCandidates.length > 0) {
     return specificCandidates.sort((a, b) => b.length - a.length)[0];
   }
-  if (candidates.length > 0) {
-    return candidates.sort((a, b) => b.length - a.length)[0];
-  }
-  return lines[0] || "";
+  
+  return candidates.sort((a, b) => b.length - a.length)[0];
 }
 
-// YENİ VE BASİTLEŞTİRİLMİŞ AYRIŞTIRMA FONKSİYONU
 export function parseInvoiceText(fullText: string): InvoiceData {
     if (!fullText) return initialData;
     const text = fullText.replace(/\r/g, "");
@@ -63,41 +57,39 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     
     const companyName = pickCompanyName(lines.filter(Boolean));
 
-    // Bu fonksiyon, bir etiketi arar ve DEĞERİ AYNI SATIRDAN alır.
-    const getValueFromLine = (regex: RegExp): string => {
+    const getValue = (regex: RegExp): string => {
         const match = text.match(regex);
         return match && match[1] ? match[1].replace(/^[:\s,]+/, '').trim() : "";
     };
 
-    const customerName = getValueFromLine(/Ad Soyad\s*[:;]?\s*(.+)/i);
-    const address = getValueFromLine(/Adres\s*[:;]?\s*(.+)/i);
+    const customerName = getValue(/Ad Soyad\s*:\s*(.+)/i);
+    const address = getValue(/Adres\s*:\s*(.+)/i);
 
-    // Tesisat no gibi değerler alt satırda olabildiği için farklı bir regex kullanıyoruz.
     let installationNumber = "";
     const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/i) || text.match(/Sözleşme Hesap No\s*\n\s*(\d+)/i);
-    if(instMatch && instMatch[1]) {
+    if (instMatch && instMatch[1]) {
         installationNumber = instMatch[1].trim();
+    } else {
+        installationNumber = getValue(/Tesisat No\s*:\s*(\d+)/i);
     }
-    
+
     let consumption = "";
     const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/i);
-    if(consMatch && consMatch[1]){
+    if (consMatch && consMatch[1]) {
         consumption = normalizeDecimal(consMatch[1]);
     }
 
     let unitPrice = "";
-    // Birim fiyatı bulmak için Tüketim tablosunda gezinebiliriz.
-    const priceLine = lines.find(line => /E\.T\.B\. Gündüz|E\.T\.B\. Puant/.test(line));
-    if(priceLine){
-        const numbers = priceLine.match(/([\d.,]+)/g);
-        if(numbers && numbers.length >= 2){
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) {
+        const numbers = priceLine.match(/[\d.,]+/g);
+        if (numbers && numbers.length >= 2) {
             unitPrice = normalizeDecimal(numbers[1]);
         }
     }
 
     return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
-
 
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
