@@ -6,7 +6,7 @@ import { Customer } from './RouteMap';
 
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
-import { generateInvoiceSummary } from "./utils/gptSummary"; // ✅ DOĞRU
+import { generateInvoiceSummary } from "./utils/gptSummary"; 
 
 
 // Kullanıcı verilerini team.ts dosyasından import ediyoruz
