@@ -268,6 +268,19 @@ const [summarizing, setSummarizing] = useState(false);
     setStream(null);
     setCameraOn(false);
   }
+  async function handleGenerateSummary() {
+  try {
+    setSummarizing(true);
+    const result = await generateInvoiceSummary(data);
+    setSummary(result);
+  } catch (error) {
+    console.error("GPT özeti oluşturulamadı:", error);
+    setSummary("GPT özeti alınamadı. Lütfen tekrar deneyin.");
+  } finally {
+    setSummarizing(false);
+  }
+}
+
 
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
