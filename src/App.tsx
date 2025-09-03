@@ -52,6 +52,13 @@ function App() {
   };
   const visibleCustomers = customers.filter(isVisibleForCurrentRole);
 
+  const [summary, setSummary] = useState("");
+
+const handleSummary = async () => {
+  const result = await generateInvoiceSummary(data); // `data`: InvoiceData objesi
+  setSummary(result);
+};
+
   // --- GUIDE eşleştirmeleri ---
   const toAppRole = (r: Role): AppRole =>
     r === 'manager' ? 'sahaYonetici' : 'satisUzmani';
