@@ -7,6 +7,9 @@ import { Customer } from './RouteMap';
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
 
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import CompetitorBillScreen from "./screens/CompetitorBillScreen";
+
 // Kullanıcı verilerini team.ts dosyasından import ediyoruz
 import { teamReps, managerUser } from './data/team';
 
