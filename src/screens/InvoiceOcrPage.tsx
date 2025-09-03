@@ -67,57 +67,159 @@ function extractBetween(source: string, startLabel: RegExp, nextStop: RegExp): s
 }
 
 export function parseInvoiceText(fullText: string): InvoiceData {
+  // Metni ön işleme: Windows satır sonlarını (\r) kaldır ve her satırı trim'le.
   const text = fullText.replace(/\r/g, "");
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
+  // ========================================================================
+  // 1. Şirket Adı (Company Name)
+  // ========================================================================
+  // Bu fonksiyon genellikle faturaların en üstünde yer alan şirket adını bulur.
+  // Mevcut 'pickCompanyName' fonksiyonu bu iş için oldukça yeterli.
   const companyName = pickCompanyName(lines);
 
+  // ========================================================================
+  // 2. Müşteri Adı (Customer Name)
+  // ========================================================================
+  // Farklı faturalardaki "Ad Soyad", "Müşteri Adı Soyadı", "Unvan" gibi
+  // çeşitli etiketleri arayacak bir regex listesi oluşturuyoruz.
+  // (?i) flag'i büyük/küçük harf duyarsız arama yapar.
+  // \s*[:\s]?\s* deseni, etiketten sonra gelebilecek iki nokta üst üste veya boşlukları tolere eder.
   const nameRegexes = [
-    /MÜŞTERİ\s*ADI.*?:\s*(.*)/i,
-    /ABONE\s*ADI.*?:\s*(.*)/i,
-    /AD\s*SOYAD.*?:\s*(.*)/i,
-    /UNVAN.*?:\s*(.*)/i,
-    /SAYIN\s+([^,\n]+)/i,
+    /(?:MÜŞTERİ|ABONE)\s*(?:ADI|ADI SOYADI)\s*[:\s]?\s*(.+)/i,
+    /AD SOYAD\s*[:\s]?\s*(.+)/i,
+    /UNVAN\s*[:\s]?\s*(.+)/i,
+    /SAYIN\s+([^,\n]+)/i, // "Sayın HASAN DİKÇE," gibi ifadeler için
   ];
   let customerName = "";
   for (const rx of nameRegexes) {
     const m = text.match(rx);
-    if (m && m[1]) { customerName = m[1].trim(); break; }
+    if (m && m[1]) {
+      // Bulunan ismin sonundaki gereksiz karakterleri (örn: TCKN etiketi) temizle
+      customerName = m[1].split(/TCKN|VERG[İI]/i)[0].trim();
+      break;
+    }
   }
+  // Eğer regex ile bulunamazsa, etiketin bir alt satırındaki değeri almayı dene.
   if (!customerName) {
-    const i = lines.findIndex((l) => /MÜŞTERİ|ABONE|AD\s*SOYAD|UNVAN/i.test(l));
-    if (i >= 0 && lines[i + 1]) customerName = lines[i + 1];
+    const nameLineIndex = lines.findIndex((l) => /(MÜŞTERİ|ABONE|AD SOYAD|UNVAN)/i.test(l));
+    if (nameLineIndex > -1 && lines[nameLineIndex + 1]) {
+      // Bir sonraki satırın fatura ile ilgili başka bir etiket içermediğinden emin olalım.
+      if (!/ADRES|TCKN|NO:|TAR[İI]H/i.test(lines[nameLineIndex + 1])) {
+        customerName = lines[nameLineIndex + 1].trim();
+      }
+    }
   }
 
+  // ========================================================================
+  // 3. Adres (Address)
+  // ========================================================================
+  // Adres genellikle "ADRES:" etiketinden sonra başlar ve bir sonraki anahtar bilgiye
+  // (Tesisat No, Fatura Tarihi, Tüketim vb.) kadar devam eder.
+  // Bitiş regex'ini daha kapsamlı hale getirerek adresin daha doğru alınmasını sağlıyoruz.
   let address = extractBetween(
     text,
-    /(ADRES|Adres)\s*:?/i,
-    /(TESISAT|TESİSAT|ABONE|MÜŞTERİ|FATURA|VERGİ|TARİH|DÖNEM|DÖNEMİ|SAYAÇ|TOPLAM|TÜKETİM)/i
+    /ADRES\s*[:\s]?/i,
+    /(TES[İI]SAT|SÖZLEŞME|ABONE|MÜŞTER[İI]|FATURA|VERG[İI]|TAR[İI]H|DÖNEM|SAYAÇ|TÜKET[İI]M|TCKN|EIC)/i
   );
+  // extractBetween başarısız olursa, etiketin altındaki 1-2 satırı birleştirmeyi dene.
   if (!address) {
     const idx = lines.findIndex((l) => /ADRES/i.test(l));
-    if (idx >= 0) address = [lines[idx + 1], lines[idx + 2]].filter(Boolean).join(" ");
+    if (idx >= 0) {
+      address = [lines[idx + 1], lines[idx + 2]].filter(Boolean).join(" ");
+    }
   }
 
+  // ========================================================================
+  // 4. Tesisat Numarası (Installation Number)
+  // ========================================================================
+  // Faturalarda "Tekil Kod/Tesisat No", "Tesisat No Kodu", "Sözleşme Hesap No" gibi
+  // birçok farklı format var. Hepsini yakalayacak esnek bir yapı kuruyoruz.
+  // Öncelik "Tesisat No" içeren ifadelerde olacak.
   const instRegexes = [
-    /(TESISAT|TESİSAT)\s*(NO|NUMARASI|#)?\s*[:]??\s*([0-9]{6,})/i,
-    /(ABONE|MÜŞTERİ)\s*(NO|NUMARASI)\s*[:]??\s*([0-9]{6,})/i,
+      // En yaygın format: "Tekil Kod/Tesisat No: 123456789"
+      /(?:TEK[İI]L KODU?\/)?\s*TES[İI]SAT\s*(?:NO|NUMARASI|KODU)?\s*[:\s]?\s*(\d{7,})/i,
+      // Diğer formatlar: "Sözleşme Hesap No: 123456789" veya "Abone No: 123456789"
+      /(?:SÖZLEŞME|ABONE|MÜŞTER[İI])\s*(?:HESAP\s*)?NO(?:SU)?\s*[:\s]?\s*(\d{7,})/i,
+      // Sadece Tesisat No arayan daha genel bir regex
+      /TES[İI]SAT\s*NO\s*[:\s]?\s*(\d{7,})/i
   ];
   let installationNumber = "";
   for (const rx of instRegexes) {
     const m = text.match(rx);
-    if (m && m[3]) { installationNumber = m[3]; break; }
+    // Yakalanan 3. grup genelde Tesisat No'dur. Ancak bizim regex'lerimizde 1. grupta olacak.
+    if (m && m[1]) {
+      installationNumber = m[1].trim();
+      break;
+    }
   }
 
-  const cons = text.match(/([0-9][0-9 .,.]*?)\s*(kWh|KWH|kWsaat)/i);
-  let consumption = cons ? normalizeDecimal(num(cons[1])) : "";
+  // ========================================================================
+  // 5. Tüketim (kWh) ve Birim Fiyat (TL/kWh)
+  // ========================================================================
+  // Bu değerler genellikle bir tablo satırında bulunur.
+  // Strateji: Önce "Toplam Tüketim", "Enerji Bedeli" gibi anahtar kelimeleri içeren satırı bul,
+  // sonra o satırdaki sayısal değerleri ayrıştır.
+  let consumption = "";
+  let unitPrice = "";
 
-  const unit = text.match(/([0-9][0-9 .,.]*?)\s*(TL\s*\/\s*kWh|TL\/kWh)/i);
-  let unitPrice = unit ? normalizeDecimal(num(unit[1])) : "";
+  // Regex: En az bir rakam içeren, potansiyel olarak içinde nokta, virgül ve boşluk barındıran sayıları bulur.
+  // Örn: "1.234,56" veya "1 234.56" gibi formatları yakalar.
+  const numberRegex = /\b(\d{1,}[\d.,\s]+\d)\b/g;
 
-  return { customerName, address, installationNumber, consumption, unitPrice, companyName };
+  // Aranacak anahtar kelimeler (öncelik sırasına göre).
+  const consumptionKeywords = [
+    /TOPLAM ENERJ[İI] BEDEL[İI]/i,
+    /AKT[İI]F TÜKET[İI]M TOPLAMI/i,
+    /ENERJ[İI] BEDEL[İI].*DÜŞÜK KADEME/i, // Düşük kademe genellikle toplam tüketimi içerir
+    /ENERJ[İI] BEDEL[İI]/i,
+    /TOPLAM\s*\(?kWh\)?/i,
+  ];
+
+  for (const keywordRegex of consumptionKeywords) {
+    const targetLine = lines.find(line => keywordRegex.test(line));
+
+    if (targetLine) {
+        // Satırdaki tüm sayısal değerleri bul.
+        const numbers = (targetLine.match(numberRegex) || []).map(numStr => normalizeDecimal(numStr));
+
+        if (numbers.length > 0) {
+            // Genellikle ilk sayı Tüketim (kWh), ikincisi Birim Fiyat (TL/kWh) olur.
+            // Örnek Satır: "Enerji Bedeli-Düşük Kademe   456,849   1.341078   612,67"
+            consumption = numbers[0];
+            if (numbers.length > 1) {
+                // Birim fiyatın makul bir aralıkta olup olmadığını kontrol edelim (örn: 0.1 ile 10 arası)
+                // Bu, yanlışlıkla fatura tutarını birim fiyat olarak almayı engeller.
+                const potentialUnitPrice = parseFloat(numbers[1]);
+                if (potentialUnitPrice > 0.1 && potentialUnitPrice < 10.0) {
+                    unitPrice = numbers[1];
+                }
+            }
+            break; // Değerleri bulduysak döngüden çık
+        }
+    }
+  }
+  
+  // Eğer yukarıdaki yöntem başarısız olursa, eski yöntemleri fallback olarak deneyelim.
+  if (!consumption) {
+      const consMatch = text.match(/TÜKET[İI]M\s*\(?kwh\)?\s*[:\s]*?([\d.,]+)/i);
+      if (consMatch && consMatch[1]) consumption = normalizeDecimal(consMatch[1]);
+  }
+  if (!unitPrice) {
+      const unitMatch = text.match(/B[İI]R[İI]M F[İI]YAT\s*\(?(?:TL|Kr)\/kWh\)?\s*[:\s]*?([\d.,]+)/i);
+      if (unitMatch && unitMatch[1]) unitPrice = normalizeDecimal(unitMatch[1]);
+  }
+
+
+  return {
+    customerName,
+    address,
+    installationNumber,
+    consumption,
+    unitPrice,
+    companyName
+  };
 }
-
 // ====== SIMPLE RUNTIME TESTS (dev only) ======
 if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
   const sample = `\
