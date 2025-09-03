@@ -28,7 +28,6 @@ import ProfileScreens from './screens/ProfileScreens';
 
 // Guide sistemi
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
-// import { GUIDE_VERSION } from "./guide/guideConfig";
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -73,7 +72,7 @@ function App() {
     }
   };
 
-  const handleSpeechToText = () => { /* içerik değişmedi */ };
+  const handleSpeechToText = () => {};
   const handleLogin = () => setCurrentScreen('roleSelect');
 
   const handleStartVisit = (customer: Customer) => {
@@ -90,7 +89,6 @@ function App() {
     setSelectedCustomer({ ...cust });
   };
 
-  // Login ve rol seçimi ekranları
   if (currentScreen === 'login') {
     return <LoginScreen onLogin={handleLogin} />;
   }
@@ -115,9 +113,8 @@ function App() {
   const guideRole = toAppRole(role);
   const guideScreen = toAppScreen(currentScreen);
 
-  // Enerjisa renkleri
-  const C_NAVY = '#002D72';
-  const C_YELLOW = '#F9C800';
+  // Kurumsal renkler (tema değişkeni varsa ona bağla)
+  const C_NAVY = 'var(--brand-navy, #002D72)';
 
   return (
     <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
@@ -127,32 +124,14 @@ function App() {
         currentScreen={currentScreen}
         setCurrentScreen={setCurrentScreen}
       >
-        {/* NAVBAR / Üst Butonlar (Router'sız) */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <button
-            onClick={() => setCurrentScreen('dashboard')}
-            className="px-3 py-1 rounded-md"
-            style={{ background: '#fff', border: `1px solid ${C_NAVY}`, color: C_NAVY }}
-          >
-            Uygulama
-          </button>
-          <button
-            onClick={() => setCurrentScreen('competitorBill')}
-            className="px-3 py-1 rounded-md text-white"
-            style={{ background: C_NAVY }}
-          >
-            Rakip Fatura
-          </button>
-        </div>
+
+        {/* NAVBAR İÇİN: AppLayout’a “Rakip Fatura” sekmesi eklendi (bkz. 2. adım) */}
+        {/* Router/Link YOK. Ekranlar STATE ile gösteriliyor. */}
 
         {/* Ekranların koşullu render edilmesi */}
-        {currentScreen === 'competitorBill' && (
-          <CompetitorBillScreen />
-        )}
+        {currentScreen === 'competitorBill' && <CompetitorBillScreen />}
 
-        {currentScreen === 'profile' && (
-          <ProfileScreens role={role} />
-        )}
+        {currentScreen === 'profile' && <ProfileScreens role={role} />}
 
         {currentScreen === 'assignmentMap' && role === 'manager' && (
           <AssignmentMapScreen
@@ -179,13 +158,15 @@ function App() {
         {currentScreen === 'messages' && <MessagesScreen />}
 
         {currentScreen === 'dashboard' && (
-          <DashboardScreen
-            customers={visibleCustomers}
-            assignments={assignments}
-            allReps={allReps}
-            setCurrentScreen={setCurrentScreen}
-            setSelectedCustomer={setSelectedCustomer}
-          />
+          <div>
+            <DashboardScreen
+              customers={visibleCustomers}
+              assignments={assignments}
+              allReps={allReps}
+              setCurrentScreen={setCurrentScreen}
+              setSelectedCustomer={setSelectedCustomer}
+            />
+          </div>
         )}
 
         {currentScreen === 'visitList' && (
