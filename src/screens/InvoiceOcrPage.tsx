@@ -23,13 +23,7 @@ const initialData: InvoiceData = {
 
 function normalizeDecimal(s: string) {
   if (!s) return s;
-  let t = s.replace(/\s/g, "");
-  if (/\,\d{1,3}$/.test(t)) {
-    t = t.replace(/\./g, "").replace(",", ".");
-  } else {
-    t = t.replace(/,/g, "");
-  }
-  return t;
+  return s.replace(/\s/g, "").replace(",", ".");
 }
 
 function pickCompanyName(lines: string[]): string {
@@ -53,40 +47,66 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     const lines = text.split("\n").map((l) => l.trim());
     
     const companyName = pickCompanyName(lines.filter(Boolean));
+    
+    let customerName = "";
+    let address = "";
+    let installationNumber = "";
+    let consumption = "";
+    let unitPrice = "";
 
-    const getValue = (regex: RegExp): string => {
-        const match = text.match(regex);
-        return match && match[1] ? match[1].replace(/^[:\s,]+/, '').trim() : "";
-    };
+    // --- "TÜKETİCİ BİLGİSİ" BLOĞUNU DOĞRU AYRIŞTIRMA ---
+    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
+    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
+    
+    if (startIndex > -1 && endIndex > -1) {
+        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean);
+        
+        const labels: string[] = [];
+        const values: string[] = [];
 
-    const customerName = getValue(/Ad Soyad\s*:\s*(.+)/);
-    const address = getValue(/Adres\s*:\s*(.+)/);
+        // Satırları, yapısına göre başlık ve değer olarak iki listeye ayır
+        blockLines.forEach(line => {
+            if (line.trim().startsWith(':')) {
+                values.push(line.replace(/^[:\s,]+/, '').trim());
+            } else if (line.trim().length > 1) { // Boşlukları ve tek karakterleri ele
+                labels.push(line.trim());
+            }
+        });
 
-    let installationNumber = getValue(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/) || getValue(/Sözleşme Hesap No\s*\n\s*(\d+)/);
-    if (!installationNumber) {
-        installationNumber = getValue(/Tesisat No\s*:\s*(\d+)/);
+        // Başlık ve değerleri bir harita üzerinde eşleştir (1. başlık -> 1. değer)
+        const infoMap = new Map<string, string>();
+        labels.forEach((label, index) => {
+            if (values[index]) {
+                infoMap.set(label.toLowerCase(), values[index]);
+            }
+        });
+        
+        customerName = infoMap.get('ad soyad') || "";
+        address = infoMap.get('adres') || "";
     }
     
-    const consumption = getValue(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    // --- DİĞER ALANLARI AYRIŞTIRMA ---
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/) || text.match(/Sözleşme Hesap No\s*\n\s*(\d+)/);
+    if (instMatch && instMatch[1]) {
+        installationNumber = instMatch[1].trim();
+    }
 
-    let unitPrice = "";
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    if (consMatch && consMatch[1]) {
+        consumption = normalizeDecimal(consMatch[1]);
+    }
+
     const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
     if (priceLine) {
         const numbers = priceLine.match(/[\d.,]+/g);
         if (numbers && numbers.length >= 2) {
-            unitPrice = numbers[1].replace(',', '.');
+            unitPrice = normalizeDecimal(numbers[1]);
         }
     }
 
-    return { 
-        customerName, 
-        address, 
-        installationNumber, 
-        consumption: normalizeDecimal(consumption), 
-        unitPrice, 
-        companyName 
-    };
+    return { customerName, address, installationNumber, consumption, unitPrice, companyName };
 }
+
 
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
