@@ -4,8 +4,8 @@ import Tesseract from "tesseract.js";
 
 // ====== THEME (Enerjisa) ======
 const BRAND_YELLOW = "#F9C800";
-const BRAND_NAVY = "#002D72";
-const BRAND_TURQ = "#0099CB"; // Projede butonlarda kullanılan turkuaz
+const BRAND_NAVY = "#002D72"; // eski lacivert
+const BRAND_TURQ = "#0099CB"; // projedeki turkuaz (butonlarla aynı)
 
 // ====== TYPES ======
 interface InvoiceData {
@@ -32,9 +32,11 @@ const num = (s?: string) => (s || "").replace(/[^0-9.,]/g, "").trim();
 function normalizeDecimal(s: string) {
   if (!s) return s;
   let t = s.replace(/\s/g, "");
+  // 1.234,56 → 1234.56
   if (/\,\d{1,3}$/.test(t)) {
     t = t.replace(/\./g, "").replace(",", ".");
   } else {
+    // 1,234.56 → 1234.56
     t = t.replace(/,/g, "");
   }
   return t;
@@ -114,6 +116,22 @@ export function parseInvoiceText(fullText: string): InvoiceData {
   let unitPrice = unit ? normalizeDecimal(num(unit[1])) : "";
 
   return { customerName, address, installationNumber, consumption, unitPrice, companyName };
+}
+
+// ====== SIMPLE RUNTIME TESTS (dev only) ======
+if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
+  const sample = `\
+XYZ ELEKTRİK A.Ş.\n\
+SAYIN MEHMET YILMAZ\n\
+ADRES: KAVAKLI MAH. ÇINAR CAD. NO:12 BEYLİKDÜZÜ İSTANBUL\n\
+TESİSAT NO: 12345678\n\
+TÜKETİM: 245 kWh\n\
+BİRİM FİYAT: 3,245 TL/kWh`;
+  const parsed = parseInvoiceText(sample);
+  console.assert(parsed.companyName.includes("ELEKTR"), "companyName parse failed", parsed);
+  console.assert(parsed.customerName.toUpperCase().includes("MEHMET"), "customerName parse failed", parsed);
+  console.assert(parsed.installationNumber === "12345678", "installationNumber parse failed", parsed);
+  console.assert(parsed.consumption === "245", "consumption parse failed", parsed);
 }
 
 // ====== MAIN COMPONENT ======
@@ -219,7 +237,182 @@ export default function InvoiceOcrPage() {
           <h1 className="text-xl font-semibold tracking-wide">Fatura OCR • Rakipten Geçiş</h1>
         </div>
       </header>
-      {/* ...kalan içerik aynı */}
+
+      <main className="mx-auto max-w-6xl p-4 md:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+          {/* SOL TARAF: Yakalama & Önizleme */}
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden" style={{ borderColor: BRAND_YELLOW }}>
+            <div className="p-4 md:p-6">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Wand2 />
+                  <h2 className="text-lg font-semibold">Görsel Seç / Çek ve Tara</h2>
+                </div>
+                <span className="text-xs text-gray-500">Tesseract.js (tr+eng)</span>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <label className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer bg-white hover:bg-gray-50">
+                  <Upload className="w-4 h-4" />
+                  <span>Fotoğraf Yükle</span>
+                  <input type="file" accept="image/*" className="hidden" onChange={onFile} />
+                </label>
+
+                {!cameraOn ? (
+                  <button onClick={startCamera} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">
+                    <Camera className="w-4 h-4" />
+                    Kamerayı Aç
+                  </button>
+                ) : (
+                  <button onClick={stopCamera} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50">
+                    <Camera className="w-4 h-4" />
+                    Kamerayı Kapat
+                  </button>
+                )}
+
+                {loading && (
+                  <span className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-xl border bg-white">
+                    <Loader2 className="w-4 h-4 animate-spin" /> OCR çalışıyor…
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-xl overflow-hidden border" style={{ borderColor: BRAND_YELLOW }}>
+                  <div className="p-2 flex items-center justify-between bg-white border-b" style={{ borderColor: BRAND_YELLOW }}>
+                    <span className="text-sm font-medium flex items-center gap-2"><Camera className="w-4 h-4" /> Kamera Önizleme</span>
+                    {cameraOn && (
+                      <button onClick={capturePhoto} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>
+                        Fotoğraf Çek
+                      </button>
+                    )}
+                  </div>
+                  <div className="aspect-video relative">
+                    {cameraOn ? (
+                      <video ref={videoRef} playsInline className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">Kamera kapalı</div>
+                    )}
+                    <canvas ref={canvasRef} className="hidden" />
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl overflow-hidden border" style={{ borderColor: BRAND_YELLOW }}>
+                  <div className="p-2 flex items-center justify-between bg-white border-b" style={{ borderColor: BRAND_YELLOW }}>
+                    <span className="text-sm font-medium flex items-center gap-2"><FileText className="w-4 h-4" /> Seçilen Görsel</span>
+                    {imagePreview && (
+                      <button onClick={() => ocrFromDataUrl(imagePreview)} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>
+                        Tekrar Tara
+                      </button>
+                    )}
+                  </div>
+                  <div className="aspect-video bg-white flex items-center justify-center">
+                    {imagePreview ? (
+                      <img src={imagePreview} alt="preview" className="max-h-full object-contain" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">Görsel seçilmedi</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <div className="mt-4 p-3 rounded-xl border text-sm flex items-start gap-2" style={{ borderColor: "#FECACA", background: "#FEF2F2" }}>
+                  <ShieldAlert className="w-4 h-4 mt-0.5" />
+                  <div>
+                    <div className="font-semibold">Hata</div>
+                    <div className="text-gray-700">{error}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* SAĞ TARAF: Otomatik Doldurulan Form */}
+          <div className="bg-white rounded-2xl shadow-sm border" style={{ borderColor: BRAND_YELLOW }}>
+            <div className="p-4 md:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Wand2 />
+                <h2 className="text-lg font-semibold">Otomatik Doldurulan Form</h2>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel>
+                  <input
+                    value={data.companyName}
+                    onChange={(e) => setData({ ...data, companyName: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                    placeholder="Örn. ABC Enerji A.Ş."
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel>
+                  <input
+                    value={data.customerName}
+                    onChange={(e) => setData({ ...data, customerName: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                    placeholder="Ad Soyad"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
+                  <textarea
+                    value={data.address}
+                    onChange={(e) => setData({ ...data, address: e.target.value })}
+                    rows={3}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                    placeholder="Sokak, Cadde, No, İlçe, İl"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel>
+                    <input
+                      value={data.installationNumber}
+                      onChange={(e) => setData({ ...data, installationNumber: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="########"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel>
+                    <input
+                      value={data.consumption}
+                      onChange={(e) => setData({ ...data, consumption: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="Örn. 245"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat (TL/kWh)</FieldLabel>
+                    <input
+                      value={data.unitPrice}
+                      onChange={(e) => setData({ ...data, unitPrice: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="Örn. 3,245"
+                    />
+                  </div>
+                </div>
+
+                {rawText && (
+                  <div className="pt-2">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm text-gray-700 select-none">Ham OCR Metni (aç/kapa)</summary>
+                      <pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
