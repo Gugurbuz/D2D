@@ -1,12 +1,26 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
+import {
+  Camera,
+  Upload,
+  Wand2,
+  Building2,
+  Home,
+  Hash,
+  Gauge,
+  Percent,
+  Loader2,
+  FileText,
+  ShieldAlert,
+  Zap,
+} from "lucide-react";
+
+// ✅ Doğru import yolu
 import { generateInvoiceSummary } from "../utils/gptSummary";
 
-
-
-// ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
+
+// ... devamı aşağıda
 
 
 // ====== TÜRLER ======
