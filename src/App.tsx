@@ -3,7 +3,7 @@ import AppLayout from './layouts/AppLayout';
 import MessagesScreen from './screens/MessagesScreen';
 import { Role, Screen } from './types';
 import { Customer } from './RouteMap';
-import InvoiceOcrPage from "./screens/InvoiceOcrPage"; 
+
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
 
@@ -23,6 +23,7 @@ import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
 import ProfileScreens from './screens/ProfileScreens';
+import InvoiceOcrPage from "./screens/InvoiceOcrPage"; 
 
 // Guide sistemi
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
