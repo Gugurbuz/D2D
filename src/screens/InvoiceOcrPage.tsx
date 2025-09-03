@@ -1,11 +1,30 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
 
-// ====== TEMA & TÜRLER & SABİTLER ======
-// ... (Bu kısımlar değişmedi, aynı kalıyor) ...
+// ====== TEMA ======
+const BRAND_YELLOW = "#F9C800";
+const BRAND_NAVY = "#002D72";
 
-// ====== YARDIMCI FONKSİYONLAR ======
-// ... (normalizeDecimal aynı kalıyor) ...
+// ====== TÜRLER ======
+interface InvoiceData {
+  customerName: string;
+  address: string;
+  installationNumber: string;
+  consumption: string; // kWh
+  unitPrice: string;   // TL/kWh
+  companyName: string; // Rakip şirket
+}
+
+// ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
+const initialData: InvoiceData = {
+  customerName: "", address: "", installationNumber: "",
+  consumption: "", unitPrice: "", companyName: "",
+};
+
+function normalizeDecimal(s: string): string {
+  if (!s) return "";
+  return s.replace(/\s/g, "").replace(",", ".");
+}
 
 function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem' | 'none' = 'none'): string {
     const candidates = lines.slice(0, 15).filter(l => l.length > 5 && !/Fatura|Arşiv|Hazine|Maliye/i.test(l));
@@ -23,7 +42,6 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
         if (match) return "Gediz Elektrik";
     }
     
-    // Genel Arama
     const specificMatch = candidates.find(c => c.toLowerCase().includes('elektrik') || c.toLowerCase().includes('enerji'));
     if (specificMatch) {
         return specificMatch.split(/Perakende|Dağıtım/i)[0].trim();
@@ -40,7 +58,6 @@ function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null
     const data: Partial<InvoiceData> = {};
     data.companyName = pickCompanyName(lines, 'aydem');
 
-    // İsim ve Adres, "Müşteri Bilgileri" başlığının altındaki pozisyonlarına göre bulunur
     const musteriBilgileriIndex = lines.findIndex(line => /Müşteri Bilgileri/i.test(line));
     if (musteriBilgileriIndex > -1) {
         data.customerName = lines[musteriBilgileriIndex + 1];
@@ -53,7 +70,7 @@ function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null
     const consMatch = text.match(/Enerji Bedeli\s+([\d.,]+)/);
     data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
 
-    const priceLine = lines.find(line => /Gündüz|Puant|Gece/.test(line) && line.split(/\s+/).length > 3);
+    const priceLine = lines.find(line => /Gündüz|Puant|Gece/.test(line) && line.split(/\s+/).length >= 4);
     if (priceLine) {
         const numbers = priceLine.match(/[\d.,]+/g);
         if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]);
@@ -64,13 +81,85 @@ function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null
 }
 
 function ckAkdenizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
-    // ... (Bu fonksiyon değişmedi, aynı kalıyor) ...
+    if (!text.includes("CK AKDENİZ")) return null;
+
+    console.log("CK Akdeniz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+    
+    data.companyName = pickCompanyName(lines, 'ck');
+
+    const nameMatch = text.match(/Ad Soyad\s*:(.+)/);
+    data.customerName = nameMatch ? nameMatch[1].replace(/-/g, '').trim() : "";
+
+    const addressMatch = text.match(/Adres:(.+)/);
+    data.address = addressMatch ? addressMatch[1].trim() : "";
+
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s+(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+
+    const consMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+([\d.,]+)/);
+    const consMatch2 = text.match(/Enerji Bedeli-Yüksek Kademe\s+([\d.,]+)/);
+    if (consMatch && consMatch[1] && consMatch2 && consMatch2[1]) {
+        const total = parseFloat(normalizeDecimal(consMatch[1])) + parseFloat(normalizeDecimal(consMatch2[1]));
+        data.consumption = total.toFixed(3);
+    }
+
+    const priceMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+[\d.,]+\s+([\d.,]+)/);
+    data.unitPrice = priceMatch ? normalizeDecimal(priceMatch[1]) : "";
+
+    if (data.customerName && data.installationNumber) return data;
+    return null;
 }
 
 function gedizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
-    // ... (Bu fonksiyon değişmedi, aynı kalıyor) ...
-}
+    if (!text.includes("Gediz Elektrik")) return null;
 
+    console.log("Gediz Parser denendi.");
+    const data: Partial<InvoiceData> = {};
+
+    data.companyName = pickCompanyName(lines, 'gediz');
+
+    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
+    data.installationNumber = instMatch ? instMatch[1].trim() : "";
+    
+    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
+    data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
+    
+    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
+    if (priceLine) {
+        const numbers = priceLine.match(/[\d.,]+/g);
+        if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]);
+    }
+    
+    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
+    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
+    if (startIndex > -1 && endIndex > -1) {
+        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean);
+        const labels: string[] = [];
+        const values: string[] = [];
+
+        blockLines.forEach(line => {
+            if (line.trim().startsWith(':')) {
+                values.push(line.replace(/^[:\s,]+/, '').trim());
+            } else if (line.trim().length > 1) {
+                labels.push(line.trim());
+            }
+        });
+        
+        const infoMap = new Map<string, string>();
+        labels.forEach((label, index) => {
+            if (values[index]) {
+                infoMap.set(label.toLowerCase(), values[index]);
+            }
+        });
+        
+        data.customerName = infoMap.get('ad soyad') || "";
+        data.address = infoMap.get('adres') || "";
+    }
+
+    if (data.customerName && data.installationNumber) return data;
+    return null;
+}
 
 // --- YÖNETİCİ PARSE FONKSİYONU ---
 export function parseInvoiceText(fullText: string): InvoiceData {
@@ -78,7 +167,6 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     const text = fullText.replace(/\r/g, "");
     const lines = text.split("\n").map((l) => l.trim());
     
-    // Uzman parser'ları bir diziye koyuyoruz. Yeni uzmanı en başa ekledik.
     const parsers = [aydemParser, ckAkdenizParser, gedizParser];
 
     for (const parser of parsers) {
@@ -92,6 +180,7 @@ export function parseInvoiceText(fullText: string): InvoiceData {
     console.warn("Uygun bir uzman parser bulunamadı.");
     return { ...initialData, companyName: pickCompanyName(lines) };
 }
+
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
