@@ -19,7 +19,8 @@
     "react-dom": "18.3.1",
     "react-joyride": "^2.9.3",
     "react-leaflet": "^4.2.1",
-    "react-leaflet-draw": "^0.20.6"
+    "react-leaflet-draw": "^0.20.6",
+    "react-router-dom": "^7.8.2"
   },
   "devDependencies": {
     "@eslint/js": "^8.57.1",
