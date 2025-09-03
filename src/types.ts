@@ -42,7 +42,8 @@ export type Screen =
   | 'assignment'
   | 'profile'
    | 'invoiceOcr'
-  | 'assignmentMap'; 
+  | 'assignmentMap'
+| "invoiceOcr"; 
 
 // src/types.ts
 export type Rep = {
