@@ -276,7 +276,7 @@ const [summarizing, setSummarizing] = useState(false);
     setSummary(result);
   } catch (error) {
     console.error("GPT özeti oluşturulamadı:", error);
-    setSummary("GPT özeti alınamadı. Lütfen tekrar deneyin.");
+    setSummary("Oluşturulamadı. Lütfen daha sonra tekrar deneyin.");
   } finally {
     setSummarizing(false);
   }
