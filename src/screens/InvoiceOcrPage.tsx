@@ -57,6 +57,9 @@ function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem'
     }
     return candidates.sort((a, b) => b.length - a.length)[0] || "";
 }
+const [summary, setSummary] = useState<string | null>(null);
+const [summarizing, setSummarizing] = useState(false);
+
 
 // --- UZMAN PARSER'LAR ---
 
