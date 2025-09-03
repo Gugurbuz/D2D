@@ -11,9 +11,9 @@ interface InvoiceData {
   customerName: string;
   address: string;
   installationNumber: string;
-  consumption: string;
-  unitPrice: string;
-  companyName: string;
+  consumption: string; // kWh
+  unitPrice: string;   // TL/kWh
+  companyName: string; // Rakip şirket
 }
 
 // ====== HELPERS ======
@@ -31,20 +31,24 @@ const num = (s?: string) => (s || "").replace(/[^0-9.,]/g, "").trim();
 function normalizeDecimal(s: string) {
   if (!s) return s;
   let t = s.replace(/\s/g, "");
+  // 1.234,56 → 1234.56
   if (/\,\d{1,3}$/.test(t)) {
     t = t.replace(/\./g, "").replace(",", ".");
   } else {
+    // 1,234.56 → 1234.56
     t = t.replace(/,/g, "");
   }
   return t;
 }
 
 function pickCompanyName(lines: string[]): string {
-  const candidates = lines.slice(0, 12).filter((l) => /ELEKTRIK|ELEKTRİK|ENERJI|ENERJİ|A\.Ş\.|AS\.|AŞ|Ş\.|SAN\.|TIC\.|TİC\./i.test(l));
-  if (candidates.length > 0) {
-    return candidates.sort((a, b) => b.length - a.length)[0];
-  }
-  const upperish = lines.find((l) => l === l.toUpperCase() && l.replace(/[^A-ZÇĞİÖŞÜ]/g, "").length >= 5);
+  const candidates = lines
+    .slice(0, 12)
+    .filter((l) => /ELEKTRIK|ELEKTRİK|ENERJI|ENERJİ|A\.Ş\.|AS\.|AŞ|Ş\.|SAN\.|TIC\.|TİC\./i.test(l));
+  if (candidates.length > 0) return candidates.sort((a, b) => b.length - a.length)[0];
+  const upperish = lines.find(
+    (l) => l === l.toUpperCase() && l.replace(/[^A-ZÇĞİÖŞÜ]/g, "").length >= 5
+  );
   return upperish || lines[0] || "";
 }
 
@@ -54,10 +58,14 @@ function extractBetween(source: string, startLabel: RegExp, nextStop: RegExp): s
   const rest = source.slice(start.index + start[0].length);
   const stop = nextStop.exec(rest);
   const seg = stop ? rest.slice(0, stop.index) : rest;
-  return seg.split("\n").map((s) => s.trim()).filter(Boolean).join(" ");
+  return seg
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
-function parseInvoiceText(fullText: string): InvoiceData {
+export function parseInvoiceText(fullText: string): InvoiceData {
   const text = fullText.replace(/\r/g, "");
   const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
 
@@ -80,12 +88,14 @@ function parseInvoiceText(fullText: string): InvoiceData {
     if (i >= 0 && lines[i + 1]) customerName = lines[i + 1];
   }
 
-  let address = extractBetween(text, /(ADRES|Adres)\s*:?/i, /(TESISAT|TESİSAT|ABONE|MÜŞTERİ|FATURA|VERGİ|TARİH|DÖNEM|DÖNEMİ|SAYAÇ|TOPLAM|TÜKETİM)/i);
+  let address = extractBetween(
+    text,
+    /(ADRES|Adres)\s*:?/i,
+    /(TESISAT|TESİSAT|ABONE|MÜŞTERİ|FATURA|VERGİ|TARİH|DÖNEM|DÖNEMİ|SAYAÇ|TOPLAM|TÜKETİM)/i
+  );
   if (!address) {
     const idx = lines.findIndex((l) => /ADRES/i.test(l));
-    if (idx >= 0) {
-      address = [lines[idx + 1], lines[idx + 2]].filter(Boolean).join(" ");
-    }
+    if (idx >= 0) address = [lines[idx + 1], lines[idx + 2]].filter(Boolean).join(" ");
   }
 
   const instRegexes = [
@@ -104,12 +114,23 @@ function parseInvoiceText(fullText: string): InvoiceData {
   const unit = text.match(/([0-9][0-9 .,.]*?)\s*(TL\s*\/\s*kWh|TL\/kWh)/i);
   let unitPrice = unit ? normalizeDecimal(num(unit[1])) : "";
 
-  console.group("📝 OCR DEBUG (Tesseract)");
-  console.log("RAW_TEXT:", fullText);
-  console.log("PARSED:", { customerName, address, installationNumber, consumption, unitPrice, companyName });
-  console.groupEnd();
-
   return { customerName, address, installationNumber, consumption, unitPrice, companyName };
+}
+
+// ====== SIMPLE RUNTIME TESTS (dev only) ======
+if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
+  const sample = `\
+XYZ ELEKTRİK A.Ş.\n\
+SAYIN MEHMET YILMAZ\n\
+ADRES: KAVAKLI MAH. ÇINAR CAD. NO:12 BEYLİKDÜZÜ İSTANBUL\n\
+TESİSAT NO: 12345678\n\
+TÜKETİM: 245 kWh\n\
+BİRİM FİYAT: 3,245 TL/kWh`;
+  const parsed = parseInvoiceText(sample);
+  console.assert(parsed.companyName.includes("ELEKTR"), "companyName parse failed", parsed);
+  console.assert(parsed.customerName.toUpperCase().includes("MEHMET"), "customerName parse failed", parsed);
+  console.assert(parsed.installationNumber === "12345678", "installationNumber parse failed", parsed);
+  console.assert(parsed.consumption === "245", "consumption parse failed", parsed);
 }
 
 // ====== MAIN COMPONENT ======
@@ -125,18 +146,14 @@ export default function InvoiceOcrPage() {
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-    };
-  }, [stream]);
+  useEffect(() => () => { if (stream) stream.getTracks().forEach((t) => t.stop()); }, [stream]);
 
   async function startCamera() {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       setStream(s);
       if (videoRef.current) {
-        videoRef.current.srcObject = s as any;
+        (videoRef.current as any).srcObject = s;
         await videoRef.current.play();
       }
       setCameraOn(true);
@@ -200,7 +217,12 @@ export default function InvoiceOcrPage() {
   function FieldLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
     return (
       <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-        <span className="inline-flex items-center justify-center w-5 h-5 rounded" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>{icon}</span>
+        <span
+          className="inline-flex items-center justify-center w-5 h-5 rounded"
+          style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
+        >
+          {icon}
+        </span>
         {children}
       </label>
     );
@@ -258,7 +280,9 @@ export default function InvoiceOcrPage() {
                   <div className="p-2 flex items-center justify-between bg-white border-b" style={{ borderColor: BRAND_YELLOW }}>
                     <span className="text-sm font-medium flex items-center gap-2"><Camera className="w-4 h-4" /> Kamera Önizleme</span>
                     {cameraOn && (
-                      <button onClick={capturePhoto} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>Fotoğraf Çek</button>
+                      <button onClick={capturePhoto} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>
+                        Fotoğraf Çek
+                      </button>
                     )}
                   </div>
                   <div className="aspect-video relative">
@@ -275,7 +299,9 @@ export default function InvoiceOcrPage() {
                   <div className="p-2 flex items-center justify-between bg-white border-b" style={{ borderColor: BRAND_YELLOW }}>
                     <span className="text-sm font-medium flex items-center gap-2"><FileText className="w-4 h-4" /> Seçilen Görsel</span>
                     {imagePreview && (
-                      <button onClick={() => ocrFromDataUrl(imagePreview)} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>Tekrar Tara</button>
+                      <button onClick={() => ocrFromDataUrl(imagePreview)} className="text-xs px-3 py-1 rounded-lg" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>
+                        Tekrar Tara
+                      </button>
                     )}
                   </div>
                   <div className="aspect-video bg-white flex items-center justify-center">
@@ -322,4 +348,68 @@ export default function InvoiceOcrPage() {
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel>
                   <input
                     value={data.customerName}
-                    onChange={(e) => setData({ ...data, customerName: e.target.value
+                    onChange={(e) => setData({ ...data, customerName: e.target.value })}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                    placeholder="Ad Soyad"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
+                  <textarea
+                    value={data.address}
+                    onChange={(e) => setData({ ...data, address: e.target.value })}
+                    rows={3}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                    placeholder="Sokak, Cadde, No, İlçe, İl"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel>
+                    <input
+                      value={data.installationNumber}
+                      onChange={(e) => setData({ ...data, installationNumber: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="########"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel>
+                    <input
+                      value={data.consumption}
+                      onChange={(e) => setData({ ...data, consumption: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="Örn. 245"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat (TL/kWh)</FieldLabel>
+                    <input
+                      value={data.unitPrice}
+                      onChange={(e) => setData({ ...data, unitPrice: e.target.value })}
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none"
+                      placeholder="Örn. 3,245"
+                    />
+                  </div>
+                </div>
+
+                {rawText && (
+                  <div className="pt-2">
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm text-gray-700 select-none">Ham OCR Metni (aç/kapa)</summary>
+                      <pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre>
+                    </details>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
