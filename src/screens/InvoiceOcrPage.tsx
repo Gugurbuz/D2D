@@ -354,6 +354,23 @@ const [summarizing, setSummarizing] = useState(false);
                   <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.unitPrice} onChange={(e) => setData({ ...data, unitPrice: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 3,245" /></div>
                 </div>
                 {rawText && <div className="pt-2"><details><summary className="cursor-pointer text-sm text-gray-600 select-none">Ham OCR Metnini Göster</summary><pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre></details></div>}
+                <div className="pt-4 border-t">
+  <button
+    onClick={handleGenerateSummary}
+    disabled={summarizing || loading}
+    className="px-4 py-2 mt-2 rounded-lg bg-yellow-400 text-blue-900 font-semibold hover:bg-yellow-300 transition disabled:opacity-50"
+  >
+    {summarizing ? "GPT özet oluşturuluyor..." : "GPT ile Fatura Özeti Oluştur"}
+  </button>
+
+  {summary && (
+    <div className="mt-4 p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
+      <strong>GPT Fatura Özeti:</strong><br />
+      {summary}
+    </div>
+  )}
+</div>
+
               </div>
             </div>
           </div>
