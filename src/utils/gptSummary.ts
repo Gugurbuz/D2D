@@ -1,20 +1,20 @@
 // src/utils/gptSummary.ts
 
-export async function generateInvoiceSummary(data) {
-  // DOĞRU URL AŞAĞIDAKİ GİBİ OLMALI:
+export async function processInvoiceWithAI(rawText: string) {
+  // Fonksiyon artık yapılandırılmış veri değil, ham metin gönderiyor.
   const response = await fetch("https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ rawText }), // Sadece ham metni gönderiyoruz
   });
 
   const result = await response.json();
 
-  // Eğer istek başarısız olursa (örn: 500 sunucu hatası), hatayı yakala
   if (!response.ok) {
-    // result.error, Supabase fonksiyonundaki catch bloğundan gelir.
-    throw new Error(result.error || "Fonksiyondan bilinmeyen bir hata döndü.");
+    throw new Error(result.error || "Yapay zeka işleme sırasında bir hata oluştu.");
   }
 
-  return result.summary || "GPT özeti alınamadı.";
+  // Backend'den gelen { invoiceData, summary } objesinin tamamını döndürüyoruz.
+  return result;
 }
+
