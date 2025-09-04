@@ -114,9 +114,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY!,
-    libraries: ["geometry", "places"],
-  });
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+  libraries: ["geometry", "places"],
+});
 
   const directionsService = useRef<google.maps.DirectionsService | null>(null);
   const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
