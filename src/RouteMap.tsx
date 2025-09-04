@@ -48,10 +48,6 @@ const fmtKm = (km: number | null) => km == null ? "—" : new Intl.NumberFormat(
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter: LatLngLiteral = { lat: defaultSalesRep.lat, lng: defaultSalesRep.lng };
 
-// ==================================================================
-// ===== Bileşenler Ana Bileşenin Dışına Taşındı (Performans için) =====
-// ==================================================================
-
 const CustomerMarker: React.FC<{
   customer: Customer;
   index: number;
