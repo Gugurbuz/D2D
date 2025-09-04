@@ -1,7 +1,7 @@
 // src/screens/RouteMapScreen.tsx
 
 import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
-import { useJsApiLoader, GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
+import { useJsApiLoader, GoogleMap, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
 import {
   Maximize2,
   Minimize2,
@@ -11,7 +11,7 @@ import {
   Navigation,
 } from "lucide-react";
 
-/* ==== Tipler ve Varsayılan Veriler (Değişiklik yok) ==== */
+/* ==== Tipler ve Varsayılan Veriler ==== */
 export type Customer = { id: string; name: string; address: string; district: string; plannedTime: string; priority: "Yüksek" | "Orta" | "Düşük"; tariff: string; meterNumber: string; consumption: string; offerHistory: string[]; status: "Bekliyor" | "Yolda" | "Tamamlandı"; estimatedDuration: string; distance: string; lat: number; lng: number; phone: string; };
 export type SalesRep = { name: string; lat: number; lng: number; };
 interface LatLngLiteral { lat: number; lng: number; }
@@ -47,6 +47,10 @@ const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`
 const fmtKm = (km: number | null) => km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 const containerStyle = { width: "100%", height: "100%" };
 const defaultCenter: LatLngLiteral = { lat: defaultSalesRep.lat, lng: defaultSalesRep.lng };
+
+// ==================================================================
+// ===== Bileşenler Ana Bileşenin Dışına Taşındı (Performans için) =====
+// ==================================================================
 
 const CustomerMarker: React.FC<{
   customer: Customer;
