@@ -98,10 +98,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   };
  
   // Google Maps API'sini yükle, **doğru çevre değişkeni kullanımıyla**.
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
-    libraries: ["geometry", "places"],
-  });
+const { isLoaded, loadError } = useJsApiLoader({
+  googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+  libraries: ["geometry", "places"],
+});
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
