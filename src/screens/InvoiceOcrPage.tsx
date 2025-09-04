@@ -11,8 +11,8 @@ import {
   Loader2,
   ShieldAlert,
   Zap,
-  ChevronRight,
-  CheckCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 /* ---------- process polyfill (Vite 5) ---------- */
@@ -26,28 +26,35 @@ const BRAND_NAVY = "#002D72";
 
 /* ---------- Veri Tipi ---------- */
 interface InvoiceData {
+  invoiceNo?: string;
+  invoiceDate?: string;
+  period?: string;
+  dueDate?: string;
   companyName?: string;
   customer?: { name?: string; address?: string };
-  supplyDetails?: { installationNumber?: string };
+  supplyDetails?: { installationNumber?: string; accountNo?: string };
   meterReadings?: { consumption?: { total_kWh?: number | string } };
-  charges?: { energyLow?: { unitPrice?: number | string } };
-  /* --- Rakip şirkete ait ek alan örnekleri --- */
-  tariffPlan?: string;
-  contractEnd?: string;
+  charges?: { energyLow?: { unitPrice?: number | string }; total?: string };
+  taxes?: string;
+  paymentMethod?: string;
 }
 
-/* ---------- Başlangıç ---------- */
+/* ---------- Boş Nesne ---------- */
 const initialData: InvoiceData = {
+  invoiceNo: "",
+  invoiceDate: "",
+  period: "",
+  dueDate: "",
   companyName: "",
   customer: { name: "", address: "" },
-  supplyDetails: { installationNumber: "" },
+  supplyDetails: { installationNumber: "", accountNo: "" },
   meterReadings: { consumption: { total_kWh: "" } },
-  charges: { energyLow: { unitPrice: "" } },
-  tariffPlan: "",
-  contractEnd: "",
+  charges: { energyLow: { unitPrice: "" }, total: "" },
+  taxes: "",
+  paymentMethod: "",
 };
 
-/* ---------- Supabase fonksiyonu ---------- */
+/* ---------- Supabase Fonksiyonu ---------- */
 async function generateInvoiceSummary(rawText: string) {
   const res = await fetch(
     "https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary",
@@ -79,18 +86,19 @@ const FieldLabel: React.FC<{ icon: React.ReactNode; text: string }> = ({
 );
 
 export default function InvoiceOcrPage() {
-  /* UI state */
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  /* State */
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  /* Data state */
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(initialData);
   const [summary, setSummary] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
 
-  /* Camera */
+  /* JSON tablo ön-izleme */
+  const [tableOpen, setTableOpen] = useState(false);
+
+  /* Kamera */
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -106,7 +114,7 @@ export default function InvoiceOcrPage() {
     [stream]
   );
 
-  /* ---------- OCR & AI işlemi ---------- */
+  /* ---------- OCR + AI ---------- */
   async function processInvoice(file: File) {
     if (!apiKey) {
       setError("Google API anahtarı bulunamadı.");
@@ -140,12 +148,11 @@ export default function InvoiceOcrPage() {
         (await visionRes.json()).responses[0]?.fullTextAnnotation?.text || "";
       setRawText(detected);
 
-      /* AI Analiz */
+      /* AI */
       setLoadingMessage("Fatura analiz ediliyor…");
       const ai = await generateInvoiceSummary(detected);
       setInvoiceData(ai.invoiceData);
       setSummary(ai.summary);
-      setStep(2); // otomatik olarak 2. adıma geç
     } catch (e: any) {
       console.error(e);
       setError(e.message || "İşlem hatası");
@@ -198,271 +205,188 @@ export default function InvoiceOcrPage() {
     stopCamera();
   }
 
-  /* ---------- Render yardımcıları ---------- */
-  const renderTable = () => (
-    <table className="min-w-full text-xs border">
-      <tbody>
-        {Object.entries(invoiceData).map(([key, val]) => {
-          if (typeof val === "object" && val !== null) return null; // basit örnek
-          return (
-            <tr key={key} className="border-b">
-              <td className="px-2 py-1 font-medium">{key}</td>
-              <td className="px-2 py-1">{String(val || "-")}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
+  /* ---------- Tablo Oluştur ---------- */
+  const rows: { label: string; value: string }[] = [
+    { label: "Fatura No", value: invoiceData.invoiceNo ?? "" },
+    { label: "Fatura Tarihi", value: invoiceData.invoiceDate ?? "" },
+    { label: "Fatura Dönemi", value: invoiceData.period ?? "" },
+    { label: "Son Ödeme Tarihi", value: invoiceData.dueDate ?? "" },
+    {
+      label: "Abone / Adres",
+      value: `${invoiceData.customer?.name ?? ""} — ${invoiceData.customer?.address ?? ""}`,
+    },
+    {
+      label: "Söz. Hesap No",
+      value: invoiceData.supplyDetails?.accountNo ?? "",
+    },
+    {
+      label: "Tesisat No",
+      value: invoiceData.supplyDetails?.installationNumber ?? "",
+    },
+    {
+      label: "Toplam Tüketim",
+      value: (invoiceData.meterReadings?.consumption?.total_kWh ?? "") + " kWh",
+    },
+    {
+      label: "Fatura Tutarı",
+      value: invoiceData.charges?.total ?? "",
+    },
+    {
+      label: "Enerji Bedeli",
+      value: invoiceData.charges?.energyLow?.unitPrice
+        ? `${invoiceData.charges.energyLow.unitPrice} TL/kWh`
+        : "",
+    },
+    { label: "Vergi & Fonlar", value: invoiceData.taxes ?? "" },
+    { label: "Ödeme Yöntemi", value: invoiceData.paymentMethod ?? "" },
+  ];
 
   /* ---------- UI ---------- */
   return (
-    <div className="w-screen h-screen bg-[#f6f7fb] flex flex-col">
+    <div className="w-screen min-h-screen bg-[#f6f7fb]">
       <header className="border-b bg-white border-gray-200 px-4 py-3 flex items-center gap-3">
         <Zap size={24} className="text-yellow-500" />
         <h1 className="text-xl font-semibold">Fatura Tarama</h1>
       </header>
 
-      {/* -------- Adım İçeriği -------- */}
-      <main className="flex-1 overflow-auto">
-        {/* ---------- ADIM 1: Tara ---------- */}
-        {step === 1 && (
-          <div className="p-4 flex flex-col gap-4 lg:flex-row">
-            {/* Sol panel – Tarayıcı */}
-            <div className="flex-1 bg-white rounded-2xl shadow border p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Wand2 />
-                <h2 className="font-semibold">1. Faturanızı Yükleyin / Çekin</h2>
-              </div>
-
-              <div className="flex gap-3 flex-wrap">
-                <button
-                  disabled={loading}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <Upload className="w-4 h-4" />
-                  Cihazdan Yükle
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={onFileChange}
-                  />
-                </button>
-
-                <button
-                  disabled={loading}
-                  onClick={cameraOn ? stopCamera : startCamera}
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  <Camera className="w-4 h-4" />
-                  {cameraOn ? "Kamerayı Kapat" : "Kamerayı Aç"}
-                </button>
-
-                {loading && (
-                  <span className="inline-flex items-center gap-2 text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {loadingMessage}
-                  </span>
-                )}
-              </div>
-
-              {/* Kamera alanı */}
-              {cameraOn && (
-                <div className="mt-4 bg-gray-100 rounded-xl overflow-hidden border">
-                  <div className="flex justify-between items-center px-2 py-1 bg-white border-b text-sm">
-                    <span>Kamera</span>
-                    <button
-                      onClick={capturePhoto}
-                      className="text-xs px-3 py-1 rounded font-semibold"
-                      style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
-                    >
-                      Fotoğraf Çek
-                    </button>
-                  </div>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className="w-full aspect-video object-cover"
-                  />
-                  <canvas ref={canvasRef} className="hidden" />
-                </div>
-              )}
-
-              {/* Özet alanı */}
-              {summary && (
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold mb-1">
-                    Akıllı Fatura Özeti
-                  </h3>
-                  <div className="bg-gray-50 border rounded-lg p-3 text-sm whitespace-pre-wrap">
-                    {summary}
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="mt-4 p-3 rounded-xl border bg-red-50 border-red-200 text-sm flex gap-2">
-                  <ShieldAlert className="w-4 h-4 text-red-600" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Devam Et butonu */}
-              {summary && (
-                <button
-                  onClick={() => setStep(2)}
-                  className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-                  style={{ background: BRAND_NAVY }}
-                >
-                  Devam Et <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Sağ panel – JSON (isteğe bağlı) */}
-            <div className="w-full lg:w-80 bg-white rounded-2xl shadow border p-4 h-fit">
-              <details open className="text-sm">
-                <summary className="cursor-pointer font-semibold">
-                  JSON Ayrıntıları
-                </summary>
-                <div className="mt-2 overflow-auto max-h-96">{renderTable()}</div>
-              </details>
-            </div>
+      <main className="mx-auto max-w-6xl p-4 md:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* -------- Sol Panel -------- */}
+        <div className="bg-white rounded-2xl shadow border p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Wand2 />
+            <h2 className="text-lg font-semibold">Fatura Yükle / Çek</h2>
           </div>
-        )}
 
-        {/* ---------- ADIM 2: Bilgileri kontrol et ---------- */}
-        {step === 2 && (
-          <div className="p-4 flex flex-col gap-4 lg:flex-row">
-            <div className="flex-1 bg-white rounded-2xl shadow border p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Home />
-                <h2 className="font-semibold">2. Müşteri Bilgilerini Kontrol Et</h2>
-              </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              disabled={loading}
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              Cihazdan Yükle
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={onFileChange}
+              />
+            </button>
 
-              {/* Basit gösterim – düzenlenebilir alan istenmiyorsa input yerine p kullan */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div>
-                  <FieldLabel icon={<Building2 />} text="Rakip Şirket" />
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={invoiceData.companyName ?? ""}
-                    onChange={(e) =>
-                      setInvoiceData({ ...invoiceData, companyName: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <FieldLabel icon={<Hash />} text="Tesisat No" />
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={invoiceData.supplyDetails?.installationNumber ?? ""}
-                    onChange={(e) =>
-                      setInvoiceData({
-                        ...invoiceData,
-                        supplyDetails: {
-                          ...invoiceData.supplyDetails,
-                          installationNumber: e.target.value,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <FieldLabel icon={<Home />} text="Müşteri Adı Soyadı" />
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={invoiceData.customer?.name ?? ""}
-                    onChange={(e) =>
-                      setInvoiceData({
-                        ...invoiceData,
-                        customer: { ...invoiceData.customer, name: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <FieldLabel icon={<Gauge />} text="Tüketim (kWh)" />
-                  <input
-                    className="w-full border rounded px-2 py-1"
-                    value={invoiceData.meterReadings?.consumption?.total_kWh ?? ""}
-                    onChange={(e) =>
-                      setInvoiceData({
-                        ...invoiceData,
-                        meterReadings: {
-                          consumption: {
-                            total_kWh: e.target.value,
-                          },
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <FieldLabel icon={<Home />} text="Adres" />
-                  <textarea
-                    rows={2}
-                    className="w-full border rounded px-2 py-1"
-                    value={invoiceData.customer?.address ?? ""}
-                    onChange={(e) =>
-                      setInvoiceData({
-                        ...invoiceData,
-                        customer: { ...invoiceData.customer, address: e.target.value },
-                      })
-                    }
-                  />
-                </div>
-              </div>
+            <button
+              disabled={loading}
+              onClick={cameraOn ? stopCamera : startCamera}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              <Camera className="w-4 h-4" />
+              {cameraOn ? "Kamerayı Kapat" : "Kamerayı Aç"}
+            </button>
 
-              {/* Devam Et */}
-              <button
-                onClick={() => setStep(3)}
-                className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-                style={{ background: BRAND_NAVY }}
-              >
-                Devam Et <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            {loading && (
+              <span className="inline-flex items-center gap-2 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {loadingMessage}
+              </span>
+            )}
           </div>
-        )}
 
-        {/* ---------- ADIM 3: Ziyareti Tamamla ---------- */}
-        {step === 3 && (
-          <div className="p-4 flex justify-center">
-            <div className="w-full max-w-2xl bg-white rounded-2xl shadow border p-6">
-              <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
-                <CheckCircle className="text-green-600" /> Ziyareti Tamamla
-              </h2>
-
-              {/* Özet */}
-              <p className="text-sm mb-4">{summary}</p>
-
-              {/* Tüm veri tablosu */}
-              <div className="mb-4 border rounded overflow-auto max-h-96">
-                {renderTable()}
+          {/* Kamera */}
+          {cameraOn && (
+            <div className="mt-4 bg-gray-100 rounded-xl overflow-hidden border">
+              <div className="flex justify-between items-center px-2 py-1 bg-white border-b text-sm">
+                <span>Kamera</span>
+                <button
+                  onClick={capturePhoto}
+                  className="text-xs px-3 py-1 rounded font-semibold"
+                  style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
+                >
+                  Fotoğraf Çek
+                </button>
               </div>
-
-              {/* İzin kutusu (örnek) */}
-              <label className="flex items-center gap-2 text-sm mb-6">
-                <input type="checkbox" className="accent-green-600" /> Müşteriden
-                verileri kaydetme izni alındı
-              </label>
-
-              <button
-                onClick={() => alert("Ziyaret kaydedildi!")}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white"
-                style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
-              >
-                Ziyareti Kaydet <CheckCircle className="w-4 h-4" />
-              </button>
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full aspect-video object-cover"
+              />
+              <canvas ref={canvasRef} className="hidden" />
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Özet */}
+          {summary && (
+            <div className="mt-4">
+              <h3 className="text-sm font-semibold mb-1">Akıllı Fatura Özeti</h3>
+              <div className="bg-gray-50 border rounded-lg p-3 text-sm whitespace-pre-wrap">
+                {summary}
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 p-3 rounded-xl border bg-red-50 border-red-200 text-sm flex gap-2">
+              <ShieldAlert className="w-4 h-4 text-red-600" />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+
+        {/* -------- Sağ Panel -------- */}
+        <div className="bg-white rounded-2xl shadow border p-6 h-fit">
+          <button
+            className="flex items-center gap-1 text-sm font-semibold mb-3 select-none"
+            onClick={() => setTableOpen(!tableOpen)}
+          >
+            JSON Tablo Özeti
+            {tableOpen ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Küçük özet (ilk 4 satır) */}
+          {!tableOpen && (
+            <table className="text-xs border w-full">
+              <tbody>
+                {rows.slice(0, 4).map((r) => (
+                  <tr key={r.label} className="border-b">
+                    <td className="font-medium px-2 py-1">{r.label}</td>
+                    <td className="px-2 py-1">{r.value || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* Tam tablo */}
+          {tableOpen && (
+            <div className="max-h-[70vh] overflow-auto">
+              <table className="text-xs border w-full">
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.label} className="border-b">
+                      <td className="font-medium px-2 py-1">{r.label}</td>
+                      <td className="px-2 py-1">{r.value || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Ham OCR metni detaylar içinde bırakıyoruz */}
+          {rawText && (
+            <details className="mt-4 text-xs">
+              <summary className="cursor-pointer">Ham OCR Metni</summary>
+              <pre className="mt-2 bg-gray-50 border p-2 max-h-48 overflow-auto whitespace-pre-wrap">
+                {rawText}
+              </pre>
+            </details>
+          )}
+        </div>
       </main>
     </div>
   );
