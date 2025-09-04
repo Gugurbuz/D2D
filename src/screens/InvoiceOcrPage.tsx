@@ -1,29 +1,47 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
-import { generateInvoiceSummary } from "../utils/gptSummary";
-
-
 
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
 
-
-// ====== TÜRLER ======
+// ====== TÜRLER (Yapay Zekadan Gelen Detaylı Veri Yapısı) ======
 interface InvoiceData {
-  customerName: string;
-  address: string;
-  installationNumber: string;
-  consumption: string; // kWh
-  unitPrice: string;   // TL/kWh
-  companyName: string; // Rakip şirket
+  companyName?: string;
+  customer?: { name?: string; address?: string };
+  supplyDetails?: { installationNumber?: string };
+  meterReadings?: { consumption?: { total_kWh?: number | string } };
+  charges?: { energyLow?: { unitPrice?: number | string } };
+  // Diğer olası alanlar buraya eklenebilir.
 }
 
 // ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
 const initialData: InvoiceData = {
-  customerName: "", address: "", installationNumber: "",
-  consumption: "", unitPrice: "", companyName: "",
+  companyName: "",
+  customer: { name: "", address: "" },
+  supplyDetails: { installationNumber: "" },
+  meterReadings: { consumption: { total_kWh: "" } },
+  charges: { energyLow: { unitPrice: "" } },
 };
+
+// YENİ AKIŞ: Bu fonksiyon artık doğrudan bu dosyanın içinde.
+// Bu, import hatasını çözer ve mantığı bir arada tutar.
+async function generateInvoiceSummary(rawText: string) {
+  const response = await fetch("https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rawText }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error || "Yapay zeka işleme sırasında bir hata oluştu.");
+  }
+
+  return result;
+}
+
 
 const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -31,138 +49,6 @@ const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React
       {children}
     </label>
 );
-
-function normalizeDecimal(s: string): string {
-  if (!s) return "";
-  return s.replace(/\s/g, "").replace(",", ".");
-}
-
-function pickCompanyName(lines: string[], providerHint: 'ck' | 'gediz' | 'aydem' | 'none' = 'none'): string {
-    const candidates = lines.slice(0, 15).filter(l => l.length > 5 && !/Fatura|Arşiv|Hazine|Maliye/i.test(l));
-
-    if (providerHint === 'aydem') {
-        const match = candidates.find(c => /Aydem Elektrik/i.test(c));
-        if (match) return "Aydem Elektrik";
-    }
-    if (providerHint === 'ck') {
-        const match = candidates.find(c => /CK AKDENİZ/i.test(c));
-        if (match) return "CK Akdeniz Elektrik";
-    }
-    if (providerHint === 'gediz') {
-        const match = candidates.find(c => /Gediz Elektrik/i.test(c));
-        if (match) return "Gediz Elektrik";
-    }
-    
-    const specificMatch = candidates.find(c => c.toLowerCase().includes('elektrik') || c.toLowerCase().includes('enerji'));
-    if (specificMatch) {
-        return specificMatch.split(/Perakende|Dağıtım/i)[0].trim();
-    }
-    return candidates.sort((a, b) => b.length - a.length)[0] || "";
-}
-
-
-// --- UZMAN PARSER'LAR ---
-
-function aydemParser(text: string, lines: string[]): Partial<InvoiceData> | null {
-    if (!text.includes("Aydem Elektrik")) return null;
-    console.log("Aydem Parser denendi.");
-    const data: Partial<InvoiceData> = {};
-    data.companyName = pickCompanyName(lines, 'aydem');
-
-    const musteriBilgileriIndex = lines.findIndex(line => /Müşteri Bilgileri/i.test(line));
-    if (musteriBilgileriIndex > -1) {
-        const nameLineIndex = lines.findIndex((line, index) => index > musteriBilgileriIndex && line.length > 0);
-        if (nameLineIndex > -1) {
-            data.customerName = lines[nameLineIndex];
-            const addressLineIndex = lines.findIndex((line, index) => index > nameLineIndex && line.length > 0);
-            if (addressLineIndex > -1) {
-                data.address = lines[addressLineIndex];
-            }
-        }
-    }
-    
-    const instMatch = text.match(/Tesisat No\/Tekil Kod\s*\n\s*(\d+)/);
-    data.installationNumber = instMatch ? instMatch[1].trim() : "";
-
-    const consMatch = text.match(/Enerji Bedeli\s+([\d.,]+)/);
-    data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
-
-    const priceLine = lines.find(line => /Gündüz|Puant|Gece/.test(line) && line.split(/\s+/).length >= 4);
-    if (priceLine) {
-        const numbers = priceLine.match(/[\d.,]+/g);
-        if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]);
-    }
-
-    if (data.customerName && data.installationNumber) return data;
-    return null;
-}
-
-function ckAkdenizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
-    if (!text.includes("CK AKDENİZ")) return null;
-    console.log("CK Akdeniz Parser denendi.");
-    const data: Partial<InvoiceData> = {};
-    data.companyName = pickCompanyName(lines, 'ck');
-    const nameMatch = text.match(/Ad Soyad\s*:(.+)/);
-    data.customerName = nameMatch ? nameMatch[1].replace(/-/g, '').trim() : "";
-    const addressMatch = text.match(/Adres:(.+)/);
-    data.address = addressMatch ? addressMatch[1].trim() : "";
-    const instMatch = text.match(/Tekil Kod\/Tesisat No\s+(\d+)/);
-    data.installationNumber = instMatch ? instMatch[1].trim() : "";
-    const consMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+([\d.,]+)/);
-    const consMatch2 = text.match(/Enerji Bedeli-Yüksek Kademe\s+([\d.,]+)/);
-    if (consMatch && consMatch[1] && consMatch2 && consMatch2[1]) {
-        const total = parseFloat(normalizeDecimal(consMatch[1])) + parseFloat(normalizeDecimal(consMatch2[1]));
-        data.consumption = total.toFixed(3);
-    }
-    const priceMatch = text.match(/Enerji Bedeli-Düşük Kademe\s+[\d.,]+\s+([\d.,]+)/);
-    data.unitPrice = priceMatch ? normalizeDecimal(priceMatch[1]) : "";
-    if (data.customerName && data.installationNumber) return data;
-    return null;
-}
-
-function gedizParser(text: string, lines: string[]): Partial<InvoiceData> | null {
-    if (!text.includes("Gediz Elektrik")) return null;
-    console.log("Gediz Parser denendi.");
-    const data: Partial<InvoiceData> = {};
-    data.companyName = pickCompanyName(lines, 'gediz');
-    const instMatch = text.match(/Tekil Kod\/Tesisat No\s*\n\s*(\d+)/);
-    data.installationNumber = instMatch ? instMatch[1].trim() : "";
-    const consMatch = text.match(/Enerji Tük\. Bedeli \(E\.T\.B\.\)\s*:\s*([\d.,]+)/);
-    data.consumption = consMatch ? normalizeDecimal(consMatch[1]) : "";
-    const priceLine = lines.find(line => /E\.T\.B\.\s+(Gündüz|Puant|Gece)/.test(line));
-    if (priceLine) { const numbers = priceLine.match(/[\d.,]+/g); if (numbers && numbers.length >= 2) data.unitPrice = normalizeDecimal(numbers[1]); }
-    const startIndex = lines.findIndex(line => /Tüketici Bilgisi/i.test(line));
-    const endIndex = lines.findIndex(line => /Sözleşme Hesap No/i.test(line));
-    if (startIndex > -1 && endIndex > -1) {
-        const blockLines = lines.slice(startIndex + 1, endIndex).filter(Boolean); const labels: string[] = []; const values: string[] = [];
-        blockLines.forEach(line => { if (line.trim().startsWith(':')) { values.push(line.replace(/^[:\s,]+/, '').trim()); } else if (line.trim().length > 1) { labels.push(line.trim()); } });
-        const infoMap = new Map<string, string>();
-        labels.forEach((label, index) => { if (values[index]) { infoMap.set(label.toLowerCase(), values[index]); } });
-        data.customerName = infoMap.get('ad soyad') || ""; data.address = infoMap.get('adres') || "";
-    }
-    if (data.customerName && data.installationNumber) return data;
-    return null;
-}
-
-// --- YÖNETİCİ PARSE FONKSİYONU ---
-export function parseInvoiceText(fullText: string): InvoiceData {
-    if (!fullText) return initialData;
-    const text = fullText.replace(/\r/g, "");
-    const lines = text.split("\n").map((l) => l.trim());
-    
-    const parsers = [aydemParser, ckAkdenizParser, gedizParser];
-
-    for (const parser of parsers) {
-        const data = parser(text, lines);
-        if (data && data.customerName && data.installationNumber) {
-            console.log(`Başarılı Parser: ${parser.name}`);
-            return { ...initialData, ...data };
-        }
-    }
-
-    console.warn("Uygun bir uzman parser bulunamadı.");
-    return { ...initialData, companyName: pickCompanyName(lines) };
-}
 
 // ====== ANA KOMPONENT ======
 export default function InvoiceOcrPage() {
@@ -174,15 +60,13 @@ export default function InvoiceOcrPage() {
   const [error, setError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-
+  const [summary, setSummary] = useState<string | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [summary, setSummary] = useState<string | null>(null);
-const [summarizing, setSummarizing] = useState(false);
-
-
+  // import.meta.env, Vite projelerinde standarttır. Uyarıyı görmezden gelebiliriz.
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
   useEffect(() => () => { if (stream) stream.getTracks().forEach((t) => t.stop()); }, [stream]);
@@ -196,6 +80,44 @@ const [summarizing, setSummarizing] = useState(false);
     });
   };
 
+  async function processTextWithAI(text: string) {
+    if (!text || text.trim() === "") {
+        setError("Faturadan metin okunamadı.");
+        return;
+    }
+    setLoadingMessage("Yapay zeka faturayı analiz ediyor...");
+    setError(null);
+    setSummary(null);
+
+    try {
+        const result = await generateInvoiceSummary(text);
+        setData({
+            companyName: result.invoiceData?.companyName ?? "",
+            customer: {
+                name: result.invoiceData?.customer?.name ?? "",
+                address: result.invoiceData?.customer?.address ?? ""
+            },
+            supplyDetails: {
+                installationNumber: result.invoiceData?.supplyDetails?.installationNumber ?? ""
+            },
+            meterReadings: {
+                consumption: {
+                    total_kWh: result.invoiceData?.meterReadings?.consumption?.total_kWh ?? ""
+                }
+            },
+            charges: {
+                energyLow: {
+                    unitPrice: result.invoiceData?.charges?.energyLow?.unitPrice ?? ""
+                }
+            }
+        });
+        setSummary(result.summary);
+    } catch (err: any) {
+        console.error("Yapay zeka işleme hatası:", err);
+        setError(err.message || "Yapay zeka özeti oluşturulamadı.");
+    }
+  }
+
   async function runCloudVisionOcr(file: File) {
     if (!apiKey) {
       setError("Google Cloud API anahtarı (.env dosyasında VITE_GOOGLE_CLOUD_API_KEY) bulunamadı.");
@@ -205,6 +127,7 @@ const [summarizing, setSummarizing] = useState(false);
     setLoading(true);
     setRawText("");
     setData(initialData);
+    setSummary(null);
     setImagePreview(URL.createObjectURL(file));
 
     try {
@@ -213,16 +136,10 @@ const [summarizing, setSummarizing] = useState(false);
       const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
 
       const requestBody = {
-        requests: [
-          {
-            image: { content: cleanBase64 },
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-          },
-        ],
+        requests: [ { image: { content: cleanBase64 }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] } ],
       };
 
       const apiEndpoint = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
-
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,17 +152,16 @@ const [summarizing, setSummarizing] = useState(false);
       }
 
       const result = await response.json();
-      const detectedText = result.responses[0]?.fullTextAnnotation?.text || "Metin bulunamadı.";
-
+      const detectedText = result.responses[0]?.fullTextAnnotation?.text || "";
       setRawText(detectedText);
-      const parsed = parseInvoiceText(detectedText);
-      setData(parsed);
+      await processTextWithAI(detectedText);
 
     } catch (err: any) {
       console.error("İşlem sırasında hata:", err);
       setError(err.message || "Bilinmeyen bir hata oluştu.");
     } finally {
       setLoading(false);
+      setLoadingMessage("");
     }
   }
 
@@ -269,19 +185,6 @@ const [summarizing, setSummarizing] = useState(false);
     setStream(null);
     setCameraOn(false);
   }
-  async function handleGenerateSummary() {
-  try {
-    setSummarizing(true);
-    const result = await generateInvoiceSummary(data);
-    setSummary(result);
-  } catch (error) {
-    console.error("GPT özeti oluşturulamadı:", error);
-    setSummary("Oluşturulamadı. Lütfen daha sonra tekrar deneyin.");
-  } finally {
-    setSummarizing(false);
-  }
-}
-
 
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
@@ -314,7 +217,7 @@ const [summarizing, setSummarizing] = useState(false);
             <div className="p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2"><Wand2 /><h2 className="text-lg font-semibold">1. Fatura Yükle</h2></div>
-                <span className="text-xs font-semibold text-blue-600">Google Cloud Vision API</span>
+                <span className="text-xs font-semibold text-blue-600">Google Vision & OpenAI API</span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button disabled={loading} onClick={() => fileInputRef.current?.click()} className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 cursor-pointer">
@@ -344,34 +247,25 @@ const [summarizing, setSummarizing] = useState(false);
           </div>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
-              <div className="flex items-center gap-2 mb-4"><Wand2 /><h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu</h2></div>
+              <div className="flex items-center gap-2 mb-4"><Wand2 /><h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu (Yapay Zeka Tarafından Dolduruldu)</h2></div>
               <div className="space-y-4">
-                <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName} onChange={(e) => setData({ ...data, companyName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. ABC Enerji A.Ş." /></div>
-                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customerName} onChange={(e) => setData({ ...data, customerName: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Ad Soyad" /></div>
-                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel><textarea value={data.address} onChange={(e) => setData({ ...data, address: e.target.value })} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Sokak, Cadde, No, İlçe, İl" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName ?? ''} onChange={e => setData(d => ({...d, companyName: e.target.value}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customer?.name ?? ''} onChange={e => setData(d => ({...d, customer: {...d.customer, name: e.target.value}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel><textarea value={data.customer?.address ?? ''} onChange={e => setData(d => ({...d, customer: {...d.customer, address: e.target.value}}))} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-1"><FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel><input value={data.installationNumber} onChange={(e) => setData({ ...data, installationNumber: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="########" /></div>
-                  <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.consumption} onChange={(e) => setData({ ...data, consumption: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 245" /></div>
-                  <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.unitPrice} onChange={(e) => setData({ ...data, unitPrice: e.target.value })} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="Örn. 3,245" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel><input value={data.supplyDetails?.installationNumber ?? ''} onChange={e => setData(d => ({...d, supplyDetails: {...d.supplyDetails, installationNumber: e.target.value}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.meterReadings?.consumption?.total_kWh ?? ''} onChange={e => setData(d => ({...d, meterReadings: {...d.meterReadings, consumption: {...d.meterReadings?.consumption, total_kWh: e.target.value}}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.charges?.energyLow?.unitPrice ?? ''} onChange={e => setData(d => ({...d, charges: {...d.charges, energyLow: {...d.charges?.energyLow, unitPrice: e.target.value}}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
                 </div>
-                {rawText && <div className="pt-2"><details><summary className="cursor-pointer text-sm text-gray-600 select-none">Fatura Metnini Göster</summary><pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre></details></div>}
-                <div className="pt-4 border-t">
-  <button
-    onClick={handleGenerateSummary}
-    disabled={summarizing || loading}
-    className="px-4 py-2 mt-2 rounded-lg bg-yellow-400 text-blue-900 font-semibold hover:bg-yellow-300 transition disabled:opacity-50"
-  >
-    {summarizing ? "GPT özet oluşturuluyor..." : "Fatura Özeti Oluştur"}
-  </button>
-
-  {summary && (
-    <div className="mt-4 p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
-      <strong>Akıllı Fatura Özeti:</strong><br />
-      {summary}
-    </div>
-  )}
-</div>
-
+                {summary && (
+                  <div className="pt-4 border-t">
+                    <div className="p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
+                      <strong className="font-semibold text-gray-800">Akıllı Fatura Özeti:</strong><br />
+                      {summary}
+                    </div>
+                  </div>
+                )}
+                {rawText && <div className="pt-2"><details><summary className="cursor-pointer text-sm text-gray-600 select-none">Ham Fatura Metnini Göster</summary><pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">{rawText}</pre></details></div>}
               </div>
             </div>
           </div>
@@ -380,3 +274,4 @@ const [summarizing, setSummarizing] = useState(false);
     </div>
   );
 }
+
