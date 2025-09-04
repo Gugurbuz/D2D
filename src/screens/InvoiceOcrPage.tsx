@@ -143,7 +143,7 @@ export default function InvoiceOcrPage() {
       r.readAsDataURL(file);
     });
 
-  /* ---------- YENİ processTextWithAI ---------- */
+  /* ---------- processTextWithAI ---------- */
   async function processTextWithAI(text: string) {
     if (!text.trim()) {
       setError("Faturadan metin okunamadı.");
@@ -311,8 +311,9 @@ export default function InvoiceOcrPage() {
 
       {/* ---------- MAIN ---------- */}
       <main className="p-2">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* --------- SOL --------- */}
+        {/* Paneller artık alt alta */}
+        <div className="space-y-6">
+          {/* --------- 1. Fatura Yükle --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -408,12 +409,12 @@ export default function InvoiceOcrPage() {
             </div>
           </div>
 
-          {/* --------- SAĞ --------- */}
+          {/* --------- 2. Müşteri Bilgileri --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Wand2 />
-                <h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu</h2>
+                <h2 className="text-lg font-semibold">2. Müşteri Bilgileri</h2>
               </div>
 
               <div className="space-y-4">
