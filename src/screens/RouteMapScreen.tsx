@@ -57,10 +57,13 @@ const CustomerMarker: React.FC<{
 }> = React.memo(({ customer, index, selectedId, starredId, onClick }) => {
   const isSelected = selectedId === customer.id;
   const isStarred = starredId === customer.id;
-
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
 
   const icon = useMemo(() => {
+    if (!window.google) {
+      return undefined;
+    }
+
     const fillColor = isStarred ? "#F5B301" : isSelected ? "#FF6B00" : "#0099CB";
     return {
       path: window.google.maps.SymbolPath.CIRCLE,
