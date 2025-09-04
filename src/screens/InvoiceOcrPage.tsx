@@ -9,7 +9,6 @@ import {
   Gauge,
   Percent,
   Loader2,
-  FileText,
   ShieldAlert,
   Zap,
 } from "lucide-react";
@@ -90,7 +89,6 @@ const FieldLabel = ({
   </label>
 );
 
-/* ============= ANA KOMPONENT ============= */
 export default function InvoiceOcrPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -108,6 +106,16 @@ export default function InvoiceOcrPage() {
 
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
+  // Özet alanını 4 satırla kısıtlamak için stil
+  const summaryClampStyle: React.CSSProperties = {
+    display: "-webkit-box",
+    WebkitLineClamp: 4, // maks 4 satır
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "normal",
+  };
+
   useEffect(
     () => () => {
       if (stream) stream.getTracks().forEach((t) => t.stop());
@@ -123,7 +131,6 @@ export default function InvoiceOcrPage() {
       keys.slice(0, -1).forEach((k) => (cur = cur[k] = cur[k] || {}));
       cur[keys.at(-1)!] = value;
 
-      /* --- SKTT otomatik hesapla --- */
       const tariff = path === "tariff" ? value : cloned.tariff;
       const annual =
         path === "annualConsumption"
@@ -143,7 +150,6 @@ export default function InvoiceOcrPage() {
       r.readAsDataURL(file);
     });
 
-  /* ---------- processTextWithAI ---------- */
   async function processTextWithAI(text: string) {
     if (!text.trim()) {
       setError("Faturadan metin okunamadı.");
@@ -155,7 +161,6 @@ export default function InvoiceOcrPage() {
 
     try {
       const result = await generateInvoiceSummary(text);
-
       const raw: any = result.invoiceData ?? result.data ?? result ?? {};
 
       const aiData: InvoiceData = {
@@ -209,7 +214,6 @@ export default function InvoiceOcrPage() {
       setError(err.message || "Yapay zeka özeti oluşturulamadı.");
     }
   }
-  /* ------------------------------------------- */
 
   async function runCloudVisionOcr(file: File) {
     if (!apiKey) {
@@ -259,7 +263,6 @@ export default function InvoiceOcrPage() {
     }
   }
 
-  /* -------- Kamera & input helper’ları -------- */
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) await runCloudVisionOcr(f);
@@ -296,10 +299,9 @@ export default function InvoiceOcrPage() {
     stopCamera();
   }
 
-  /* ---------------- JSX ---------------- */
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
-      {/* ------- HEADER (Artık sticky değil) ------- */}
+      {/* ------- HEADER (sticky değil) ------- */}
       <header className="border-b bg-white border-gray-200">
         <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
@@ -311,7 +313,7 @@ export default function InvoiceOcrPage() {
 
       {/* ---------- MAIN ---------- */}
       <main className="p-2">
-        {/* Paneller artık alt alta */}
+        {/* Paneller alt alta */}
         <div className="space-y-6">
           {/* --------- 1. Fatura Yükle --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -382,16 +384,18 @@ export default function InvoiceOcrPage() {
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
                 ) : summary ? (
-                  /* -------- Akıllı Fatura Özeti (sol panel) -------- */
-                  <div className="p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
-                    <strong className="font-semibold text-gray-800">
-                      Akıllı Fatura Özeti:
-                    </strong>
-                    <br />
-                    {summary}
+                  /* --- Akıllı Fatura Özeti: 3-4 satıra kısaltılmış --- */
+                  <div className="p-4 border rounded-lg bg-gray-50 text-sm">
+                    <div className="font-semibold text-gray-800 mb-1">
+                      Akıllı Fatura Özeti
+                    </div>
+                    <p style={summaryClampStyle} className="text-gray-700">
+                      {summary}
+                    </p>
                   </div>
                 ) : (
-                  <div className="aspect-video bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
+                  // Boşken büyük yer kaplamasın
+                  <div className="h-24 bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
                     Henüz özet yok
                   </div>
                 )}
