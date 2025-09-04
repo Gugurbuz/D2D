@@ -363,4 +363,4 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-export default RouteMap;
+export default RouteMapScreen;
