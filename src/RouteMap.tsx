@@ -1,7 +1,7 @@
 // src/screens/RouteMapScreen.tsx
 
 import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
-import { useJsApiLoader, GoogleMap, Marker, DirectionsService, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
+import { useJsApiLoader, GoogleMap, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
 import {
   Maximize2,
   Minimize2,
@@ -57,7 +57,7 @@ const CustomerMarker: React.FC<{
   index: number;
   selectedId: string | null;
   starredId: string | null;
-  onClick: (id: string) => void;
+  onClick: (id: string | null) => void;
 }> = React.memo(({ customer, index, selectedId, starredId, onClick }) => {
   const isSelected = selectedId === customer.id;
   const isStarred = starredId === customer.id;
@@ -113,7 +113,6 @@ const CustomerMarker: React.FC<{
   );
 });
 
-
 /* ==== Ana Bileşen ==== */
 const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
@@ -139,7 +138,6 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
     touchStartX.current = null;
   };
   
-  // Google Maps API'sini yükle, **doğru çevre değişkeni kullanımıyla**.
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
     libraries: ["geometry", "places"],
@@ -196,7 +194,6 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
         
         const reorderedCustomers = orderedIndexes.map((index) => allCustomers[index]);
         
-        // Yıldızlı müşteri varsa onu en başa koyarız
         if (starredId) {
           reorderedCustomers.unshift(allCustomers.find((c) => c.id === starredId)!);
         }
