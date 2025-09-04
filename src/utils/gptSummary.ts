@@ -1,6 +1,6 @@
 // src/utils/gptSummary.ts
 
-export async function processInvoiceWithAI(rawText: string) {
+export async function generateInvoiceSummary(rawText: string) {
   // Fonksiyon artık yapılandırılmış veri değil, ham metin gönderiyor.
   const response = await fetch("https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary", {
     method: "POST",
