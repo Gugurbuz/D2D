@@ -60,18 +60,20 @@ export default function InvoiceOcrPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Düzeltme: `import.meta.env` yerine `process.env` kullanıldı.
-  // Bu, eski derleme hedefleriyle uyumluluğu artırır.
-  const apiKey = process.env.VITE_GOOGLE_CLOUD_API_KEY;
+  // Vite ortam değişkenlerine erişmenin standart yolu `import.meta.env` kullanmaktır.
+  const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
   useEffect(() => () => { if (stream) stream.getTracks().forEach((t) => t.stop()); }, [stream]);
 
-  // Düzeltme: İç içe state'i güvenli bir şekilde güncellemek için yardımcı fonksiyon
   const handleDataChange = (path: string, value: any) => {
     setData(prevData => {
-      // Lodash'i global window nesnesinden kullanıyoruz
-      const newData = (window as any)._.cloneDeep(prevData); 
-      (window as any)._.set(newData, path, value);
+      const newData = JSON.parse(JSON.stringify(prevData)); // Basit deep clone
+      let current = newData;
+      const keys = path.split('.');
+      for (let i = 0; i < keys.length - 1; i++) {
+        current = current[keys[i]] = current[keys[i]] || {};
+      }
+      current[keys[keys.length - 1]] = value;
       return newData;
     });
   };
@@ -214,8 +216,6 @@ export default function InvoiceOcrPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
-        {/* Lodash script'i CDN üzerinden yüklenir */}
-        <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
       <header className="sticky top-0 z-20 border-b bg-white border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
