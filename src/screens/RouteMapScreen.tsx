@@ -10,7 +10,7 @@ import {
   StarOff,
   Navigation,
 } from "lucide-react";
-
+import { useJsApiLoader, GoogleMap, Marker, DirectionsService, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
 /* ==== Tipler ve Varsayılan Veriler (Değişiklik yok) ==== */
 export type Customer = { id: string; name: string; address: string; district: string; plannedTime: string; priority: "Yüksek" | "Orta" | "Düşük"; tariff: string; meterNumber: string; consumption: string; offerHistory: string[]; status: "Bekliyor" | "Yolda" | "Tamamlandı"; estimatedDuration: string; distance: string; lat: number; lng: number; phone: string; };
 export type SalesRep = { name: string; lat: number; lng: number; };
