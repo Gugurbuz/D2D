@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Camera, Upload, Wand2, Building2, Home, Hash, Gauge, Percent, Loader2, FileText, ShieldAlert, Zap } from "lucide-react";
+import _ from 'lodash'; // Lodash'i güvenli nesne güncellemeleri için kullanacağız
 
 // ====== TEMA ======
 const BRAND_YELLOW = "#F9C800";
@@ -12,7 +13,6 @@ interface InvoiceData {
   supplyDetails?: { installationNumber?: string };
   meterReadings?: { consumption?: { total_kWh?: number | string } };
   charges?: { energyLow?: { unitPrice?: number | string } };
-  // Diğer olası alanlar buraya eklenebilir.
 }
 
 // ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
@@ -24,24 +24,19 @@ const initialData: InvoiceData = {
   charges: { energyLow: { unitPrice: "" } },
 };
 
-// YENİ AKIŞ: Bu fonksiyon artık doğrudan bu dosyanın içinde.
-// Bu, import hatasını çözer ve mantığı bir arada tutar.
+// Bu fonksiyon Supabase'e bağlanarak AI işlemini yapar.
 async function generateInvoiceSummary(rawText: string) {
   const response = await fetch("https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rawText }),
   });
-
   const result = await response.json();
-
   if (!response.ok) {
     throw new Error(result.error || "Yapay zeka işleme sırasında bir hata oluştu.");
   }
-
   return result;
 }
-
 
 const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -66,10 +61,18 @@ export default function InvoiceOcrPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // import.meta.env, Vite projelerinde standarttır. Uyarıyı görmezden gelebiliriz.
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
   useEffect(() => () => { if (stream) stream.getTracks().forEach((t) => t.stop()); }, [stream]);
+
+  // Düzeltme: İç içe state'i güvenli bir şekilde güncellemek için yardımcı fonksiyon
+  const handleDataChange = (path: string, value: any) => {
+    setData(prevData => {
+      const newData = _.cloneDeep(prevData); // State'in derin bir kopyasını oluştur
+      _.set(newData, path, value); // Belirtilen yola yeni değeri ata
+      return newData;
+    });
+  };
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -91,23 +94,27 @@ export default function InvoiceOcrPage() {
 
     try {
         const result = await generateInvoiceSummary(text);
+        console.log("Yapay zekadan gelen yapılandırılmış veri:", result.invoiceData);
+        const aiData = result.invoiceData || {};
+        
+        // Gelen JSON verisiyle formu doldur
         setData({
-            companyName: result.invoiceData?.companyName ?? "",
+            companyName: aiData.companyName ?? "",
             customer: {
-                name: result.invoiceData?.customer?.name ?? "",
-                address: result.invoiceData?.customer?.address ?? ""
+                name: aiData.customer?.name ?? "",
+                address: aiData.customer?.address ?? ""
             },
             supplyDetails: {
-                installationNumber: result.invoiceData?.supplyDetails?.installationNumber ?? ""
+                installationNumber: aiData.supplyDetails?.installationNumber ?? ""
             },
             meterReadings: {
                 consumption: {
-                    total_kWh: result.invoiceData?.meterReadings?.consumption?.total_kWh ?? ""
+                    total_kWh: aiData.meterReadings?.consumption?.total_kWh ?? ""
                 }
             },
             charges: {
                 energyLow: {
-                    unitPrice: result.invoiceData?.charges?.energyLow?.unitPrice ?? ""
+                    unitPrice: aiData.charges?.energyLow?.unitPrice ?? ""
                 }
             }
         });
@@ -205,6 +212,8 @@ export default function InvoiceOcrPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
+        {/* Lodash script'i eklendi */}
+        <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
       <header className="sticky top-0 z-20 border-b bg-white border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
@@ -249,13 +258,13 @@ export default function InvoiceOcrPage() {
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4"><Wand2 /><h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu (Yapay Zeka Tarafından Dolduruldu)</h2></div>
               <div className="space-y-4">
-                <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName ?? ''} onChange={e => setData(d => ({...d, companyName: e.target.value}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
-                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customer?.name ?? ''} onChange={e => setData(d => ({...d, customer: {...d.customer, name: e.target.value}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
-                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel><textarea value={data.customer?.address ?? ''} onChange={e => setData(d => ({...d, customer: {...d.customer, address: e.target.value}}))} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel><input value={data.companyName ?? ''} onChange={e => handleDataChange('companyName', e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel><input value={data.customer?.name ?? ''} onChange={e => handleDataChange('customer.name', e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                <div className="space-y-1"><FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel><textarea value={data.customer?.address ?? ''} onChange={e => handleDataChange('customer.address', e.target.value)} rows={3} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="space-y-1"><FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel><input value={data.supplyDetails?.installationNumber ?? ''} onChange={e => setData(d => ({...d, supplyDetails: {...d.supplyDetails, installationNumber: e.target.value}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
-                  <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.meterReadings?.consumption?.total_kWh ?? ''} onChange={e => setData(d => ({...d, meterReadings: {...d.meterReadings, consumption: {...d.meterReadings?.consumption, total_kWh: e.target.value}}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
-                  <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.charges?.energyLow?.unitPrice ?? ''} onChange={e => setData(d => ({...d, charges: {...d.charges, energyLow: {...d.charges?.energyLow, unitPrice: e.target.value}}}))} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel><input value={data.supplyDetails?.installationNumber ?? ''} onChange={e => handleDataChange('supplyDetails.installationNumber', e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel><input value={data.meterReadings?.consumption?.total_kWh ?? ''} onChange={e => handleDataChange('meterReadings.consumption.total_kWh', e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
+                  <div className="space-y-1"><FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel><input value={data.charges?.energyLow?.unitPrice ?? ''} onChange={e => handleDataChange('charges.energyLow.unitPrice', e.target.value)} className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400" placeholder="-" /></div>
                 </div>
                 {summary && (
                   <div className="pt-4 border-t">
