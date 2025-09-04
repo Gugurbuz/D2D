@@ -61,6 +61,7 @@ const CustomerMarker: React.FC<{
 }> = React.memo(({ customer, index, selectedId, starredId, onClick }) => {
   const isSelected = selectedId === customer.id;
   const isStarred = starredId === customer.id;
+
   const icon = useMemo(() => {
     const fillColor = isStarred ? "#F5B301" : isSelected ? "#FF6B00" : "#0099CB";
     return {
@@ -86,6 +87,8 @@ const CustomerMarker: React.FC<{
       icon={icon}
       label={label}
       onClick={() => onClick(customer.id)}
+      // Marker'ın diğer katmanların üzerinde görünmesini sağlar
+      zIndex={index + 1}
     />
   );
 });
