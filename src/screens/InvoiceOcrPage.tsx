@@ -16,7 +16,7 @@ import {
 
 /* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
-  (window as any).process = { env: {} }; // gerekirse NODE_ENV ekleyin
+  (window as any).process = { env: {} };
 }
 /* ------------------------------------------------------ */
 
@@ -29,6 +29,10 @@ interface InvoiceData {
   companyName?: string;
   customer?: { name?: string; address?: string };
   supplyDetails?: { installationNumber?: string };
+  tariff?: string;
+  annualConsumption?: string;
+  avgConsumption?: string;
+  skttStatus?: string;
   meterReadings?: { consumption?: { total_kWh?: number | string } };
   charges?: { energyLow?: { unitPrice?: number | string } };
 }
@@ -38,6 +42,10 @@ const initialData: InvoiceData = {
   companyName: "",
   customer: { name: "", address: "" },
   supplyDetails: { installationNumber: "" },
+  tariff: "",
+  annualConsumption: "",
+  avgConsumption: "",
+  skttStatus: "",
   meterReadings: { consumption: { total_kWh: "" } },
   charges: { energyLow: { unitPrice: "" } },
 };
@@ -54,6 +62,14 @@ async function generateInvoiceSummary(rawText: string) {
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "AI hatası");
   return result;
+}
+
+function computeSktt(tariff: string, yearly: number): string {
+  if (!tariff || isNaN(yearly)) return "";
+  if (tariff === "Mesken") return yearly >= 5000 ? "Kapsamda" : "Hariç";
+  if (tariff === "Ticarethane" || tariff === "Sanayi")
+    return yearly >= 15000 ? "Kapsamda" : "Hariç";
+  return "";
 }
 
 const FieldLabel = ({
@@ -76,6 +92,7 @@ const FieldLabel = ({
 
 /* ============= ANA KOMPONENT ============= */
 export default function InvoiceOcrPage() {
+  const [summary, setSummary] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
   const [loading, setLoading] = useState(false);
@@ -84,7 +101,6 @@ export default function InvoiceOcrPage() {
   const [error, setError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [summary, setSummary] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -106,6 +122,15 @@ export default function InvoiceOcrPage() {
       let cur = cloned;
       keys.slice(0, -1).forEach((k) => (cur = cur[k] = cur[k] || {}));
       cur[keys.at(-1)!] = value;
+
+      /* --- SKTT otomatik hesapla --- */
+      const tariff = path === "tariff" ? value : cloned.tariff;
+      const annual =
+        path === "annualConsumption"
+          ? Number(value)
+          : Number(cloned.annualConsumption);
+      cloned.skttStatus = computeSktt(tariff, annual);
+
       return cloned;
     });
   };
@@ -124,17 +149,14 @@ export default function InvoiceOcrPage() {
       setError("Faturadan metin okunamadı.");
       return;
     }
-    setLoadingMessage("Yapay zeka faturayı analiz ediyor…");
+    setLoadingMessage("Fatura analiz ediliyor…");
     setError(null);
     setSummary(null);
 
     try {
       const result = await generateInvoiceSummary(text);
-      console.log("AI yanıtı:", result);
 
-      /* normalize */
-      const raw: any =
-        result.invoiceData ?? result.data ?? result ?? {};
+      const raw: any = result.invoiceData ?? result.data ?? result ?? {};
 
       const aiData: InvoiceData = {
         companyName: raw.companyName ?? raw.company_name ?? "",
@@ -146,6 +168,10 @@ export default function InvoiceOcrPage() {
           installationNumber:
             raw.supplyDetails?.installationNumber ?? raw.installationNumber ?? "",
         },
+        tariff: raw.tariff ?? "",
+        annualConsumption: raw.annualConsumption ?? "",
+        avgConsumption: raw.avgConsumption ?? "",
+        skttStatus: "",
         meterReadings: {
           consumption: {
             total_kWh:
@@ -162,7 +188,11 @@ export default function InvoiceOcrPage() {
         },
       };
 
-      /* sayısalları string’e çevir */
+      aiData.skttStatus = computeSktt(
+        aiData.tariff || "",
+        Number(aiData.annualConsumption)
+      );
+
       const toStr = (v: unknown) =>
         v === undefined || v === null ? "" : String(v);
       aiData.meterReadings!.consumption!.total_kWh = toStr(
@@ -183,53 +213,83 @@ export default function InvoiceOcrPage() {
 
   async function runCloudVisionOcr(file: File) {
     if (!apiKey) {
-      setError("Google Cloud API anahtarı eksik."); return;
+      setError("Google Cloud API anahtarı eksik.");
+      return;
     }
-    setLoading(true); setError(null); setRawText(""); setData(initialData);
-    setSummary(null); setImagePreview(URL.createObjectURL(file));
+    setLoading(true);
+    setError(null);
+    setRawText("");
+    setData(initialData);
+    setSummary(null);
+    setImagePreview(URL.createObjectURL(file));
+
     try {
-      setLoadingMessage("Görüntü Google'a gönderiliyor…");
+      setLoadingMessage("Fatura okunuyor…");
       const cleanBase64 = (await fileToBase64(file)).replace(
         /^data:image\/\w+;base64,/,
         ""
       );
       const body = {
-        requests: [{ image: { content: cleanBase64 }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }],
+        requests: [
+          {
+            image: { content: cleanBase64 },
+            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+          },
+        ],
       };
       const res = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
       );
       if (!res.ok) throw new Error((await res.json()).error.message);
-      const detected = (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
+      const detected =
+        (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
       setRawText(detected);
       await processTextWithAI(detected);
     } catch (e: any) {
       console.error(e);
-      setError(e.message || "OCR/Aİ hatası");
+      setError(e.message || "OCR/AI hatası");
     } finally {
-      setLoading(false); setLoadingMessage("");
+      setLoading(false);
+      setLoadingMessage("");
     }
   }
 
   /* -------- Kamera & input helper’ları -------- */
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]; if (f) await runCloudVisionOcr(f);
+    const f = e.target.files?.[0];
+    if (f) await runCloudVisionOcr(f);
   }
   async function startCamera() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      setStream(s); if (videoRef.current) { (videoRef.current as any).srcObject = s; await videoRef.current.play(); }
+      const s = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      setStream(s);
+      if (videoRef.current) {
+        (videoRef.current as any).srcObject = s;
+        await videoRef.current.play();
+      }
       setCameraOn(true);
     } catch {
       setError("Kamera başlatılamadı.");
     }
   }
-  function stopCamera() { stream?.getTracks().forEach((t) => t.stop()); setStream(null); setCameraOn(false); }
+  function stopCamera() {
+    stream?.getTracks().forEach((t) => t.stop());
+    setStream(null);
+    setCameraOn(false);
+  }
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
-    const c = canvasRef.current, v = videoRef.current;
-    c.width = v.videoWidth; c.height = v.videoHeight;
+    const c = canvasRef.current,
+      v = videoRef.current;
+    c.width = v.videoWidth;
+    c.height = v.videoHeight;
     c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
     const blob = await (await fetch(c.toDataURL("image/jpeg"))).blob();
     await runCloudVisionOcr(new File([blob], "capture.jpg", { type: "image/jpeg" }));
@@ -239,8 +299,9 @@ export default function InvoiceOcrPage() {
   /* ---------------- JSX ---------------- */
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
-      <header className="sticky top-0 z-20 border-b bg-white border-gray-200">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
+      {/* ------- HEADER (Artık sticky değil) ------- */}
+      <header className="border-b bg-white border-gray-200">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
           <h1 className="text-xl font-semibold tracking-wide text-gray-800">
             Bölge Dışı Ziyaret
@@ -249,19 +310,14 @@ export default function InvoiceOcrPage() {
       </header>
 
       {/* ---------- MAIN ---------- */}
-      <main className="mx-auto max-w-6xl p-4 md:p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
+      <main className="p-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* --------- SOL --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Wand2 />
-                  <h2 className="text-lg font-semibold">1. Fatura Yükle</h2>
-                </div>
-                <span className="text-xs font-semibold text-blue-600">
-                  Google Vision & OpenAI API
-                </span>
+              <div className="flex items-center gap-2 mb-4">
+                <Wand2 />
+                <h2 className="text-lg font-semibold">1. Fatura Yükle</h2>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -316,30 +372,26 @@ export default function InvoiceOcrPage() {
                     <div className="aspect-video relative">
                       <video
                         ref={videoRef}
+                        autoPlay
                         playsInline
+                        muted
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
+                ) : summary ? (
+                  /* -------- Akıllı Fatura Özeti (sol panel) -------- */
+                  <div className="p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
+                    <strong className="font-semibold text-gray-800">
+                      Akıllı Fatura Özeti:
+                    </strong>
+                    <br />
+                    {summary}
+                  </div>
                 ) : (
-                  <div className="bg-gray-50 rounded-xl overflow-hidden border">
-                    <div className="p-2 bg-white border-b">
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        <FileText className="w-4 h-4" /> Yüklenen Görüntü
-                      </span>
-                    </div>
-                    <div className="aspect-video bg-white flex items-center justify-center">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="preview"
-                          className="max-h-full object-contain"
-                        />
-                      ) : (
-                        <div className="text-gray-400 text-sm">Görsel seçilmedi</div>
-                      )}
-                    </div>
+                  <div className="aspect-video bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
+                    Henüz özet yok
                   </div>
                 )}
               </div>
@@ -361,12 +413,27 @@ export default function InvoiceOcrPage() {
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Wand2 />
-                <h2 className="text-lg font-semibold">
-                  2. Müşteri Bilgi Formu (Yapay Zeka Tarafından Dolduruldu)
-                </h2>
+                <h2 className="text-lg font-semibold">2. Müşteri Bilgi Formu</h2>
               </div>
 
               <div className="space-y-4">
+                {/* ------- Tarife ------- */}
+                <div className="space-y-1">
+                  <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
+                    Tarife
+                  </FieldLabel>
+                  <select
+                    value={data.tariff ?? ""}
+                    onChange={(e) => handleDataChange("tariff", e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  >
+                    <option value="">-</option>
+                    <option value="Mesken">Mesken</option>
+                    <option value="Ticarethane">Ticarethane</option>
+                    <option value="Sanayi">Sanayi</option>
+                  </select>
+                </div>
+
                 {/* ------- Şirket ------- */}
                 <div className="space-y-1">
                   <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>
@@ -374,7 +441,9 @@ export default function InvoiceOcrPage() {
                   </FieldLabel>
                   <input
                     value={data.companyName ?? ""}
-                    onChange={(e) => handleDataChange("companyName", e.target.value)}
+                    onChange={(e) =>
+                      handleDataChange("companyName", e.target.value)
+                    }
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="-"
                   />
@@ -387,7 +456,9 @@ export default function InvoiceOcrPage() {
                   </FieldLabel>
                   <input
                     value={data.customer?.name ?? ""}
-                    onChange={(e) => handleDataChange("customer.name", e.target.value)}
+                    onChange={(e) =>
+                      handleDataChange("customer.name", e.target.value)
+                    }
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="-"
                   />
@@ -395,7 +466,9 @@ export default function InvoiceOcrPage() {
 
                 {/* ------- Adres ------- */}
                 <div className="space-y-1">
-                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
+                    Adres
+                  </FieldLabel>
                   <textarea
                     value={data.customer?.address ?? ""}
                     onChange={(e) =>
@@ -416,7 +489,10 @@ export default function InvoiceOcrPage() {
                     <input
                       value={data.supplyDetails?.installationNumber ?? ""}
                       onChange={(e) =>
-                        handleDataChange("supplyDetails.installationNumber", e.target.value)
+                        handleDataChange(
+                          "supplyDetails.installationNumber",
+                          e.target.value
+                        )
                       }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
@@ -447,7 +523,10 @@ export default function InvoiceOcrPage() {
                     <input
                       value={data.charges?.energyLow?.unitPrice ?? ""}
                       onChange={(e) =>
-                        handleDataChange("charges.energyLow.unitPrice", e.target.value)
+                        handleDataChange(
+                          "charges.energyLow.unitPrice",
+                          e.target.value
+                        )
                       }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
@@ -455,18 +534,47 @@ export default function InvoiceOcrPage() {
                   </div>
                 </div>
 
-                {/* ------- AI Özeti ------- */}
-                {summary && (
-                  <div className="pt-4 border-t">
-                    <div className="p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
-                      <strong className="font-semibold text-gray-800">
-                        Akıllı Fatura Özeti:
-                      </strong>
-                      <br />
-                      {summary}
-                    </div>
+                {/* ------- Yıllık & Ortalama Tüketim ------- */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
+                      Yıllık Tüketim (kWh)
+                    </FieldLabel>
+                    <input
+                      type="number"
+                      value={data.annualConsumption ?? ""}
+                      onChange={(e) =>
+                        handleDataChange("annualConsumption", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="-"
+                    />
                   </div>
-                )}
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
+                      Ortalama Tüketim (kWh)
+                    </FieldLabel>
+                    <input
+                      type="number"
+                      value={data.avgConsumption ?? ""}
+                      onChange={(e) =>
+                        handleDataChange("avgConsumption", e.target.value)
+                      }
+                      className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder="-"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
+                      SKTT Durumu
+                    </FieldLabel>
+                    <input
+                      value={data.skttStatus ?? ""}
+                      readOnly
+                      className="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-700"
+                    />
+                  </div>
+                </div>
 
                 {/* ------- Ham OCR ------- */}
                 {rawText && (
