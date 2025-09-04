@@ -1,7 +1,7 @@
 // src/screens/RouteMapScreen.tsx
 
 import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
-import { useJsApiLoader, GoogleMap, Marker, DirectionsService, DirectionsRenderer } from "@react-google-maps/api";
+import { useJsApiLoader, GoogleMap, Marker, DirectionsService, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
 import {
   Maximize2,
   Minimize2,
@@ -10,7 +10,7 @@ import {
   StarOff,
   Navigation,
 } from "lucide-react";
-import { useJsApiLoader, GoogleMap, Marker, DirectionsService, DirectionsRenderer, InfoWindow } from "@react-google-maps/api";
+
 /* ==== Tipler ve Varsayılan Veriler (Değişiklik yok) ==== */
 export type Customer = { id: string; name: string; address: string; district: string; plannedTime: string; priority: "Yüksek" | "Orta" | "Düşük"; tariff: string; meterNumber: string; consumption: string; offerHistory: string[]; status: "Bekliyor" | "Yolda" | "Tamamlandı"; estimatedDuration: string; distance: string; lat: number; lng: number; phone: string; };
 export type SalesRep = { name: string; lat: number; lng: number; };
@@ -87,11 +87,32 @@ const CustomerMarker: React.FC<{
       icon={icon}
       label={label}
       onClick={() => onClick(customer.id)}
-      // Marker'ın diğer katmanların üzerinde görünmesini sağlar
-      zIndex={index + 1}
-    />
+      zIndex={isSelected ? 2000 : (isStarred ? 1500 : (1000 - index))}
+    >
+      {isSelected && (
+        <InfoWindow onCloseClick={() => onClick(null)}>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <b>{index + 1}. {customer.name}</b>
+              {isStarred && <span className="text-[#F5B301] text-xs font-semibold">⭐ İlk Durak</span>}
+            </div>
+            <div>{customer.address}, {customer.district}</div>
+            <div>Saat: {customer.plannedTime}</div>
+            <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(customer.phone)}>{customer.phone}</a></div>
+            <a href={`https://www.google.com/maps/dir/?api=1&destination=${customer.lat},${customer.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors">
+              <Navigation className="w-4 h-4" />
+              <span>Navigasyonu Başlat</span>
+            </a>
+          </div>
+        </InfoWindow>
+      )}
+    </Marker>
   );
 });
+
 
 /* ==== Ana Bileşen ==== */
 const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
@@ -99,7 +120,7 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
 
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(baseCustomers[0]?.id || null);
   const [starredId, setStarredId] = useState<string | null>(null);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -196,15 +217,17 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
     }
   }, [baseCustomers, starredId, rep.lat, rep.lng]);
 
-  const highlightCustomer = (customerId: string) => {
+  const highlightCustomer = (customerId: string | null) => {
     setSelectedId(customerId);
-    const customer = orderedCustomers.find(c => c.id === customerId);
-    if (customer && mapRef.current) {
-      mapRef.current.panTo({ lat: customer.lat, lng: customer.lng });
-      mapRef.current.setZoom(14);
+    if (customerId && mapRef.current) {
+        const customer = orderedCustomers.find(c => c.id === customerId);
+        if (customer) {
+            mapRef.current.panTo({ lat: customer.lat, lng: customer.lng });
+            mapRef.current.setZoom(14);
+        }
+        const row = document.getElementById(`cust-row-${customerId}`);
+        if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-    const row = document.getElementById(`cust-row-${customerId}`);
-    if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
   
   useEffect(() => {
