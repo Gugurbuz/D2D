@@ -14,17 +14,17 @@ import {
   Zap,
 } from "lucide-react";
 
-// --- process polyfill (tarayıcı) ------------------------------
+/* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
   (window as any).process = { env: {} }; // gerekirse NODE_ENV ekleyin
 }
-// --------------------------------------------------------------
+/* ------------------------------------------------------ */
 
-// ====== TEMA ======
+/* ============= TEMA ============= */
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
 
-// ====== TÜRLER (Yapay Zekadan Gelen Detaylı Veri Yapısı) ======
+/* ============= TÜRLER ============= */
 interface InvoiceData {
   companyName?: string;
   customer?: { name?: string; address?: string };
@@ -33,7 +33,7 @@ interface InvoiceData {
   charges?: { energyLow?: { unitPrice?: number | string } };
 }
 
-// ====== YARDIMCI FONKSİYONLAR & SABİTLER ======
+/* ============= SABİT & YARDIMCI ============= */
 const initialData: InvoiceData = {
   companyName: "",
   customer: { name: "", address: "" },
@@ -42,7 +42,6 @@ const initialData: InvoiceData = {
   charges: { energyLow: { unitPrice: "" } },
 };
 
-// Bu fonksiyon Supabase'e bağlanarak AI işlemini yapar.
 async function generateInvoiceSummary(rawText: string) {
   const response = await fetch(
     "https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary",
@@ -53,9 +52,7 @@ async function generateInvoiceSummary(rawText: string) {
     }
   );
   const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.error || "Yapay zeka işleme sırasında bir hata oluştu.");
-  }
+  if (!response.ok) throw new Error(result.error || "AI hatası");
   return result;
 }
 
@@ -77,7 +74,7 @@ const FieldLabel = ({
   </label>
 );
 
-// ====== ANA KOMPONENT ======
+/* ============= ANA KOMPONENT ============= */
 export default function InvoiceOcrPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
@@ -93,7 +90,6 @@ export default function InvoiceOcrPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Vite ortam değişkenlerine erişmenin standart yolu `import.meta.env`tir.
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
   useEffect(
@@ -104,172 +100,145 @@ export default function InvoiceOcrPage() {
   );
 
   const handleDataChange = (path: string, value: any) => {
-    setData((prevData) => {
-      const newData: any = JSON.parse(JSON.stringify(prevData)); // Basit deep clone
+    setData((prev) => {
+      const cloned: any = JSON.parse(JSON.stringify(prev));
       const keys = path.split(".");
-      let current = newData;
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i]] = current[keys[i]] || {};
-      }
-      current[keys[keys.length - 1]] = value;
-      return newData;
+      let cur = cloned;
+      keys.slice(0, -1).forEach((k) => (cur = cur[k] = cur[k] || {}));
+      cur[keys.at(-1)!] = value;
+      return cloned;
     });
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
+  const fileToBase64 = (file: File) =>
+    new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = rej;
+      r.readAsDataURL(file);
     });
 
+  /* ---------- YENİ processTextWithAI ---------- */
   async function processTextWithAI(text: string) {
-    if (!text || text.trim() === "") {
+    if (!text.trim()) {
       setError("Faturadan metin okunamadı.");
       return;
     }
-    setLoadingMessage("Yapay zeka faturayı analiz ediyor...");
+    setLoadingMessage("Yapay zeka faturayı analiz ediyor…");
     setError(null);
     setSummary(null);
 
     try {
       const result = await generateInvoiceSummary(text);
-      console.log("Yapay zekadan gelen yapılandırılmış veri:", result.invoiceData);
-      const aiData = result.invoiceData || {};
+      console.log("AI yanıtı:", result);
 
-      // Gelen JSON verisiyle formu doldur
-      setData({
-        companyName: aiData.companyName ?? "",
+      /* normalize */
+      const raw: any =
+        result.invoiceData ?? result.data ?? result ?? {};
+
+      const aiData: InvoiceData = {
+        companyName: raw.companyName ?? raw.company_name ?? "",
         customer: {
-          name: aiData.customer?.name ?? "",
-          address: aiData.customer?.address ?? "",
+          name: raw.customer?.name ?? raw.customerName ?? "",
+          address: raw.customer?.address ?? raw.address ?? "",
         },
         supplyDetails: {
-          installationNumber: aiData.supplyDetails?.installationNumber ?? "",
+          installationNumber:
+            raw.supplyDetails?.installationNumber ?? raw.installationNumber ?? "",
         },
         meterReadings: {
           consumption: {
-            total_kWh: aiData.meterReadings?.consumption?.total_kWh ?? "",
+            total_kWh:
+              raw.meterReadings?.consumption?.total_kWh ??
+              raw.consumption ??
+              "",
           },
         },
         charges: {
           energyLow: {
-            unitPrice: aiData.charges?.energyLow?.unitPrice ?? "",
+            unitPrice:
+              raw.charges?.energyLow?.unitPrice ?? raw.unitPrice ?? "",
           },
         },
-      });
+      };
+
+      /* sayısalları string’e çevir */
+      const toStr = (v: unknown) =>
+        v === undefined || v === null ? "" : String(v);
+      aiData.meterReadings!.consumption!.total_kWh = toStr(
+        aiData.meterReadings?.consumption?.total_kWh
+      );
+      aiData.charges!.energyLow!.unitPrice = toStr(
+        aiData.charges?.energyLow?.unitPrice
+      );
+
+      setData(aiData);
       setSummary(result.summary);
     } catch (err: any) {
-      console.error("Yapay zeka işleme hatası:", err);
+      console.error(err);
       setError(err.message || "Yapay zeka özeti oluşturulamadı.");
     }
   }
+  /* ------------------------------------------- */
 
   async function runCloudVisionOcr(file: File) {
     if (!apiKey) {
-      setError(
-        "Google Cloud API anahtarı (.env dosyasında VITE_GOOGLE_CLOUD_API_KEY) bulunamadı."
-      );
-      return;
+      setError("Google Cloud API anahtarı eksik."); return;
     }
-    setError(null);
-    setLoading(true);
-    setRawText("");
-    setData(initialData);
-    setSummary(null);
-    setImagePreview(URL.createObjectURL(file));
-
+    setLoading(true); setError(null); setRawText(""); setData(initialData);
+    setSummary(null); setImagePreview(URL.createObjectURL(file));
     try {
-      setLoadingMessage("Görüntü Google'a gönderiliyor...");
-      const base64Image = await fileToBase64(file);
-      const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-
-      const requestBody = {
-        requests: [
-          {
-            image: { content: cleanBase64 },
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-          },
-        ],
+      setLoadingMessage("Görüntü Google'a gönderiliyor…");
+      const cleanBase64 = (await fileToBase64(file)).replace(
+        /^data:image\/\w+;base64,/,
+        ""
+      );
+      const body = {
+        requests: [{ image: { content: cleanBase64 }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }],
       };
-
-      const apiEndpoint = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
-      const response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error.message || "Google Vision API isteği başarısız oldu.");
-      }
-
-      const result = await response.json();
-      const detectedText = result.responses[0]?.fullTextAnnotation?.text || "";
-      setRawText(detectedText);
-      await processTextWithAI(detectedText);
-    } catch (err: any) {
-      console.error("İşlem sırasında hata:", err);
-      setError(err.message || "Bilinmeyen bir hata oluştu.");
+      const res = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      );
+      if (!res.ok) throw new Error((await res.json()).error.message);
+      const detected = (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
+      setRawText(detected);
+      await processTextWithAI(detected);
+    } catch (e: any) {
+      console.error(e);
+      setError(e.message || "OCR/Aİ hatası");
     } finally {
-      setLoading(false);
-      setLoadingMessage("");
+      setLoading(false); setLoadingMessage("");
     }
   }
 
+  /* -------- Kamera & input helper’ları -------- */
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    await runCloudVisionOcr(f);
+    const f = e.target.files?.[0]; if (f) await runCloudVisionOcr(f);
   }
-
   async function startCamera() {
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
-      });
-      setStream(s);
-      if (videoRef.current) {
-        (videoRef.current as any).srcObject = s;
-        await videoRef.current.play();
-      }
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      setStream(s); if (videoRef.current) { (videoRef.current as any).srcObject = s; await videoRef.current.play(); }
       setCameraOn(true);
-    } catch (e) {
-      setError("Kamera başlatılamadı. Tarayıcı izinlerini kontrol edin.");
+    } catch {
+      setError("Kamera başlatılamadı.");
     }
   }
-
-  function stopCamera() {
-    if (stream) stream.getTracks().forEach((t) => t.stop());
-    setStream(null);
-    setCameraOn(false);
-  }
-
+  function stopCamera() { stream?.getTracks().forEach((t) => t.stop()); setStream(null); setCameraOn(false); }
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg");
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
-    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-    await runCloudVisionOcr(file);
+    const c = canvasRef.current, v = videoRef.current;
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+    const blob = await (await fetch(c.toDataURL("image/jpeg"))).blob();
+    await runCloudVisionOcr(new File([blob], "capture.jpg", { type: "image/jpeg" }));
     stopCamera();
   }
 
-  /* ------------------------------------------------------------------ */
-  /* -----------------------------  JSX  ------------------------------ */
-  /* ------------------------------------------------------------------ */
+  /* ---------------- JSX ---------------- */
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
-      {/* -------- HEADER -------- */}
       <header className="sticky top-0 z-20 border-b bg-white border-gray-200">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
@@ -279,10 +248,10 @@ export default function InvoiceOcrPage() {
         </div>
       </header>
 
-      {/* -------- MAIN -------- */}
+      {/* ---------- MAIN ---------- */}
       <main className="mx-auto max-w-6xl p-4 md:p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
-          {/* ========== Sol Panel – Yükleme ========== */}
+          {/* --------- SOL --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6">
               <div className="flex items-center justify-between mb-4">
@@ -295,21 +264,20 @@ export default function InvoiceOcrPage() {
                 </span>
               </div>
 
-              {/* --- Yükleme Butonları --- */}
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   disabled={loading}
                   onClick={() => fileInputRef.current?.click()}
-                  className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50 cursor-pointer"
+                  className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50"
                 >
                   <Upload className="w-4 h-4" />
                   <span>Cihazdan Yükle</span>
                   <input
                     type="file"
                     accept="image/*"
-                    className="hidden"
                     ref={fileInputRef}
                     onChange={onFile}
+                    className="hidden"
                   />
                 </button>
 
@@ -330,7 +298,6 @@ export default function InvoiceOcrPage() {
                 )}
               </div>
 
-              {/* --- Kamera veya Önizleme Alanı --- */}
               <div className="mt-4">
                 {cameraOn ? (
                   <div className="bg-gray-50 rounded-xl overflow-hidden border">
@@ -377,7 +344,6 @@ export default function InvoiceOcrPage() {
                 )}
               </div>
 
-              {/* --- Hata Mesajı --- */}
               {error && (
                 <div className="mt-4 p-3 rounded-xl border bg-red-50 border-red-200 text-sm flex items-start gap-2">
                   <ShieldAlert className="w-4 h-4 mt-0.5 text-red-600" />
@@ -390,7 +356,7 @@ export default function InvoiceOcrPage() {
             </div>
           </div>
 
-          {/* ========== Sağ Panel – Form ========== */}
+          {/* --------- SAĞ --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -401,6 +367,7 @@ export default function InvoiceOcrPage() {
               </div>
 
               <div className="space-y-4">
+                {/* ------- Şirket ------- */}
                 <div className="space-y-1">
                   <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>
                     Rakip Şirket
@@ -413,6 +380,7 @@ export default function InvoiceOcrPage() {
                   />
                 </div>
 
+                {/* ------- İsim ------- */}
                 <div className="space-y-1">
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
                     Müşteri Adı Soyadı
@@ -425,6 +393,7 @@ export default function InvoiceOcrPage() {
                   />
                 </div>
 
+                {/* ------- Adres ------- */}
                 <div className="space-y-1">
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
                   <textarea
@@ -438,6 +407,7 @@ export default function InvoiceOcrPage() {
                   />
                 </div>
 
+                {/* ------- Grid ------- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>
@@ -485,7 +455,7 @@ export default function InvoiceOcrPage() {
                   </div>
                 </div>
 
-                {/* ----- AI Özeti ----- */}
+                {/* ------- AI Özeti ------- */}
                 {summary && (
                   <div className="pt-4 border-t">
                     <div className="p-4 border rounded-lg bg-gray-50 text-sm whitespace-pre-wrap">
@@ -498,7 +468,7 @@ export default function InvoiceOcrPage() {
                   </div>
                 )}
 
-                {/* ----- Ham OCR Metni ----- */}
+                {/* ------- Ham OCR ------- */}
                 {rawText && (
                   <div className="pt-2">
                     <details>
