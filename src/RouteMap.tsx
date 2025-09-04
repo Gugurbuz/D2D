@@ -109,7 +109,6 @@ const CustomerMarker: React.FC<{
   );
 });
 
-
 const FullscreenBtn: React.FC<{ targetRef: React.RefObject<HTMLElement> }> = React.memo(({ targetRef }) => {
   const [isFs, setIsFs] = useState(false);
   const toggleFullscreen = useCallback(async () => {
@@ -165,16 +164,18 @@ const RouteMapScreen: React.FC<Props> = ({ customers, salesRep }) => {
 
   const onMapLoad = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
-    directionsService.current = new window.google.maps.DirectionsService();
-    directionsRenderer.current = new window.google.maps.DirectionsRenderer({
-      suppressMarkers: true,
-      polylineOptions: {
-        strokeColor: "#0099CB",
-        strokeWeight: 7,
-      },
-    });
-    directionsRenderer.current.setMap(map);
-  }, []);
+    if (isLoaded) {
+      directionsService.current = new window.google.maps.DirectionsService();
+      directionsRenderer.current = new window.google.maps.DirectionsRenderer({
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: "#0099CB",
+          strokeWeight: 7,
+        },
+      });
+      directionsRenderer.current.setMap(map);
+    }
+  }, [isLoaded]);
 
   const onUnmount = useCallback(() => {
     mapRef.current = null;
