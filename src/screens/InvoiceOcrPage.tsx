@@ -1,3 +1,4 @@
+// src/screens/InvoiceOcrPage.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   Camera,
@@ -11,8 +12,6 @@ import {
   Loader2,
   ShieldAlert,
   Zap,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 
 /* ---------- process polyfill (Vite 5) ---------- */
@@ -39,7 +38,7 @@ interface InvoiceData {
   paymentMethod?: string;
 }
 
-/* ---------- Boş Nesne ---------- */
+/* ---------- Başlangıç ---------- */
 const initialData: InvoiceData = {
   invoiceNo: "",
   invoiceDate: "",
@@ -56,7 +55,7 @@ const initialData: InvoiceData = {
 
 /* ---------- Supabase Fonksiyonu ---------- */
 async function generateInvoiceSummary(rawText: string) {
-  const res = await fetch(
+  const r = await fetch(
     "https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary",
     {
       method: "POST",
@@ -64,9 +63,9 @@ async function generateInvoiceSummary(rawText: string) {
       body: JSON.stringify({ rawText }),
     }
   );
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "AI hatası");
-  return data as { invoiceData: InvoiceData; summary: string };
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || "AI hatası");
+  return d as { invoiceData: InvoiceData; summary: string };
 }
 
 /* ---------- Yardımcı ---------- */
@@ -85,6 +84,7 @@ const FieldLabel: React.FC<{ icon: React.ReactNode; text: string }> = ({
   </label>
 );
 
+/* ---------- Bileşen ---------- */
 export default function InvoiceOcrPage() {
   /* State */
   const [loading, setLoading] = useState(false);
@@ -94,9 +94,6 @@ export default function InvoiceOcrPage() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData>(initialData);
   const [summary, setSummary] = useState<string | null>(null);
   const [rawText, setRawText] = useState("");
-
-  /* JSON tablo ön-izleme */
-  const [tableOpen, setTableOpen] = useState(false);
 
   /* Kamera */
   const [cameraOn, setCameraOn] = useState(false);
@@ -127,7 +124,7 @@ export default function InvoiceOcrPage() {
       /* OCR */
       const base64 = await fileToBase64(file);
       const clean = base64.replace(/^data:image\/\w+;base64,/, "");
-      const visionRes = await fetch(
+      const vRes = await fetch(
         `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
         {
           method: "POST",
@@ -142,10 +139,9 @@ export default function InvoiceOcrPage() {
           }),
         }
       );
-      if (!visionRes.ok)
-        throw new Error((await visionRes.json()).error.message);
+      if (!vRes.ok) throw new Error((await vRes.json()).error.message);
       const detected =
-        (await visionRes.json()).responses[0]?.fullTextAnnotation?.text || "";
+        (await vRes.json()).responses[0]?.fullTextAnnotation?.text || "";
       setRawText(detected);
 
       /* AI */
@@ -162,7 +158,6 @@ export default function InvoiceOcrPage() {
     }
   }
 
-  /* ---------- Helpers ---------- */
   const fileToBase64 = (file: File) =>
     new Promise<string>((res, rej) => {
       const r = new FileReader();
@@ -205,7 +200,7 @@ export default function InvoiceOcrPage() {
     stopCamera();
   }
 
-  /* ---------- Tablo Oluştur ---------- */
+  /* ---------- Sabit tablo satırları ---------- */
   const rows: { label: string; value: string }[] = [
     { label: "Fatura No", value: invoiceData.invoiceNo ?? "" },
     { label: "Fatura Tarihi", value: invoiceData.invoiceDate ?? "" },
@@ -291,7 +286,7 @@ export default function InvoiceOcrPage() {
             )}
           </div>
 
-          {/* Kamera */}
+          {/* Kamera alanı */}
           {cameraOn && (
             <div className="mt-4 bg-gray-100 rounded-xl overflow-hidden border">
               <div className="flex justify-between items-center px-2 py-1 bg-white border-b text-sm">
@@ -335,23 +330,12 @@ export default function InvoiceOcrPage() {
 
         {/* -------- Sağ Panel -------- */}
         <div className="bg-white rounded-2xl shadow border p-6 h-fit">
-          <button
-            className="flex items-center gap-1 text-sm font-semibold mb-3 select-none"
-            onClick={() => setTableOpen(!tableOpen)}
-          >
-            JSON Tablo Özeti
-            {tableOpen ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
+          <h3 className="text-sm font-semibold mb-3">Fatura Verileri</h3>
 
-          {/* Küçük özet (ilk 4 satır) */}
-          {!tableOpen && (
+          <div className="max-h-[70vh] overflow-auto">
             <table className="text-xs border w-full">
               <tbody>
-                {rows.slice(0, 4).map((r) => (
+                {rows.map((r) => (
                   <tr key={r.label} className="border-b">
                     <td className="font-medium px-2 py-1">{r.label}</td>
                     <td className="px-2 py-1">{r.value || "-"}</td>
@@ -359,25 +343,9 @@ export default function InvoiceOcrPage() {
                 ))}
               </tbody>
             </table>
-          )}
+          </div>
 
-          {/* Tam tablo */}
-          {tableOpen && (
-            <div className="max-h-[70vh] overflow-auto">
-              <table className="text-xs border w-full">
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.label} className="border-b">
-                      <td className="font-medium px-2 py-1">{r.label}</td>
-                      <td className="px-2 py-1">{r.value || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Ham OCR metni detaylar içinde bırakıyoruz */}
+          {/* Ham OCR metni (isteğe bağlı) */}
           {rawText && (
             <details className="mt-4 text-xs">
               <summary className="cursor-pointer">Ham OCR Metni</summary>
