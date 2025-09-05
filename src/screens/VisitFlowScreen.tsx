@@ -308,11 +308,21 @@ const ProposalScreen: React.FC<{ customer: Customer; onProceed: () => void; onCa
                              <h3 className="font-bold text-[#0099CB] flex items-center gap-2"><Sparkles className="w-5 h-5"/> Enerjisa Teklif Simülasyonu</h3>
                              <div className="mt-4 space-y-2">
                                 <p className="text-xs text-gray-500 mb-1">Uygun Tarife Seçimi</p>
-                                {availableTariffs.map(tariff => (<label key={tariff.name} className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedTariff.name === tariff.name ? 'bg-white border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100'}`}>
-                                    <div className="flex justify-between items-center"><span className="text-sm font-semibold text-gray-800">{tariff.name}</span><span className="font-bold text-sm text-[#0099CB]">{formatCurrency(tariff.price)}</span></div>
-                                    {tariff.isSolar && (<div className="mt-2 text-xs text-green-700 bg-green-50 p-1.5 rounded flex items-center gap-1"><Info className="w-4 h-4 flex-shrink-0" /><span>Bu tarife ile solar çözümlerde %10 indirim!</span></div>)}
+                                {availableTariffs.map(tariff => (
+                                <label key={tariff.name} className={`p-3 border rounded-lg cursor-pointer transition-colors flex flex-col ${selectedTariff.name === tariff.name ? 'bg-white border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100'}`}>
+                                    <div className="flex justify-between items-center w-full">
+                                        <span className="text-sm font-semibold text-gray-800">{tariff.name}</span>
+                                        <span className="font-bold text-sm text-[#0099CB]">{formatCurrency(tariff.price)}</span>
+                                    </div>
+                                    {tariff.isSolar && (
+                                    <div className="mt-2 text-xs text-green-700 bg-green-50 p-1.5 rounded flex items-center gap-1 w-full">
+                                        <Info className="w-4 h-4 flex-shrink-0" />
+                                        <span className="min-w-0">Bu tarife ile solar çözümlerde %10 indirim!</span>
+                                    </div>
+                                    )}
                                     <input type="radio" name="tariff" checked={selectedTariff.name === tariff.name} onChange={() => setSelectedTariff(tariff)} className="sr-only"/>
-                                </label>))}
+                                </label>
+                                ))}
                              </div>
                              {selectedTariff.isSolar && (
                                 <div className="mt-4 pt-4 border-t border-blue-200 text-center animate-fade-in">
