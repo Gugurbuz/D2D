@@ -1,5 +1,5 @@
 // src/screens/RouteMapScreen.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -9,7 +9,9 @@ import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff, Navigation } f
 
 import { optimizeRoute, LatLng } from "../lib/osrm";
 
-// ==== Tipler (uygun gördüğün yere taşıyabilirsin) ====
+/* =======================
+   Tipler
+   ======================= */
 export type Customer = {
   id: string;
   name: string;
@@ -24,23 +26,36 @@ export type Customer = {
   status: "Bekliyor" | "Yolda" | "Tamamlandı";
   estimatedDuration: string;
   distance: string;
-  lat: number;
-  lng: number;
+  lat: number | string;
+  lng: number | string;
   phone: string;
 };
 
 export type SalesRep = {
   name: string;
-  lat: number;
-  lng: number;
+  lat: number | string;
+  lng: number | string;
 };
 
 interface Props {
-  customers: Customer[];   // 🔴 Artık zorunlu (default veri YOK)
-  salesRep: SalesRep;      // 🔴 Zorunlu
+  customers: Customer[]; // zorunlu
+  salesRep: SalesRep;    // zorunlu
 }
 
-// ==== Ikonlar ====
+/* =======================
+   Yardımcılar
+   ======================= */
+const toNum = (v: any) => {
+  const n = typeof v === "string" ? parseFloat(v) : Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const fmtKm = (km: number | null) =>
+  km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
+
+/* =======================
+   Ikonlar
+   ======================= */
 const repIcon = new L.Icon({
   iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491",
   iconSize: [32, 32],
@@ -62,15 +77,33 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
   });
 }
 
-const fmtKm = (km: number | null) =>
-  km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
-
-// ==== Ekran ====
+/* =======================
+   Ekran
+   ======================= */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
-  const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(customers || []);
+  // 1) Rep'i ve müşterileri güvene al
+  const safeRep = useMemo(() => {
+    const lat = toNum(salesRep?.lat);
+    const lng = toNum(salesRep?.lng);
+    return lat != null && lng != null ? { ...salesRep, lat, lng } : null;
+  }, [salesRep]);
+
+  const validCustomers = useMemo(() => {
+    return (customers || [])
+      .map((c) => {
+        const lat = toNum(c.lat);
+        const lng = toNum(c.lng);
+        if (lat == null || lng == null) return null;
+        return { ...c, lat, lng } as Customer & { lat: number; lng: number };
+      })
+      .filter(Boolean) as Customer[];
+  }, [customers]);
+
+  // 2) State
+  const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(validCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,13 +111,21 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // 3) Inputs değişince sıfırla
   useEffect(() => {
-    setOrderedCustomers(customers || []);
+    setOrderedCustomers(validCustomers);
     setRouteCoords([]);
     setRouteKm(null);
     setSelectedId(null);
     setStarredId(null);
-  }, [customers]);
+  }, [validCustomers]);
+
+  // 4) Merkez (rep -> ilk müşteri -> İstanbul)
+  const center: LatLng = safeRep
+    ? [safeRep.lat as number, safeRep.lng as number]
+    : validCustomers.length
+      ? [validCustomers[0].lat as number, validCustomers[0].lng as number]
+      : [41.015137, 28.97953];
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
@@ -92,48 +133,53 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     setSelectedId(c.id);
     const m = markerRefs.current[c.id];
     if (pan && mapRef.current) {
-      mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+      mapRef.current.setView([c.lat as number, c.lng as number], Math.max(mapRef.current.getZoom(), 14), { animate: true });
     }
     if (m) m.openPopup();
     const row = document.getElementById(`cust-row-${c.id}`);
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
+  // 5) Optimize
   const handleOptimize = async () => {
+    if (!safeRep || validCustomers.length === 0) return;
     setLoading(true);
     try {
       const { orderedStops, polyline, distanceKm } = await optimizeRoute({
-        rep: { lat: salesRep.lat, lng: salesRep.lng },
-        stops: customers,
+        rep: { lat: safeRep.lat as number, lng: safeRep.lng as number },
+        stops: validCustomers,
         starredId,
       });
       setOrderedCustomers(orderedStops as Customer[]);
       setRouteCoords(polyline);
       setRouteKm(distanceKm);
-      if (orderedStops[0]) highlightCustomer(orderedStops[0] as Customer, true);
+      if (orderedStops[0]) {
+        const first = orderedStops[0] as Customer;
+        highlightCustomer(first, true);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // yıldız değişince otomatik optimize
   useEffect(() => {
-    // yıldız değişince otomatik optimize
     if (starredId !== null) handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
 
-  if (!customers || customers.length === 0) {
+  // Boş/Geçersiz durum
+  if (!safeRep && validCustomers.length === 0) {
     return (
       <div className="p-6 rounded-xl border bg-white">
         <div className="text-gray-800 font-semibold">Rota Haritası</div>
         <div className="text-sm text-gray-600 mt-2">
-          Gösterilecek müşteri yok. Lütfen <b>customers</b> prop&#39;u ile durakları iletin.
+          Geçerli konum veya müşteri bulunamadı. Lütfen <b>salesRep.lat/lng</b> ile
+          <b> customers[].lat/lng</b> alanlarının sayısal olduğundan emin olun.
         </div>
       </div>
     );
   }
-
-  const center: LatLng = [salesRep.lat, salesRep.lng];
 
   return (
     <div className="relative w-full">
@@ -149,7 +195,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           </div>
           <button
             onClick={handleOptimize}
-            disabled={loading}
+            disabled={loading || !safeRep || validCustomers.length === 0}
             className={`px-4 py-2 rounded-lg font-semibold ${
               loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
             }`}
@@ -163,22 +209,23 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         <MapContainer
+          key={`${center[0]}-${center[1]}`} // güvenli remount
           center={center}
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
           className="z-0"
         >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
-
-          <Marker position={[salesRep.lat, salesRep.lng]} icon={repIcon}>
-            <Popup><b>{salesRep.name}</b></Popup>
-          </Marker>
+          {safeRep && (
+            <Marker position={[safeRep.lat as number, safeRep.lng as number]} icon={repIcon}>
+              <Popup><b>{safeRep.name}</b></Popup>
+            </Marker>
+          )}
 
           {orderedCustomers.map((c, i) => (
             <Marker
               key={c.id}
-              position={[c.lat, c.lng]}
+              position={[c.lat as number, c.lng as number]}
               icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
               zIndexOffset={1000 - i}
               ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
@@ -238,7 +285,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           onRowClick={(c) => {
             setSelectedId(c.id);
             if (mapRef.current) {
-              mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+              mapRef.current.setView([c.lat as number, c.lng as number], Math.max(mapRef.current.getZoom(), 14), { animate: true });
             }
             const m = markerRefs.current[c.id];
             if (m) m.openPopup();
@@ -260,6 +307,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
+/* =======================
+   Sağ Panel
+   ======================= */
 const SidePanel: React.FC<{
   customers: Customer[];
   selectedId: string | null;
@@ -361,6 +411,9 @@ const SidePanel: React.FC<{
   );
 };
 
+/* =======================
+   Tam ekran butonu
+   ======================= */
 const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
