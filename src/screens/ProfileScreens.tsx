@@ -64,31 +64,28 @@ const allUsers = [...teamReps, managerUser];
 // export const SalesProfile: React.FC<{ user: SalesUser }> = ({ user }) => { ... };
 // export const ManagerProfile: React.FC<{ user: ManagerUser }> = ({ user }) => { ... };
 
-// ===== Wrapper Component'in son hali =====
+// ===== Wrapper Component'in DÜZELTİLMİŞ ve SON hali =====
 const ProfileScreens: React.FC<{ userId: string }> = ({ userId }) => {
-  // DEĞİŞTİRİLDİ: Arama işlemi artık 'reps' yerine 'allUsers' dizisinde yapılıyor.
+  // Veri artık merkezi `allUsers` dizisinden geliyor.
   const user = allUsers.find((r) => r.id === userId);
 
-  // Kullanıcı bulunamazsa gösterilecek mesaj (Değişiklik yok)
+  // Kullanıcı bulunamazsa hata mesajı göster.
   if (!user) {
     return <div className="p-8 text-center text-red-500">Kullanıcı bulunamadı! ID: {userId}</div>;
   }
 
-  // Rol'e göre render etme (Değişiklik yok)
+  // --- DEĞİŞİKLİK BURADA ---
+  // Rol'e göre GEÇİCİ div'ler yerine GERÇEK bileşenleri render et.
   if (user.role === "sales") {
     // SalesProfile bileşeninizin burada render edilmesi gerekiyor.
-    // Eğer aynı dosyadaysa kodunuz çalışacaktır.
-    // return <SalesProfile user={user as SalesUser} />;
-    return <div>Sales Profile for {user.name}</div>; // Geçici placeholder
+    return <SalesProfile user={user as SalesUser} />;
   }
   
   if (user.role === "manager") {
     // ManagerProfile bileşeninizin burada render edilmesi gerekiyor.
-    // return <ManagerProfile user={user as ManagerUser} />;
-    return <div>Manager Profile for {user.name}</div>; // Geçici placeholder
+    return <ManagerProfile user={user as ManagerUser} />;
   }
 
   return <div>Geçersiz kullanıcı rolü.</div>;
 };
-
 export default ProfileScreens;
