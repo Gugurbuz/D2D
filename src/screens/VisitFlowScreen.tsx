@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 
 // --- GEREKLİ TİPLER ---
-// Önizleme için gerekli tipleri ve mock verileri buraya ekledim.
 export interface Customer {
   id: number;
   name: string;
@@ -23,7 +22,6 @@ export interface Customer {
   currentProvider: string;
   currentKwhPrice: number;
   avgMonthlyConsumptionKwh: number;
-  // Müşteri konumu için enlem ve boylam
   lat: number;
   lon: number;
 }
@@ -93,7 +91,15 @@ function visitReducer(state: State, action: Action): State {
       return { ...state, visitStatus: action.payload };
     case 'SET_STEP':
       return { ...state, currentStep: action.payload };
-    // ... diğer case'ler aynı kalır
+    case 'SET_ID_PHOTO': return { ...state, idPhoto: action.payload };
+    case 'SET_OCR_STATUS': return { ...state, ocrStatus: action.payload };
+    case 'SET_NFC_STATUS': return { ...state, nfcStatus: action.payload };
+    case 'SET_CONTRACT_ACCEPTED': return { ...state, contractAccepted: action.payload };
+    case 'SET_SMS_SENT': return { ...state, smsSent: action.payload };
+    case 'SET_NOTES': return { ...state, notes: action.payload };
+    case 'SET_REJECTION_REASON': return { ...state, rejectionReason: action.payload, rescheduledDate: null };
+    case 'SET_RESCHEDULED_DATE': return { ...state, rescheduledDate: action.payload, rejectionReason: null };
+    case 'RESET': return initialState;
     default:
       return state;
   }
@@ -131,7 +137,7 @@ const VisitFlowScreen: React.FC<VisitFlowProps> = ({ customer, onCloseToList, on
     <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ziyaret: {customer.name}</h1>
-        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Listeye Dön</button>
+        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Başa Dön</button>
       </div>
       {state.visitStatus === 'Pending' && <VisitStatusSelection onSelect={handleStatusSelect} />}
       {state.visitStatus === 'InProgress' && (
@@ -192,7 +198,7 @@ const ProposalScreen: React.FC<{ customer: Customer; onProceed: () => void; onCa
         <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen animate-fade-in">
             <div className="flex items-center justify-between mb-4">
                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Müşteri Teklifi ve Analiz</h1>
-                 <button onClick={onCancel} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Listeye Dön</button>
+                 <button onClick={onCancel} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Başa Dön</button>
             </div>
             <div className="bg-white rounded-xl shadow-sm p-6">
                 <div className="pb-4 border-b flex justify-between items-start">
@@ -228,20 +234,12 @@ const ProposalScreen: React.FC<{ customer: Customer; onProceed: () => void; onCa
     );
 };
 
-
 // ==================================================================
 // ==================== YENİ CHECK-IN EKRANI ========================
 // ==================================================================
 
-// İki coğrafi koordinat arasındaki mesafeyi km olarak hesaplayan yardımcı fonksiyon (Haversine formülü)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Dünya'nın yarıçapı (km)
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-        0.5 - Math.cos(dLat)/2 + 
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * (1 - Math.cos(dLon)) / 2;
-    return R * 2 * Math.asin(Math.sqrt(a));
+    const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180; const a = 0.5 - Math.cos(dLat)/2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * (1 - Math.cos(dLon)) / 2; return R * 2 * Math.asin(Math.sqrt(a));
 }
 
 const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void; onCancel: () => void;}> = ({ customer, onCheckInSuccess, onCancel }) => {
@@ -271,6 +269,8 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
     }, [customer.lat, customer.lon]);
     
     const isCheckInAllowed = distance !== null && distance <= CHECK_IN_RADIUS_KM;
+    // TEST MODU: Konum hatası olsa bile devam etmeye izin ver.
+    const canProceedForTesting = locationStatus !== 'loading';
 
     return (
         <div className="p-4 sm:p-6 max-w-lg mx-auto bg-gray-50 min-h-screen flex items-center justify-center animate-fade-in">
@@ -282,15 +282,8 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
                 </div>
 
                 <div className="mt-6 border-t pt-6 space-y-4">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Müşteri</p>
-                        <p className="font-semibold text-gray-800">{customer.name}</p>
-                        <p className="text-sm text-gray-600">{customer.address}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm font-medium text-gray-500">Ziyaret Başlangıç Zamanı</p>
-                        <p className="font-semibold text-gray-800">{checkInTime.toLocaleDateString('tr-TR')} - {checkInTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}</p>
-                    </div>
+                    <div> <p className="text-sm font-medium text-gray-500">Müşteri</p> <p className="font-semibold text-gray-800">{customer.name}</p> <p className="text-sm text-gray-600">{customer.address}</p> </div>
+                    <div> <p className="text-sm font-medium text-gray-500">Ziyaret Başlangıç Zamanı</p> <p className="font-semibold text-gray-800">{checkInTime.toLocaleDateString('tr-TR')} - {checkInTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}</p> </div>
                     <div>
                         <p className="text-sm font-medium text-gray-500">Konum Durumu</p>
                         {locationStatus === 'loading' && <div className="flex items-center gap-2 text-gray-600"><Loader2 className="w-4 h-4 animate-spin"/>Konumunuz alınıyor...</div>}
@@ -299,14 +292,14 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
                             isCheckInAllowed ? (
                                 <div className="flex items-center gap-2 text-green-600 font-semibold"><CheckCircle className="w-5 h-5"/>Müşteri konumundasınız ({Math.round(distance * 1000)}m).</div>
                             ) : (
-                                <div className="flex items-center gap-2 text-orange-600 font-semibold"><AlertTriangle className="w-5 h-5"/>Müşteri konumuna uzaksınız ({distance.toFixed(2)} km).</div>
+                                <div className="flex items-center gap-2 text-orange-600 font-semibold"><AlertTriangle className="w-5 h-5"/>Müşteri konumuna uzaksınız ({distance.toFixed(2)} km). [Test Modu Aktif]</div>
                             )
                         )}
                     </div>
                 </div>
 
                 <div className="mt-8 flex flex-col gap-3">
-                    <button onClick={onCheckInSuccess} disabled={!isCheckInAllowed} className="w-full bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center justify-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    <button onClick={onCheckInSuccess} disabled={!canProceedForTesting} className="w-full bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center justify-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">
                        Check-in Yap ve Devam Et
                     </button>
                      <button onClick={onCancel} className="w-full bg-gray-100 text-gray-700 px-8 py-2 rounded-lg font-medium hover:bg-gray-200">
@@ -317,8 +310,6 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
         </div>
     );
 };
-
-
 
 // ==================================================================
 // ==================== ANA UYGULAMA (ÖNİZLEME İÇİN) ===============
@@ -331,17 +322,14 @@ const mockCustomers: Customer[] = [
 ];
 
 const App = () => {
-    const [view, setView] = useState<'list' | 'check-in' | 'proposal' | 'flow'>('list');
-    const [activeCustomer, setActiveCustomer] = useState<Customer | null>(null);
-    
-    const handleStartVisit = (customer: Customer) => {
-        setActiveCustomer(customer);
-        setView('check-in'); // Önce Check-in ekranını göster
-    };
-    
-    const handleClose = () => {
-        setActiveCustomer(null);
-        setView('list');
+    // TEST MODU: Müşteri listesi olmadan, doğrudan ilk müşterinin check-in ekranıyla başla
+    const [activeCustomer, setActiveCustomer] = useState<Customer>(mockCustomers[0]);
+    const [view, setView] = useState<'check-in' | 'proposal' | 'flow'>('check-in');
+
+    const handleReset = () => {
+        // Test için akışı yeniden başlat
+        setActiveCustomer(mockCustomers[0]);
+        setView('check-in');
     };
     
     const handleCheckInSuccess = () => {
@@ -354,42 +342,23 @@ const App = () => {
     
     const handleComplete = (customer: Customer, status: VisitStatus, notes: string) => {
         console.log("Ziyaret Tamamlandı!", { customer: customer.name, status, notes });
-        handleClose();
+        handleReset(); // Akış bitince başa dön
     };
-
-    if (activeCustomer) {
-        if (view === 'check-in') {
-            return <CheckInScreen customer={activeCustomer} onCheckInSuccess={handleCheckInSuccess} onCancel={handleClose} />;
-        }
-        if (view === 'proposal') {
-            return <ProposalScreen customer={activeCustomer} onProceed={handleProceedToFlow} onCancel={handleClose} />;
-        }
-        if (view === 'flow') {
-            return <VisitFlowScreen customer={activeCustomer} onCloseToList={handleClose} onCompleteVisit={handleComplete} />;
-        }
-    }
     
-    return (
-        <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">Müşteri Ziyaret Listesi</h1>
-            <div className="space-y-4">
-                {mockCustomers.map(customer => (
-                    <div key={customer.id} className="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold text-lg text-gray-800">{customer.name}</p>
-                            <p className="text-sm text-gray-600">{customer.address}</p>
-                             <div className={`mt-2 inline-flex items-center gap-2 px-2 py-0.5 ${subscriberTypeInfo[customer.subscriberType].color} rounded-full text-xs font-medium`}>
-                                {subscriberTypeInfo[customer.subscriberType].icon} {customer.subscriberType}
-                            </div>
-                        </div>
-                        <button onClick={() => handleStartVisit(customer)} className="bg-[#0099CB] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors">
-                            Ziyareti Başlat
-                        </button>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+    if (!activeCustomer) {
+      return <div>Müşteri bulunamadı.</div>;
+    }
+
+    switch (view) {
+        case 'check-in':
+            return <CheckInScreen customer={activeCustomer} onCheckInSuccess={handleCheckInSuccess} onCancel={handleReset} />;
+        case 'proposal':
+            return <ProposalScreen customer={activeCustomer} onProceed={handleProceedToFlow} onCancel={handleReset} />;
+        case 'flow':
+             return <VisitFlowScreen customer={activeCustomer} onCloseToList={handleReset} onCompleteVisit={handleComplete} />;
+        default:
+             return <div>Geçersiz görünüm.</div>
+    }
 }
 
 export default App;
