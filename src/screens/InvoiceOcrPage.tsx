@@ -110,6 +110,9 @@ export default function InvoiceOcrPage() {
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
 
+  // Özet modal state
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -134,20 +137,21 @@ export default function InvoiceOcrPage() {
     []
   );
 
-  // cameraOn => body scroll kilidi
+  // Kamera veya Modal açıksa body scroll kilidi
   useEffect(() => {
-    if (!cameraOn) return;
     const prev = {
       overflow: document.body.style.overflow,
       height: document.body.style.height,
     };
-    document.body.style.overflow = "hidden";
-    document.body.style.height = "100vh";
+    if (cameraOn || isSummaryModalOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.style.height = "100vh";
+    }
     return () => {
       document.body.style.overflow = prev.overflow;
       document.body.style.height = prev.height;
     };
-  }, [cameraOn]);
+  }, [cameraOn, isSummaryModalOpen]);
 
   // stream bağlama ve play
   useEffect(() => {
@@ -439,7 +443,6 @@ export default function InvoiceOcrPage() {
   // ONAYLA → OVERLAY KAPANIR, OCR arkada başlar
   function confirmPhoto() {
     if (!capturedFile) return;
-    // ana ekranda hemen loader göstermek istersen:
     setLoading(true);
     setLoadingMessage("Fatura okunuyor…");
     setError(null);
@@ -447,7 +450,6 @@ export default function InvoiceOcrPage() {
     const file = capturedFile;
     closeCamera(); // overlay kapanır
     setTimeout(() => {
-      // arka planda OCR
       runCloudVisionOcr(file);
     }, 0);
   }
@@ -525,17 +527,25 @@ export default function InvoiceOcrPage() {
                 )}
               </div>
 
-              {/* Özet kutusu */}
+              {/* Özet kutusu (TIKLANABİLİR) */}
               <div className="mt-4">
                 {summary ? (
-                  <div className="p-4 border rounded-lg bg-gray-50 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => setIsSummaryModalOpen(true)}
+                    className="w-full text-left p-4 border rounded-lg bg-gray-50 text-sm hover:bg-gray-100 active:opacity-90 cursor-pointer"
+                    aria-label="Akıllı Fatura Özetini Aç"
+                  >
                     <div className="font-semibold text-gray-800 mb-1">
                       Akıllı Fatura Özeti
                     </div>
                     <p style={summaryClampStyle} className="text-gray-700">
                       {summary}
                     </p>
-                  </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Tamamını görmek için dokunun
+                    </div>
+                  </button>
                 ) : (
                   <div className="h-24 bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
                     Henüz özet yok
@@ -760,6 +770,38 @@ export default function InvoiceOcrPage() {
           </div>
         </div>
       </main>
+
+      {/* ===================== ÖZET MODAL ===================== */}
+      {isSummaryModalOpen && summary && (
+        <div
+          className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Akıllı Fatura Özeti"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsSummaryModalOpen(false)}
+          />
+          <div className="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-lg max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-base font-semibold">Akıllı Fatura Özeti</h3>
+              <button
+                onClick={() => setIsSummaryModalOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Kapat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto">
+              <pre className="whitespace-pre-wrap break-words text-gray-800 text-sm">
+                {summary}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ===================== KAMERA TAM EKRAN OVERLAY ===================== */}
       {cameraOn && (
