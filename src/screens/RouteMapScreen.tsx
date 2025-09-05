@@ -13,7 +13,7 @@ import { optimizeRoute, LatLng } from "../lib/osrm";
    Tipler
    ======================= */
 export type Customer = {
-  id: string;
+  id: string | number;
   name: string;
   address: string;
   district: string;
@@ -38,12 +38,12 @@ export type SalesRep = {
 };
 
 interface Props {
-  customers: Customer[]; // zorunlu
-  salesRep: SalesRep;    // zorunlu
+  customers: Customer[];
+  salesRep: SalesRep;
 }
 
 /* =======================
-   Yardımcılar
+   Yardımcılar / ikonlar
    ======================= */
 const toNum = (v: any) => {
   const n = typeof v === "string" ? parseFloat(v) : Number(v);
@@ -53,9 +53,6 @@ const toNum = (v: any) => {
 const fmtKm = (km: number | null) =>
   km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
-/* =======================
-   Ikonlar
-   ======================= */
 const repIcon = new L.Icon({
   iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491",
   iconSize: [32, 32],
@@ -84,7 +81,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
-  // 1) Rep'i ve müşterileri güvene al
+  // rep & customers'ı güvene al
   const safeRep = useMemo(() => {
     const lat = toNum(salesRep?.lat);
     const lng = toNum(salesRep?.lng);
@@ -102,16 +99,16 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       .filter(Boolean) as Customer[];
   }, [customers]);
 
-  // 2) State
+  // state
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(validCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [starredId, setStarredId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  const [starredId, setStarredId] = useState<string | number | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // 3) Inputs değişince sıfırla
+  // inputs değişince sıfırla
   useEffect(() => {
     setOrderedCustomers(validCustomers);
     setRouteCoords([]);
@@ -120,7 +117,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     setStarredId(null);
   }, [validCustomers]);
 
-  // 4) Merkez (rep -> ilk müşteri -> İstanbul)
   const center: LatLng = safeRep
     ? [safeRep.lat as number, safeRep.lng as number]
     : validCustomers.length
@@ -131,7 +127,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   const highlightCustomer = (c: Customer, pan = true) => {
     setSelectedId(c.id);
-    const m = markerRefs.current[c.id];
+    const m = markerRefs.current[String(c.id)];
     if (pan && mapRef.current) {
       mapRef.current.setView([c.lat as number, c.lng as number], Math.max(mapRef.current.getZoom(), 14), { animate: true });
     }
@@ -140,7 +136,13 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // 5) Optimize
+  const fitPolylineBounds = (poly: LatLng[]) => {
+    if (!mapRef.current || poly.length < 2) return;
+    const bounds = L.latLngBounds(poly.map((p) => L.latLng(p[0], p[1])));
+    mapRef.current.fitBounds(bounds, { padding: [24, 24] });
+  };
+
+  // optimize
   const handleOptimize = async () => {
     if (!safeRep || validCustomers.length === 0) return;
     setLoading(true);
@@ -157,6 +159,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         const first = orderedStops[0] as Customer;
         highlightCustomer(first, true);
       }
+      fitPolylineBounds(polyline);
+    } catch (e) {
+      console.error("optimize error:", e);
     } finally {
       setLoading(false);
     }
@@ -168,7 +173,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
 
-  // Boş/Geçersiz durum
   if (!safeRep && validCustomers.length === 0) {
     return (
       <div className="p-6 rounded-xl border bg-white">
@@ -224,15 +228,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
           {orderedCustomers.map((c, i) => (
             <Marker
-              key={c.id}
+              key={String(c.id)}
               position={[c.lat as number, c.lng as number]}
               icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
               zIndexOffset={1000 - i}
-              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+              ref={(ref: any) => { if (ref) markerRefs.current[String(c.id)] = ref; }}
               eventHandlers={{
                 click: () => {
                   setSelectedId(c.id);
-                  const m = markerRefs.current[c.id];
+                  const m = markerRefs.current[String(c.id)];
                   if (m) m.openPopup();
                 },
               }}
@@ -272,7 +276,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             </Marker>
           ))}
 
-          {routeCoords.length > 0 && (
+          {routeCoords.length > 1 && (
             <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
           )}
         </MapContainer>
@@ -287,7 +291,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             if (mapRef.current) {
               mapRef.current.setView([c.lat as number, c.lng as number], Math.max(mapRef.current.getZoom(), 14), { animate: true });
             }
-            const m = markerRefs.current[c.id];
+            const m = markerRefs.current[String(c.id)];
             if (m) m.openPopup();
           }}
           onToggleStar={(id) => setStarredId((prev) => (prev === id ? null : id))}
@@ -312,10 +316,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
    ======================= */
 const SidePanel: React.FC<{
   customers: Customer[];
-  selectedId: string | null;
-  starredId: string | null;
+  selectedId: string | number | null;
+  starredId: string | number | null;
   onRowClick: (c: Customer) => void;
-  onToggleStar: (id: string) => void;
+  onToggleStar: (id: string | number) => void;
   panelOpen: boolean;
   setPanelOpen: (b: boolean) => void;
 }> = ({ customers, selectedId, starredId, onRowClick, onToggleStar, panelOpen, setPanelOpen }) => {
@@ -370,7 +374,7 @@ const SidePanel: React.FC<{
             const starred = starredId === c.id;
             return (
               <div
-                key={c.id}
+                key={String(c.id)}
                 id={`cust-row-${c.id}`}
                 className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
                 onClick={() => onRowClick(c)}
@@ -411,9 +415,6 @@ const SidePanel: React.FC<{
   );
 };
 
-/* =======================
-   Tam ekran butonu
-   ======================= */
 const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
