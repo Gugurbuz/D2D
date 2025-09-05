@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Play, MapPin, UserCheck, StickyNote, Hash, Calendar } from "lucide-react";
+import { Eye, Play, MapPin, UserCheck, StickyNote } from "lucide-react";
 import type { Customer } from "../RouteMap";
 import { Chip } from "./Chip";
 
@@ -26,25 +26,17 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* SOL TARAF */}
         <div className="flex-1 space-y-2">
-          {/* İsim */}
-          <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
+          {/* İsim + yeni bilgiler tek satırda */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
+            <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber}</div>
+            <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber}</div>
+            <div className="text-xs text-gray-500">Tarih: {customer.visitDate}</div>
+          </div>
 
           {/* Adres */}
           <div className="text-sm text-gray-600 flex items-center gap-1">
             <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
-          </div>
-
-          {/* 🔹 Yeni Ek Bilgiler */}
-          <div className="text-xs text-gray-500 space-y-1 mt-1">
-            <div className="flex items-center gap-1">
-              <Hash className="w-3 h-3 text-gray-400" /> <span>Müşteri No:</span> {customer.customerNumber}
-            </div>
-            <div className="flex items-center gap-1">
-              <Hash className="w-3 h-3 text-gray-400" /> <span>Tesisat No:</span> {customer.installationNumber}
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-gray-400" /> <span>Ziyaret Tarihi:</span> {customer.visitDate}
-            </div>
           </div>
 
           {/* Chip alanları */}
