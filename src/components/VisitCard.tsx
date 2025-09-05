@@ -9,6 +9,16 @@ const getStatusTone = (status: Customer["status"]) =>
 const getPriorityTone = (priority: Customer["priority"]) =>
   priority === "Yüksek" ? "red" : priority === "Orta" ? "yellow" : "green";
 
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+}
+
 type Props = {
   customer: Customer;
   assignedName: string | null;
@@ -56,7 +66,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           <div>
             {/* Tarih + Saat aynı satırda */}
             <div className="text-sm font-medium text-gray-900 flex gap-2">
-              <span>{customer.visitDate ?? "-"}</span>
+              <span>{formatDate(customer.visitDate)}</span>
               <span>{customer.plannedTime}</span>
             </div>
             {/* Mesafe */}
