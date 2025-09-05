@@ -1,3 +1,7 @@
+// src/data/mockCustomers.ts
+
+
+export const mockCustomers: Customer[] = [
 [
   {
     "id": "1",
