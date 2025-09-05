@@ -12,6 +12,8 @@ import {
   ShieldAlert,
   Zap,
   X,
+  RotateCcw,
+  Check,
 } from "lucide-react";
 
 /* ------------ process polyfill (tarayıcı) ------------- */
@@ -90,6 +92,8 @@ const FieldLabel = ({
   </label>
 );
 
+type CamMode = "live" | "preview";
+
 export default function InvoiceOcrPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -100,8 +104,11 @@ export default function InvoiceOcrPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Kamera state
-  const [cameraOn, setCameraOn] = useState(false); // tam ekran modal görünürlüğü
+  const [cameraOn, setCameraOn] = useState(false);     // overlay açık mı?
+  const [camMode, setCamMode] = useState<CamMode>("live"); // live | preview
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [capturedFile, setCapturedFile] = useState<File | null>(null);
+  const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -119,12 +126,12 @@ export default function InvoiceOcrPage() {
     whiteSpace: "normal",
   };
 
-  // Bileşen unmount'ta stream'i kapat
+  // Unmount'ta stream'i kapat
   useEffect(
     () => () => {
-      if (stream) stream.getTracks().forEach((t) => t.stop());
+      stopStream();
     },
-    [stream]
+    []
   );
 
   // cameraOn => body scroll kilidi
@@ -150,10 +157,15 @@ export default function InvoiceOcrPage() {
     v.muted = true;
     (v as any).srcObject = stream;
     const p = v.play();
-    if (p && typeof p.then === "function") {
-      p.catch(() => {});
-    }
+    if (p && typeof p.then === "function") p.catch(() => {});
   }, [stream]);
+
+  // capturedUrl revocation
+  useEffect(() => {
+    return () => {
+      if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+    };
+  }, [capturedUrl]);
 
   const handleDataChange = (path: string, value: any) => {
     setData((prev) => {
@@ -279,7 +291,7 @@ export default function InvoiceOcrPage() {
           body: JSON.stringify(body),
         }
       );
-      const json = await res.json(); // ⬅️ TEK KEZ OKU
+      const json = await res.json();
       if (!res.ok) {
         const msg =
           json?.error?.message ||
@@ -287,7 +299,6 @@ export default function InvoiceOcrPage() {
           "Google Vision hatası";
         throw new Error(msg);
       }
-      // fullTextAnnotation yoksa textAnnotations[0].description fallback
       const detected =
         json?.responses?.[0]?.fullTextAnnotation?.text ||
         json?.responses?.[0]?.textAnnotations?.[0]?.description ||
@@ -313,7 +324,20 @@ export default function InvoiceOcrPage() {
     if (f) await runCloudVisionOcr(f);
   }
 
-  // --- Kamera (tam ekran) ---
+  // --- Kamera yardımcıları ---
+  function stopStream() {
+    try {
+      stream?.getTracks().forEach((t) => t.stop());
+    } catch {}
+    setStream(null);
+  }
+
+  function resetCapture() {
+    if (capturedUrl) URL.revokeObjectURL(capturedUrl);
+    setCapturedUrl(null);
+    setCapturedFile(null);
+  }
+
   function mapMediaError(e: any): string {
     const name = e?.name || "";
     if (!window.isSecureContext)
@@ -354,46 +378,78 @@ export default function InvoiceOcrPage() {
 
   async function openCameraFullscreen() {
     setError(null);
-    setCameraOn(true); // modalı göster
+    resetCapture();
+    setCamMode("live");
+    setCameraOn(true);
     await startCamera();
   }
 
   function closeCamera() {
-    try {
-      stream?.getTracks().forEach((t) => t.stop());
-    } catch {}
-    setStream(null);
+    stopStream();
+    resetCapture();
+    setCamMode("live");
     setCameraOn(false);
   }
 
-  // ✅ Fotoğrafı güvenilir şekilde al: canvas.toBlob
+  // FOTOĞRAF ÇEK → ÖNİZLEME
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
 
     // metadata gelmediyse bekle
     if (videoRef.current.videoWidth === 0) {
       await new Promise<void>((resolve) => {
-        const handler = () => {
-          videoRef.current?.removeEventListener("loadeddata", handler);
+        const onLoaded = () => {
+          videoRef.current?.removeEventListener("loadeddata", onLoaded);
           resolve();
         };
-        videoRef.current?.addEventListener("loadeddata", handler);
+        videoRef.current?.addEventListener("loadeddata", onLoaded);
       });
     }
 
     const c = canvasRef.current, v = videoRef.current;
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 720;
     c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
 
     const blob: Blob = await new Promise((resolve, reject) => {
-      c.toBlob((b) => (b ? resolve(b) : reject(new Error("Görüntü oluşturulamadı."))), "image/jpeg", 0.92);
+      c.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("Görüntü oluşturulamadı."))),
+        "image/jpeg",
+        0.92
+      );
     });
 
     const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
-    setImagePreview(URL.createObjectURL(file));
-    await runCloudVisionOcr(file);
-    closeCamera(); // çekince kapat
+    const url = URL.createObjectURL(file);
+
+    // Canlı yayını durdur, önizlemeye geç
+    stopStream();
+    setCapturedFile(file);
+    setCapturedUrl(url);
+    setCamMode("preview");
+  }
+
+  // YENİDEN ÇEK
+  async function retakePhoto() {
+    resetCapture();
+    setCamMode("live");
+    await startCamera();
+  }
+
+  // ONAYLA → OVERLAY KAPANIR, OCR arkada başlar
+  function confirmPhoto() {
+    if (!capturedFile) return;
+    // ana ekranda hemen loader göstermek istersen:
+    setLoading(true);
+    setLoadingMessage("Fatura okunuyor…");
+    setError(null);
+
+    const file = capturedFile;
+    closeCamera(); // overlay kapanır
+    setTimeout(() => {
+      // arka planda OCR
+      runCloudVisionOcr(file);
+    }, 0);
   }
 
   // Detay tablosu satırları
@@ -720,31 +776,63 @@ export default function InvoiceOcrPage() {
             </button>
           </div>
 
-          {/* Video alanı */}
+          {/* İçerik: canlı veya önizleme */}
           <div className="absolute inset-0">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-            {/* Kadraj rehberi */}
-            <div className="absolute inset-0 pointer-events-none">
-              <div className="absolute inset-0 border-2 border-white/20 m-6 rounded-xl" />
-              <div className="absolute inset-x-0 top-1/2 h-px bg-white/20" />
-            </div>
+            {camMode === "live" ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              capturedUrl && (
+                <img
+                  src={capturedUrl}
+                  alt="Önizleme"
+                  className="w-full h-full object-contain bg-black"
+                />
+              )
+            )}
+
+            {/* Kadraj rehberi sadece LIVE iken */}
+            {camMode === "live" && (
+              <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute inset-0 border-2 border-white/20 m-6 rounded-xl" />
+                <div className="absolute inset-x-0 top-1/2 h-px bg-white/20" />
+              </div>
+            )}
           </div>
 
-          {/* Alt bar: çekim butonu */}
-          <div className="absolute left-0 right-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-center gap-6">
-            <button
-              onClick={capturePhoto}
-              className="relative w-16 h-16 rounded-full bg-white active:scale-95 transition-transform"
-              aria-label="Fotoğraf Çek"
-            >
-              <span className="absolute inset-1 rounded-full border-4 border-black/60" />
-            </button>
+          {/* Alt bar */}
+          <div className="absolute left-0 right-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent">
+            <div className="h-28 flex items-center justify-center gap-6">
+              {camMode === "live" ? (
+                <button
+                  onClick={capturePhoto}
+                  className="relative w-16 h-16 rounded-full bg-white active:scale-95 transition-transform"
+                  aria-label="Fotoğraf Çek"
+                >
+                  <span className="absolute inset-1 rounded-full border-4 border-black/60" />
+                </button>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={retakePhoto}
+                    className="px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 text-white inline-flex items-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" /> Yeniden Çek
+                  </button>
+                  <button
+                    onClick={confirmPhoto}
+                    className="px-5 py-2 rounded-full bg-white text-black font-semibold inline-flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" /> Onayla
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Gizli canvas */}
