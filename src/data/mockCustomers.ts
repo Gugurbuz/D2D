@@ -2,7 +2,6 @@
 import type { Customer } from '../types';
 
 export const mockCustomers: Customer[] = [
-[
   {
     "id": "1",
     "name": "Ahmet Yılmaz",
@@ -4403,4 +4402,4 @@ export const mockCustomers: Customer[] = [
     "visitDate": "2025-09-08",
     "visitResult": null
   }
-],
+];
