@@ -11,15 +11,20 @@ import {
   Loader2,
   ShieldAlert,
   Zap,
+  X,
 } from "lucide-react";
 
+/* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
   (window as any).process = { env: {} };
 }
+/* ------------------------------------------------------ */
 
+/* ============= TEMA ============= */
 const BRAND_YELLOW = "#F9C800";
 const BRAND_NAVY = "#002D72";
 
+/* ============= TÜRLER ============= */
 interface InvoiceData {
   companyName?: string;
   customer?: { name?: string; address?: string };
@@ -32,6 +37,7 @@ interface InvoiceData {
   charges?: { energyLow?: { unitPrice?: number | string } };
 }
 
+/* ============= SABİT & YARDIMCI ============= */
 const initialData: InvoiceData = {
   companyName: "",
   customer: { name: "", address: "" },
@@ -47,7 +53,11 @@ const initialData: InvoiceData = {
 async function generateInvoiceSummary(rawText: string) {
   const response = await fetch(
     "https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary",
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rawText }) }
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rawText }),
+    }
   );
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "AI hatası");
@@ -57,13 +67,23 @@ async function generateInvoiceSummary(rawText: string) {
 function computeSktt(tariff: string, yearly: number): string {
   if (!tariff || isNaN(yearly)) return "";
   if (tariff === "Mesken") return yearly >= 5000 ? "Kapsamda" : "Hariç";
-  if (tariff === "Ticarethane" || tariff === "Sanayi") return yearly >= 15000 ? "Kapsamda" : "Hariç";
+  if (tariff === "Ticarethane" || tariff === "Sanayi")
+    return yearly >= 15000 ? "Kapsamda" : "Hariç";
   return "";
 }
 
-const FieldLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+const FieldLabel = ({
+  icon,
+  children,
+}: {
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) => (
   <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-    <span className="inline-flex items-center justify-center w-5 h-5 rounded" style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}>
+    <span
+      className="inline-flex items-center justify-center w-5 h-5 rounded"
+      style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
+    >
       {icon}
     </span>
     {children}
@@ -76,9 +96,11 @@ export default function InvoiceOcrPage() {
   const [data, setData] = useState<InvoiceData>(initialData);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [rawText, setRawText] = useState<string>("");
+  const [rawText, setRawText] = useState<string>(""); // UI'da gizli
   const [error, setError] = useState<string | null>(null);
-  const [cameraOn, setCameraOn] = useState(false);
+
+  // Kamera state
+  const [cameraOn, setCameraOn] = useState(false); // ⬅️ tam ekran modal görünürlüğü
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -87,6 +109,7 @@ export default function InvoiceOcrPage() {
 
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
+  // Özet alanını 3-4 satırla kısıtla
   const summaryClampStyle: React.CSSProperties = {
     display: "-webkit-box",
     WebkitLineClamp: 4,
@@ -96,13 +119,31 @@ export default function InvoiceOcrPage() {
     whiteSpace: "normal",
   };
 
-  useEffect(() => {
-    return () => {
+  // Bileşen unmount'ta stream'i kapat
+  useEffect(
+    () => () => {
       if (stream) stream.getTracks().forEach((t) => t.stop());
-    };
-  }, [stream]);
+    },
+    [stream]
+  );
 
-  // 🔧 KRİTİK: stream değişince videoya bağla ve play et
+  // cameraOn => body scroll kilidi
+  useEffect(() => {
+    if (cameraOn) {
+      const prev = {
+        overflow: document.body.style.overflow,
+        height: document.body.style.height,
+      };
+      document.body.style.overflow = "hidden";
+      document.body.style.height = "100vh";
+      return () => {
+        document.body.style.overflow = prev.overflow;
+        document.body.style.height = prev.height;
+      };
+    }
+  }, [cameraOn]);
+
+  // stream bağlama ve play
   useEffect(() => {
     if (!videoRef.current || !stream) return;
     const v = videoRef.current;
@@ -111,8 +152,8 @@ export default function InvoiceOcrPage() {
     (v as any).srcObject = stream;
     const p = v.play();
     if (p && typeof p.then === "function") {
-      p.catch((e: any) => {
-        console.warn("video.play() engellendi:", e?.name || e);
+      p.catch(() => {
+        /* autoplay engeli olabilir, kullanıcı etkileşimi var zaten */
       });
     }
   }, [stream]);
@@ -124,9 +165,14 @@ export default function InvoiceOcrPage() {
       let cur = cloned;
       keys.slice(0, -1).forEach((k) => (cur = cur[k] = cur[k] || {}));
       cur[keys.at(-1)!] = value;
+
       const tariff = path === "tariff" ? value : cloned.tariff;
-      const annual = path === "annualConsumption" ? Number(value) : Number(cloned.annualConsumption);
+      const annual =
+        path === "annualConsumption"
+          ? Number(value)
+          : Number(cloned.annualConsumption);
       cloned.skttStatus = computeSktt(tariff, annual);
+
       return cloned;
     });
   };
@@ -159,23 +205,42 @@ export default function InvoiceOcrPage() {
           address: raw.customer?.address ?? raw.address ?? "",
         },
         supplyDetails: {
-          installationNumber: raw.supplyDetails?.installationNumber ?? raw.installationNumber ?? "",
+          installationNumber:
+            raw.supplyDetails?.installationNumber ?? raw.installationNumber ?? "",
         },
         tariff: raw.tariff ?? "",
         annualConsumption: raw.annualConsumption ?? "",
         avgConsumption: raw.avgConsumption ?? "",
         skttStatus: "",
         meterReadings: {
-          consumption: { total_kWh: raw.meterReadings?.consumption?.total_kWh ?? raw.consumption ?? "" },
+          consumption: {
+            total_kWh:
+              raw.meterReadings?.consumption?.total_kWh ??
+              raw.consumption ??
+              "",
+          },
         },
-        charges: { energyLow: { unitPrice: raw.charges?.energyLow?.unitPrice ?? raw.unitPrice ?? "" } },
+        charges: {
+          energyLow: {
+            unitPrice:
+              raw.charges?.energyLow?.unitPrice ?? raw.unitPrice ?? "",
+          },
+        },
       };
 
-      aiData.skttStatus = computeSktt(aiData.tariff || "", Number(aiData.annualConsumption));
+      aiData.skttStatus = computeSktt(
+        aiData.tariff || "",
+        Number(aiData.annualConsumption)
+      );
 
-      const toStr = (v: unknown) => (v === undefined || v === null ? "" : String(v));
-      aiData.meterReadings!.consumption!.total_kWh = toStr(aiData.meterReadings?.consumption?.total_kWh);
-      aiData.charges!.energyLow!.unitPrice = toStr(aiData.charges?.energyLow?.unitPrice);
+      const toStr = (v: unknown) =>
+        v === undefined || v === null ? "" : String(v);
+      aiData.meterReadings!.consumption!.total_kWh = toStr(
+        aiData.meterReadings?.consumption?.total_kWh
+      );
+      aiData.charges!.energyLow!.unitPrice = toStr(
+        aiData.charges?.energyLow?.unitPrice
+      );
 
       setData(aiData);
       setSummary(result.summary);
@@ -199,15 +264,28 @@ export default function InvoiceOcrPage() {
 
     try {
       setLoadingMessage("Fatura okunuyor…");
-      const cleanBase64 = (await fileToBase64(file)).replace(/^data:image\/\w+;base64/, "").replace(/^,/, "");
-      const body = { requests: [{ image: { content: cleanBase64 }, features: [{ type: "DOCUMENT_TEXT_DETECTION" }] }] };
-      const res = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const cleanBase64 = (await fileToBase64(file))
+        .replace(/^data:image\/\w+;base64/, "")
+        .replace(/^,/, "");
+      const body = {
+        requests: [
+          {
+            image: { content: cleanBase64 },
+            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+          },
+        ],
+      };
+      const res = await fetch(
+        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
       if (!res.ok) throw new Error((await res.json()).error.message);
-      const detected = (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
+      const detected =
+        (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
       setRawText(detected);
       await processTextWithAI(detected);
     } catch (e: any) {
@@ -224,9 +302,20 @@ export default function InvoiceOcrPage() {
     if (f) await runCloudVisionOcr(f);
   }
 
-  // ❗ Kamera: önce UI'ı aç, sonra stream'i set et; stream effect'i videoya bağlar
+  // --- Kamera (tam ekran) ---
+  function mapMediaError(e: any): string {
+    const name = e?.name || "";
+    if (!window.isSecureContext)
+      return "Kamera yalnızca HTTPS veya localhost üzerinde çalışır.";
+    if (name === "NotAllowedError")
+      return "Kamera erişimi reddedildi. Tarayıcı izinlerini kontrol edin.";
+    if (name === "NotFoundError") return "Uygun bir kamera bulunamadı.";
+    if (name === "NotReadableError")
+      return "Kamera başka bir uygulama tarafından kullanılıyor olabilir.";
+    return "Kamera başlatılamadı.";
+  }
+
   async function startCamera() {
-    setError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
       setError("Tarayıcı getUserMedia desteklemiyor.");
       return;
@@ -235,23 +324,30 @@ export default function InvoiceOcrPage() {
       setError("Kamera yalnızca HTTPS veya localhost üzerinde çalışır.");
       return;
     }
-
-    setCameraOn(true); // video DOM'a gelsin
     try {
       let s: MediaStream;
       try {
-        s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+        s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+        });
       } catch {
-        s = await navigator.mediaDevices.getUserMedia({ video: true }); // fallback
+        s = await navigator.mediaDevices.getUserMedia({ video: true });
       }
       setStream(s);
     } catch (e: any) {
+      setError(mapMediaError(e));
       setCameraOn(false);
-      setError(`Kamera başlatılamadı: ${e?.name || e?.message || e}`);
+      setStream(null);
     }
   }
 
-  function stopCamera() {
+  async function openCameraFullscreen() {
+    setError(null);
+    setCameraOn(true); // modalı göster
+    await startCamera();
+  }
+
+  function closeCamera() {
     try {
       stream?.getTracks().forEach((t) => t.stop());
     } catch {}
@@ -273,15 +369,17 @@ export default function InvoiceOcrPage() {
       });
     }
 
-    const c = canvasRef.current, v = videoRef.current;
+    const c = canvasRef.current,
+      v = videoRef.current;
     c.width = v.videoWidth;
     c.height = v.videoHeight;
     c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
     const blob = await (await fetch(c.toDataURL("image/jpeg"))).blob();
     await runCloudVisionOcr(new File([blob], "capture.jpg", { type: "image/jpeg" }));
-    stopCamera();
+    closeCamera(); // çekince kapat
   }
 
+  // Detay tablosu satırları
   const detailRows = [
     { label: "Rakip Şirket", value: data.companyName },
     { label: "Müşteri Adı Soyadı", value: data.customer?.name },
@@ -299,16 +397,20 @@ export default function InvoiceOcrPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
+      {/* ------- HEADER (sticky değil) ------- */}
       <header className="border-b bg-white border-gray-200">
         <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
-          <h1 className="text-xl font-semibold tracking-wide text-gray-800">Bölge Dışı Ziyaret</h1>
+          <h1 className="text-xl font-semibold tracking-wide text-gray-800">
+            Bölge Dışı Ziyaret
+          </h1>
         </div>
       </header>
 
+      {/* ---------- MAIN ---------- */}
       <main className="p-2">
         <div className="space-y-6">
-          {/* 1. Fatura Yükle */}
+          {/* --------- 1. Fatura Yükle --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -324,16 +426,22 @@ export default function InvoiceOcrPage() {
                 >
                   <Upload className="w-4 h-4" />
                   <span>Cihazdan Yükle</span>
-                  <input type="file" accept="image/*" ref={fileInputRef} onChange={onFile} className="hidden" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={onFile}
+                    className="hidden"
+                  />
                 </button>
 
                 <button
                   disabled={loading}
-                  onClick={cameraOn ? stopCamera : startCamera}
+                  onClick={openCameraFullscreen}
                   className="disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2 px-3 py-2 rounded-xl border bg-white hover:bg-gray-50"
                 >
                   <Camera className="w-4 h-4" />
-                  {cameraOn ? "Kamerayı Kapat" : "Kamerayı Aç"}
+                  Kamerayı Aç
                 </button>
 
                 {loading && (
@@ -344,37 +452,16 @@ export default function InvoiceOcrPage() {
                 )}
               </div>
 
+              {/* Özet kutusu */}
               <div className="mt-4">
-                {cameraOn ? (
-                  <div className="bg-gray-50 rounded-xl overflow-hidden border">
-                    <div className="p-2 flex items-center justify-between bg-white border-b">
-                      <span className="text-sm font-medium flex items-center gap-2">
-                        <Camera className="w-4 h-4" /> Kamera
-                      </span>
-                      <button
-                        onClick={capturePhoto}
-                        className="text-xs px-3 py-1 rounded-lg font-semibold"
-                        style={{ background: BRAND_YELLOW, color: BRAND_NAVY }}
-                      >
-                        Fotoğraf Çek
-                      </button>
-                    </div>
-                    {/* aspect-video bazı projelerde yoksa sabit yükseklik ver */}
-                    <div className="relative h-64">
-                      <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className="absolute inset-0 w-full h-full object-cover bg-black"
-                      />
-                    </div>
-                    <canvas ref={canvasRef} className="hidden" />
-                  </div>
-                ) : summary ? (
+                {summary ? (
                   <div className="p-4 border rounded-lg bg-gray-50 text-sm">
-                    <div className="font-semibold text-gray-800 mb-1">Akıllı Fatura Özeti</div>
-                    <p style={summaryClampStyle} className="text-gray-700">{summary}</p>
+                    <div className="font-semibold text-gray-800 mb-1">
+                      Akıllı Fatura Özeti
+                    </div>
+                    <p style={summaryClampStyle} className="text-gray-700">
+                      {summary}
+                    </p>
                   </div>
                 ) : (
                   <div className="h-24 bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
@@ -395,7 +482,7 @@ export default function InvoiceOcrPage() {
             </div>
           </div>
 
-          {/* 2. Müşteri Bilgileri */}
+          {/* --------- 2. Müşteri Bilgileri --------- */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -404,8 +491,11 @@ export default function InvoiceOcrPage() {
               </div>
 
               <div className="space-y-4">
+                {/* ------- Tarife ------- */}
                 <div className="space-y-1">
-                  <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>Tarife</FieldLabel>
+                  <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
+                    Tarife
+                  </FieldLabel>
                   <select
                     value={data.tariff ?? ""}
                     onChange={(e) => handleDataChange("tariff", e.target.value)}
@@ -418,100 +508,155 @@ export default function InvoiceOcrPage() {
                   </select>
                 </div>
 
+                {/* ------- Şirket ------- */}
                 <div className="space-y-1">
-                  <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>Rakip Şirket</FieldLabel>
+                  <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>
+                    Rakip Şirket
+                  </FieldLabel>
                   <input
                     value={data.companyName ?? ""}
-                    onChange={(e) => handleDataChange("companyName", e.target.value)}
+                    onChange={(e) =>
+                      handleDataChange("companyName", e.target.value)
+                    }
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="-"
                   />
                 </div>
 
+                {/* ------- İsim ------- */}
                 <div className="space-y-1">
-                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Müşteri Adı Soyadı</FieldLabel>
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
+                    Müşteri Adı Soyadı
+                  </FieldLabel>
                   <input
                     value={data.customer?.name ?? ""}
-                    onChange={(e) => handleDataChange("customer.name", e.target.value)}
+                    onChange={(e) =>
+                      handleDataChange("customer.name", e.target.value)
+                    }
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="-"
                   />
                 </div>
 
+                {/* ------- Adres ------- */}
                 <div className="space-y-1">
-                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>Adres</FieldLabel>
+                  <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
+                    Adres
+                  </FieldLabel>
                   <textarea
                     value={data.customer?.address ?? ""}
-                    onChange={(e) => handleDataChange("customer.address", e.target.value)}
+                    onChange={(e) =>
+                      handleDataChange("customer.address", e.target.value)
+                    }
                     rows={3}
                     className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                     placeholder="-"
                   />
                 </div>
 
+                {/* ------- Grid ------- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>Tesisat No</FieldLabel>
+                    <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>
+                      Tesisat No
+                    </FieldLabel>
                     <input
                       value={data.supplyDetails?.installationNumber ?? ""}
-                      onChange={(e) => handleDataChange("supplyDetails.installationNumber", e.target.value)}
+                      onChange={(e) =>
+                        handleDataChange(
+                          "supplyDetails.installationNumber",
+                          e.target.value
+                        )
+                      }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Tüketim (kWh)</FieldLabel>
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
+                      Tüketim (kWh)
+                    </FieldLabel>
                     <input
                       value={data.meterReadings?.consumption?.total_kWh ?? ""}
-                      onChange={(e) => handleDataChange("meterReadings.consumption.total_kWh", e.target.value)}
+                      onChange={(e) =>
+                        handleDataChange(
+                          "meterReadings.consumption.total_kWh",
+                          e.target.value
+                        )
+                      }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>Birim Fiyat</FieldLabel>
+                    <FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>
+                      Birim Fiyat
+                    </FieldLabel>
                     <input
                       value={data.charges?.energyLow?.unitPrice ?? ""}
-                      onChange={(e) => handleDataChange("charges.energyLow.unitPrice", e.target.value)}
+                      onChange={(e) =>
+                        handleDataChange(
+                          "charges.energyLow.unitPrice",
+                          e.target.value
+                        )
+                      }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
                     />
                   </div>
                 </div>
 
+                {/* ------- Yıllık & Ortalama Tüketim ------- */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Yıllık Tüketim (kWh)</FieldLabel>
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
+                      Yıllık Tüketim (kWh)
+                    </FieldLabel>
                     <input
                       type="number"
                       value={data.annualConsumption ?? ""}
-                      onChange={(e) => handleDataChange("annualConsumption", e.target.value)}
+                      onChange={(e) =>
+                        handleDataChange("annualConsumption", e.target.value)
+                      }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
                     />
                   </div>
                   <div className="space-y-1">
-                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>Ortalama Tüketim (kWh)</FieldLabel>
+                    <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
+                      Ortalama Tüketim (kWh)
+                    </FieldLabel>
                     <input
                       type="number"
                       value={data.avgConsumption ?? ""}
-                      onChange={(e) => handleDataChange("avgConsumption", e.target.value)}
+                      onChange={(e) =>
+                        handleDataChange("avgConsumption", e.target.value)
+                      }
                       className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
                       placeholder="-"
                     />
                   </div>
                   <div className="space-y-1">
-                    <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>SKTT Durumu</FieldLabel>
-                    <input value={data.skttStatus ?? ""} readOnly className="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-700" />
+                    <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
+                      SKTT Durumu
+                    </FieldLabel>
+                    <input
+                      value={data.skttStatus ?? ""}
+                      readOnly
+                      className="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-700"
+                    />
                   </div>
                 </div>
 
+                {/* ------- Detayları Göster (tablo) ------- */}
                 {hasAnyAIData && (
                   <div className="pt-2">
                     <details>
-                      <summary className="cursor-pointer text-sm text-gray-600 select-none">Detayları Göster</summary>
+                      <summary className="cursor-pointer text-sm text-gray-600 select-none">
+                        Detayları Göster
+                      </summary>
                       <div className="mt-2 bg-gray-50 p-3 rounded-lg border">
                         <table className="w-full text-sm">
                           <thead>
@@ -523,8 +668,12 @@ export default function InvoiceOcrPage() {
                           <tbody>
                             {detailRows.map((r, i) => (
                               <tr key={i} className="border-t">
-                                <td className="px-3 py-2 font-medium text-gray-700">{r.label}</td>
-                                <td className="px-3 py-2 text-gray-800 break-words">{String(r.value)}</td>
+                                <td className="px-3 py-2 font-medium text-gray-700">
+                                  {r.label}
+                                </td>
+                                <td className="px-3 py-2 text-gray-800 break-words">
+                                  {String(r.value)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -538,6 +687,53 @@ export default function InvoiceOcrPage() {
           </div>
         </div>
       </main>
+
+      {/* ===================== KAMERA TAM EKRAN OVERLAY ===================== */}
+      {cameraOn && (
+        <div className="fixed inset-0 z-[1000] bg-black">
+          {/* Üst bar */}
+          <div className="absolute top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur flex items-center justify-between px-3">
+            <div className="text-white text-sm">Kamera</div>
+            <button
+              onClick={closeCamera}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/30 text-white"
+              aria-label="Kapat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Video alanı */}
+          <div className="absolute inset-0">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+            />
+            {/* Kadraj rehberi */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute inset-0 border-2 border-white/20 m-6 rounded-xl" />
+              <div className="absolute inset-x-0 top-1/2 h-px bg-white/20" />
+            </div>
+          </div>
+
+          {/* Alt bar: çekim butonu */}
+          <div className="absolute left-0 right-0 bottom-0 h-28 bg-gradient-to-t from-black/70 to-transparent flex items-center justify-center gap-6">
+            <button
+              onClick={capturePhoto}
+              className="relative w-16 h-16 rounded-full bg-white active:scale-95 transition-transform"
+              aria-label="Fotoğraf Çek"
+            >
+              <span className="absolute inset-1 rounded-full border-4 border-black/60" />
+            </button>
+          </div>
+
+          {/* Gizli canvas */}
+          <canvas ref={canvasRef} className="hidden" />
+        </div>
+      )}
     </div>
   );
 }
