@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// (İstersen kullanırsın)
 import MarkerClusterGroup from "react-leaflet-cluster";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
+
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
 
@@ -17,7 +19,9 @@ import {
   Navigation,
 } from "lucide-react";
 
-/* ==== Tipler ==== */
+/* =======================
+   Tipler
+   ======================= */
 export type Customer = {
   id: string;
   name: string;
@@ -50,7 +54,9 @@ interface Props {
   salesRep?: SalesRep;
 }
 
-/* ==== Varsayılanlar ==== */
+/* =======================
+   Varsayılan veri
+   ======================= */
 const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
 
 const anadoluCustomers: Customer[] = [
@@ -78,7 +84,9 @@ const anadoluCustomers: Customer[] = [
   { id: "22", name: "Onur Demirel", address: "Çamlık Mh. 6",     district: "Çekmeköy",    plannedTime: "17:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000022", consumption: "330 kWh/ay",  offerHistory: ["2024-05: Otomatik ödeme"],   status: "Bekliyor", estimatedDuration: "25 dk", distance: "19.0 km", lat: 41.0466, lng: 29.2233, phone: "0555 111 22 22" },
 ];
 
-/* ==== İkonlar ==== */
+/* =======================
+   Harita ikonları
+   ======================= */
 const repIcon = new L.Icon({
   iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491",
   iconSize: [32, 32],
@@ -100,7 +108,9 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
   });
 }
 
-/* ==== Yardımcılar ==== */
+/* =======================
+   Yardımcılar
+   ======================= */
 function haversineKm(a: LatLng, b: LatLng) {
   const R = 6371;
   const dLat = ((b[0] - a[0]) * Math.PI) / 180;
@@ -113,11 +123,105 @@ function haversineKm(a: LatLng, b: LatLng) {
 const fmtKm = (km: number | null) =>
   km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
-// OSRM güvenli koordinat string & radiuses
+// OSRM güvenli string yardımcıları
 const toCoordStr = (lat: number, lng: number) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
 const makeRadiusesParam = (n: number, r = 1000) => new Array(n).fill(String(r)).join(";");
 
-/* ==== Bileşen ==== */
+/* =======================
+   OSRM çağrıları (safe)
+   ======================= */
+async function osrmTripSafe(points: { lat: number; lng: number }[]) {
+  try {
+    const coords = points.map((p) => toCoordStr(p.lat, p.lng)).join(";");
+    const radiuses = makeRadiusesParam(points.length, 1000);
+    const url = encodeURI(
+      `https://router.project-osrm.org/trip/v1/driving/${coords}` +
+        `?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&radiuses=${radiuses}`
+    );
+    const res = await fetch(url);
+    const text = await res.text();
+    if (!res.ok) return null;
+    const data = JSON.parse(text);
+    if (data.code !== "Ok" || !data.trips?.[0]) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+async function osrmRouteSafe(from: LatLng, to: LatLng) {
+  try {
+    const coords = `${toCoordStr(from[0], from[1])};${toCoordStr(to[0], to[1])}`;
+    const url = encodeURI(
+      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=false&steps=false`
+    );
+    const res = await fetch(url);
+    const text = await res.text();
+    if (!res.ok) return null;
+    const data = JSON.parse(text);
+    if (data.code !== "Ok" || !data.routes?.[0]) return null;
+    return data.routes[0] as { distance: number; geometry: { coordinates: [number, number][] } };
+  } catch {
+    return null;
+  }
+}
+
+/* Greedy TSP (en yakın komşu) — sadece sıralama bulur */
+function greedyOrder(points: LatLng[], startIndex = 0): number[] {
+  const n = points.length;
+  const used = new Array(n).fill(false);
+  const order = [startIndex];
+  used[startIndex] = true;
+  for (let k = 1; k < n; k++) {
+    const last = points[order[order.length - 1]];
+    let best = -1;
+    let bestD = Infinity;
+    for (let i = 0; i < n; i++) {
+      if (used[i]) continue;
+      const d = haversineKm(last, points[i]);
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    used[best] = true;
+    order.push(best);
+  }
+  return order;
+}
+
+/* Yolu OSRM route ile çiz (segment segment); olmazsa düz çizgi */
+async function buildGeometryFromOrder(orderedLatLngs: LatLng[]) {
+  const coords: LatLng[] = [];
+  let totalKm = 0;
+
+  if (orderedLatLngs.length === 0) return { coords, km: 0 };
+
+  coords.push(orderedLatLngs[0]);
+
+  for (let i = 1; i < orderedLatLngs.length; i++) {
+    const a = orderedLatLngs[i - 1];
+    const b = orderedLatLngs[i];
+
+    const route = await osrmRouteSafe(a, b);
+    if (route) {
+      const seg = route.geometry.coordinates.map(([lng, lat]) => [lat, lng] as LatLng);
+      // bir önceki nokta zaten eklendi
+      coords.push(...seg.slice(1));
+      totalKm += route.distance / 1000;
+    } else {
+      // OSRM yoksa düz bağla
+      coords.push(b);
+      totalKm += haversineKm(a, b);
+    }
+  }
+
+  return { coords, km: totalKm };
+}
+
+/* =======================
+   Bileşen
+   ======================= */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
@@ -130,6 +234,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  const markerRefs = useRef<Record<string, L.Marker>>({});
+  const mapRef = useRef<L.Map | null>(null);
+
+  // swipe panel
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -140,11 +248,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     touchStartX.current = null;
   };
 
-  const markerRefs = useRef<Record<string, L.Marker>>({});
-  const mapRef = useRef<L.Map | null>(null);
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
-  const highlightCustomer = (c: Customer, i: number, pan = true) => {
+  const highlightCustomer = (c: Customer, _i: number, pan = true) => {
     setSelectedId(c.id);
     const m = markerRefs.current[c.id];
     if (pan && mapRef.current) {
@@ -155,115 +261,101 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" });
   };
 
-  // ---- OSRM çağrıları ----
-  async function osrmTrip(coords: string, pointCount: number) {
-    const radiuses = makeRadiusesParam(pointCount, 1000);
-    const url = encodeURI(
-      `https://router.project-osrm.org/trip/v1/driving/${coords}` +
-      `?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&radiuses=${radiuses}`
-    );
-    const res = await fetch(url);
-    const text = await res.text();
-    if (!res.ok) throw new Error(`OSRM trip error: ${res.status} ${text.slice(0, 120)}`);
-    const data = JSON.parse(text);
-    if (data.code !== "Ok" || !data.trips?.[0]) throw new Error(`Trip not found: ${data.code}`);
-    return data;
-  }
-
-  async function osrmRoute(from: LatLng, to: LatLng) {
-    const coords = `${toCoordStr(from[0], from[1])};${toCoordStr(to[0], to[1])}`;
-    const url = encodeURI(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`);
-    const res = await fetch(url);
-    const text = await res.text();
-    if (!res.ok) throw new Error(`OSRM route error: ${res.status} ${text.slice(0, 120)}`);
-    const data = JSON.parse(text);
-    if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("Route not found");
-    return data;
-  }
-
   const handleOptimize = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      // 1) OSRM trip ile dene
+      const start = { lat: rep.lat, lng: rep.lng };
 
       if (!starredId) {
-        // Repten başla, tüm müşteriler (bitiş: son nokta)
-        const tripPoints = [
-          { kind: "rep" as const, lat: rep.lat, lng: rep.lng },
-          ...baseCustomers.map((c) => ({ kind: "cust" as const, lat: c.lat, lng: c.lng, ref: c })),
-        ];
-        const coords = tripPoints.map((p) => toCoordStr(p.lat, p.lng)).join(";");
-        const data = await osrmTrip(coords, tripPoints.length);
+        const points = [start, ...baseCustomers.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
+        const tripData = await osrmTripSafe(points);
+        if (tripData) {
+          // waypoint_index'e göre sırala
+          const ordered = tripData.waypoints
+            .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
+            .sort((a: any, b: any) => a.order - b.order)
+            .map((x: any) => points[x.inputIdx]);
 
-        const orderedByTrip = data.waypoints
-          .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
-          .sort((a: any, b: any) => a.order - b.order)
-          .map((x: any) => tripPoints[x.inputIdx]);
+          const sortedCustomers = ordered.slice(1).map((p: any) => p.ref as Customer);
+          setOrderedCustomers(sortedCustomers);
 
-        const sortedCustomers = orderedByTrip.filter((p) => p.kind === "cust").map((p) => (p as any).ref as Customer);
-        setOrderedCustomers(sortedCustomers);
+          const latlngs: LatLng[] = tripData.trips[0].geometry.coordinates.map(
+            ([lng, lat]: [number, number]) => [lat, lng]
+          );
+          setRouteCoords(latlngs);
+          setRouteKm((tripData.trips[0].distance as number) / 1000);
 
-        const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng]
-        );
-        setRouteCoords(latlngs);
-        setRouteKm((data.trips[0].distance as number) / 1000);
-
-        if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0], 0, true);
+          if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0], 0, true);
+          return;
+        }
+        // trip yoksa greedy fallback
+        const greedyPoints: LatLng[] = [[rep.lat, rep.lng], ...baseCustomers.map((c) => [c.lat, c.lng])];
+        const orderIdx = greedyOrder(greedyPoints, 0); // 0 = rep
+        const orderedLatLngs = orderIdx.map((i) => greedyPoints[i]);
+        const orderedCusts = orderIdx.slice(1).map((i) => baseCustomers[i - 1]);
+        setOrderedCustomers(orderedCusts);
+        const geom = await buildGeometryFromOrder(orderedLatLngs);
+        setRouteCoords(geom.coords);
+        setRouteKm(geom.km);
+        if (orderedCusts[0]) highlightCustomer(orderedCusts[0], 0, true);
       } else {
-        // Önce rep -> star rota, sonra star + diğerlerine trip
+        // yıldızlı: rep -> star, sonra star + diğerleri
         const star = baseCustomers.find((c) => c.id === starredId)!;
         const others = baseCustomers.filter((c) => c.id !== starredId);
 
-        const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
-        const route1 = dataRoute.routes[0];
-        const route1Coords: LatLng[] = route1.geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng]
-        );
-        const route1Km = (route1.distance as number) / 1000;
+        // önce rep->star yolu (route)
+        const firstLeg = await osrmRouteSafe([rep.lat, rep.lng], [star.lat, star.lng]);
+        const firstLegCoords: LatLng[] = firstLeg
+          ? firstLeg.geometry.coordinates.map(([lng, lat]) => [lat, lng] as LatLng)
+          : ([[rep.lat, rep.lng], [star.lat, star.lng]] as LatLng[]);
+        const firstLegKm = firstLeg ? firstLeg.distance / 1000 : haversineKm([rep.lat, rep.lng], [star.lat, star.lng]);
 
-        const tripSeed = [{ lat: star.lat, lng: star.lng }, ...others.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
-        const coords2 = tripSeed.map((p) => toCoordStr(p.lat, p.lng)).join(";");
-        const dataTrip2 = await osrmTrip(coords2, tripSeed.length);
+        // kalanlar için trip dene (star başlangıç)
+        const points2 = [{ lat: star.lat, lng: star.lng }, ...others.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
+        const trip2 = await osrmTripSafe(points2);
 
-        const ordered2 = dataTrip2.waypoints
-          .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
-          .sort((a: any, b: any) => a.order - b.order)
-          .map((x: any) => tripSeed[x.inputIdx]);
+        if (trip2) {
+          const ordered2 = trip2.waypoints
+            .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
+            .sort((a: any, b: any) => a.order - b.order)
+            .map((x: any) => points2[x.inputIdx]);
 
-        const sortedCustomers = ordered2.map((p: any, idx: number) => (idx === 0 ? star : (p.ref as Customer)));
-        setOrderedCustomers(sortedCustomers);
+          const sortedCustomers = ordered2.map((p: any, idx: number) => (idx === 0 ? star : (p.ref as Customer)));
+          setOrderedCustomers(sortedCustomers);
 
-        const restCoords: LatLng[] = dataTrip2.trips[0].geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng]
-        );
-        const merged: LatLng[] = route1Coords.concat(restCoords.slice(1));
-        setRouteCoords(merged);
-        setRouteKm(route1Km + (dataTrip2.trips[0].distance as number) / 1000);
+          const restCoords: LatLng[] = trip2.trips[0].geometry.coordinates.map(
+            ([lng, lat]: [number, number]) => [lat, lng]
+          );
+          const merged = firstLegCoords.concat(restCoords.slice(1));
+          setRouteCoords(merged);
+          setRouteKm(firstLegKm + (trip2.trips[0].distance as number) / 1000);
 
+          highlightCustomer(star, 0, true);
+          return;
+        }
+
+        // trip2 de yoksa: greedy fallback (star sabit ilk)
+        const greedyPoints2: LatLng[] = [[rep.lat, rep.lng], [star.lat, star.lng], ...others.map((c) => [c.lat, c.lng] as LatLng)];
+        // rep->star sabit, star'dan sonra greedy:
+        const orderIdx2 = [0, 1].concat(greedyOrder(greedyPoints2.slice(1), 0).slice(1).map((i) => i + 1));
+        const orderedLatLngs2 = orderIdx2.map((i) => greedyPoints2[i]);
+        const orderedCusts2 = [star, ...orderIdx2.slice(2).map((i) => others[i - 2])];
+        setOrderedCustomers(orderedCusts2);
+
+        // geometri: önce firstLeg, sonra kalan
+        const geom2 = await buildGeometryFromOrder(orderedLatLngs2);
+        setRouteCoords(geom2.coords);
+        setRouteKm(geom2.km);
         highlightCustomer(star, 0, true);
       }
-    } catch (e) {
-      console.error(e);
-      // Fallback: Haversine ile düz hat
-      const seq: LatLng[] = (() => {
-        const startList = starredId
-          ? [baseCustomers.find((c) => c.id === starredId)!, ...baseCustomers.filter((c) => c.id !== starredId)]
-          : baseCustomers;
-        return [[rep.lat, rep.lng] as LatLng].concat(startList.map((c) => [c.lat, c.lng] as LatLng));
-      })();
-      setRouteCoords(seq);
-      let acc = 0;
-      for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
-      setRouteKm(acc);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (starredId !== null) {
-      handleOptimize();
-    }
+    if (starredId !== null) handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
 
@@ -275,7 +367,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   return (
     <div className="relative w-full">
-      {/* Başlık ve butonlar */}
+      {/* Üst bar */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-900 font-semibold">
           <RouteIcon className="w-5 h-5 text-[#0099CB]" />
@@ -288,9 +380,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           <button
             onClick={handleOptimize}
             disabled={loading}
-            className={`px-4 py-2 rounded-lg font-semibold ${
-              loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
-            }`}
+            className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`}
           >
             {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
@@ -298,6 +388,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         </div>
       </div>
 
+      {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         <MapContainer
           center={center}
@@ -312,7 +403,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             <Popup><b>{rep.name}</b></Popup>
           </Marker>
 
-          {/* Müşteriler */}
           {orderedCustomers.map((c, i) => (
             <Marker
               key={c.id}
@@ -336,9 +426,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setStarredId(prev => (prev === c.id ? null : c.id));
+                        setStarredId((prev) => (prev === c.id ? null : c.id));
                       }}
-                      aria-label={starredId === c.id ? "Yıldızı kaldır" : "Yıldızla"}
+                      aria-label={starredId === c.id ? "Yıldızı kaldır" : "İlk durak yap"
+                      }
                       className="p-1 rounded hover:bg-gray-100"
                     >
                       <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
@@ -373,8 +464,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
             panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
           } flex`}
-          onTouchStart={(e) => { onTouchStart(e); }}
-          onTouchEnd={(e) => { onTouchEnd(e); }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
         >
           <button
             onClick={() => setPanelOpen((o) => !o)}
@@ -428,7 +519,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                     </span>
                     <div className="min-w-0">
                       <div className="font-medium text-gray-900 truncate">{c.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {c.address}, {c.district}
+                      </div>
                       <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e) => e.stopPropagation()}>
                         {c.phone}
                       </a>
@@ -467,7 +560,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-// ---- Tam ekran butonu ----
+/* =======================
+   Tam ekran butonu
+   ======================= */
 const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
