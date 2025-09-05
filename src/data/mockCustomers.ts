@@ -1,4 +1,8 @@
-[
+// src/data/mockCustomers.ts
+import type { Customer } from '../types';
+
+export const mockCustomers: Customer[] = [
+ [
   {
     "id": "1",
     "name": "Ahmet Yılmaz",
