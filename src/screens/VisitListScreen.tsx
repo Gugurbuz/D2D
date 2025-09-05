@@ -66,7 +66,7 @@ const VisitListScreen: React.FC<Props> = ({
               aria-pressed={filter === f}
               className={`px-4 py-2 rounded-lg transition-colors ${
                 filter === f
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-cyan-600 text-white'
                   : 'bg-white text-gray-800 border border-gray-200 hover:bg-gray-100'
               }`}
             >
@@ -84,7 +84,7 @@ const VisitListScreen: React.FC<Props> = ({
           <input
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-16 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="block w-full pl-10 pr-16 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
             placeholder="Müşteri adı, adres veya ilçe ile ara..."
             aria-label="Müşteri arama alanı"
           />
@@ -95,7 +95,7 @@ const VisitListScreen: React.FC<Props> = ({
               className={`p-2 rounded-lg transition-all focus:outline-none ${
                 isListening
                   ? 'bg-red-100 text-red-600 animate-pulse'
-                  : 'bg-yellow-100 text-blue-700'
+                  : 'bg-yellow-100 text-cyan-700'
               }`}
               aria-label="Sesli arama başlat"
               title="Sesli arama başlat"
@@ -148,7 +148,7 @@ const VisitListScreen: React.FC<Props> = ({
                 <div className="flex flex-col gap-2 justify-center">
                   <button
                     onClick={() => onDetail(c)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+                    className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-lg transition"
                   >
                     Detay
                   </button>
