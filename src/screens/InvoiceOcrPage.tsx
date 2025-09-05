@@ -95,7 +95,7 @@ export default function InvoiceOcrPage() {
   const [data, setData] = useState<InvoiceData>(initialData);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [rawText, setRawText] = useState<string>(""); // tutuluyor ama artık UI'da gösterilmiyor
+  const [rawText, setRawText] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -215,80 +215,99 @@ export default function InvoiceOcrPage() {
     }
   }
 
-  async function runCloudVisionOcr(file: File) {
-    if (!apiKey) {
-      setError("Google Cloud API anahtarı eksik.");
+  /* ========= Kamera ========= */
+
+  // getUserMedia için güvenli bağlam kontrolü ve anlamlı hata mesajı
+  function mapMediaError(e: any): string {
+    const name = e?.name || "";
+    if (!window.isSecureContext)
+      return "Kamera yalnızca HTTPS veya localhost üzerinde çalışır.";
+    if (name === "NotAllowedError")
+      return "Kamera erişimi reddedildi. Tarayıcı izinlerini kontrol edin.";
+    if (name === "NotFoundError")
+      return "Uygun bir kamera bulunamadı.";
+    if (name === "NotReadableError")
+      return "Kamera başka bir uygulama tarafından kullanılıyor olabilir.";
+    return "Kamera başlatılamadı.";
+  }
+
+  async function startCamera() {
+    setError(null);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Tarayıcı getUserMedia desteklemiyor.");
       return;
     }
-    setLoading(true);
-    setError(null);
-    setRawText("");
-    setData(initialData);
-    setSummary(null);
-    setImagePreview(URL.createObjectURL(file));
-
-    try {
-      setLoadingMessage("Fatura okunuyor…");
-      const cleanBase64 = (await fileToBase64(file)).replace(
-        /^data:image\/\w+;base64,/,
-        ""
-      );
-      const body = {
-        requests: [
-          {
-            image: { content: cleanBase64 },
-            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
-          },
-        ],
-      };
-      const res = await fetch(
-        `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-      if (!res.ok) throw new Error((await res.json()).error.message);
-      const detected =
-        (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
-      setRawText(detected);
-      await processTextWithAI(detected);
-    } catch (e: any) {
-      console.error(e);
-      setError(e.message || "OCR/AI hatası");
-    } finally {
-      setLoading(false);
-      setLoadingMessage("");
+    if (!window.isSecureContext) {
+      setError("Kamera yalnızca HTTPS veya localhost üzerinde çalışır.");
+      return;
     }
-  }
 
-  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (f) await runCloudVisionOcr(f);
-  }
-  async function startCamera() {
+    // Önce arka kamera ideal, olmazsa ön kamera
+    const primary = { video: { facingMode: { ideal: "environment" } as any } };
+    const fallback = { video: { facingMode: { ideal: "user" } as any } };
+
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+      let s = await navigator.mediaDevices.getUserMedia(primary).catch(async () => {
+        return await navigator.mediaDevices.getUserMedia(fallback);
       });
-      setStream(s);
+
+      // iOS için playsInline zorunlu
       if (videoRef.current) {
+        videoRef.current.setAttribute("playsinline", "true");
+        videoRef.current.muted = true;
         (videoRef.current as any).srcObject = s;
-        await videoRef.current.play();
+
+        // metadata yüklenene kadar bekle, sonra play et
+        await new Promise<void>((resolve) => {
+          const v = videoRef.current!;
+          const handler = () => {
+            v.removeEventListener("loadedmetadata", handler);
+            resolve();
+          };
+          if (v.readyState >= 1) resolve();
+          else v.addEventListener("loadedmetadata", handler);
+        });
+
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.warn("video.play() başarısız, sessiz autoplay denendi:", e);
+        }
       }
+
+      setStream(s);
       setCameraOn(true);
-    } catch {
-      setError("Kamera başlatılamadı.");
+    } catch (e: any) {
+      console.error("Camera error:", e);
+      setError(mapMediaError(e));
+      setCameraOn(false);
+      setStream(null);
     }
   }
+
   function stopCamera() {
-    stream?.getTracks().forEach((t) => t.stop());
+    try {
+      stream?.getTracks().forEach((t) => t.stop());
+    } catch {}
     setStream(null);
     setCameraOn(false);
   }
+
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
+
+    // Bazı cihazlarda width/height 0 gelebilir, metadata bekle
+    if (videoRef.current.videoWidth === 0) {
+      await new Promise<void>((resolve) => {
+        const handler = () => {
+          videoRef.current?.removeEventListener("loadeddata", handler);
+          resolve();
+        };
+        videoRef.current?.addEventListener("loadeddata", handler);
+      });
+    }
+
     const c = canvasRef.current,
       v = videoRef.current;
     c.width = v.videoWidth;
@@ -299,6 +318,7 @@ export default function InvoiceOcrPage() {
     stopCamera();
   }
 
+  /* ---------- MAIN UI ---------- */
   // Detay tablosu satırları (AI'dan gelen yapılandırılmış veri)
   const detailRows = [
     { label: "Rakip Şirket", value: data.companyName },
@@ -317,7 +337,7 @@ export default function InvoiceOcrPage() {
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
-      {/* ------- HEADER (sticky değil) ------- */}
+      {/* ------- HEADER ------- */}
       <header className="border-b bg-white border-gray-200">
         <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
@@ -351,7 +371,10 @@ export default function InvoiceOcrPage() {
                     type="file"
                     accept="image/*"
                     ref={fileInputRef}
-                    onChange={onFile}
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (f) await runCloudVisionOcr(f);
+                    }}
                     className="hidden"
                   />
                 </button>
@@ -388,19 +411,19 @@ export default function InvoiceOcrPage() {
                         Fotoğraf Çek
                       </button>
                     </div>
-                    <div className="aspect-video relative">
+                    {/* aspect-video bazı projelerde yoksa, h-64 + absolute layer */}
+                    <div className="relative h-64">
                       <video
                         ref={videoRef}
                         autoPlay
                         playsInline
                         muted
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover"
                       />
                     </div>
                     <canvas ref={canvasRef} className="hidden" />
                   </div>
                 ) : summary ? (
-                  /* --- Akıllı Fatura Özeti: 3-4 satıra kısaltılmış --- */
                   <div className="p-4 border rounded-lg bg-gray-50 text-sm">
                     <div className="font-semibold text-gray-800 mb-1">
                       Akıllı Fatura Özeti
@@ -410,7 +433,6 @@ export default function InvoiceOcrPage() {
                     </p>
                   </div>
                 ) : (
-                  // Boşken büyük yer kaplamasın
                   <div className="h-24 bg-white flex items-center justify-center text-gray-400 text-sm border rounded-xl">
                     Henüz özet yok
                   </div>
