@@ -6,7 +6,7 @@ import MarkerClusterGroup from "react-leaflet-cluster";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
 import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
 import SimpleBar from 'simplebar-react';
-import 'simplebar/dist/simplebar.min.css';
+import 'simplebar-react/dist/simplebar.min.css';
 
 
 import {
@@ -460,3 +460,4 @@ const FullscreenBtn: React.FC = () => {
 };
 
 export default RouteMap;
+
