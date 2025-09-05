@@ -4403,4 +4403,4 @@ export const mockCustomers: Customer[] = [
     "visitDate": "2025-09-08",
     "visitResult": null
   }
-]
+] },
