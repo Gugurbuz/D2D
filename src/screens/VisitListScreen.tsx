@@ -1,6 +1,6 @@
 /* --- VisitListScreen.tsx --- */
 import React, { useMemo, useState } from "react";
-import type { Customer } from "../RouteMap";
+import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
 import { Search, Filter, SortAsc, SortDesc } from "lucide-react";
