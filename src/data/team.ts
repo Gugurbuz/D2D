@@ -15,6 +15,9 @@ export const managerUser: ManagerUser = {
   territory: 'Anadolu 1. Bölge',
   teamName: 'Anadolu Yakası Şampiyonlar',
   teamSize: 4,
+  // --- KONUM BİLGİSİ EKLENDİ ---
+  lat: 41.0283,
+  lng: 29.0528,
   autoAssignMethod: 'km_optimized',
   preventOverlap: true,
   maxAutoAssignPerRep: 50,
@@ -40,6 +43,9 @@ export const teamReps: SalesUser[] = [
     phone: '+90 555 111 22 33',
     district: 'Kadıköy',
     region: 'İstanbul Anadolu',
+    // --- KONUM BİLGİSİ EKLENDİ ---
+    lat: 40.9839,
+    lng: 29.0285,
     dailyVisitTarget: 20,
     vehicle: 'car',
     workHours: { start: '09:00', end: '18:00' },
@@ -63,6 +69,9 @@ export const teamReps: SalesUser[] = [
     phone: '+90 555 222 33 44',
     district: 'Üsküdar',
     region: 'İstanbul Anadolu',
+    // --- KONUM BİLGİSİ EKLENDİ ---
+    lat: 41.0255,
+    lng: 29.0184,
     dailyVisitTarget: 25,
     vehicle: 'walking',
     workHours: { start: '08:30', end: '17:30' },
@@ -86,6 +95,9 @@ export const teamReps: SalesUser[] = [
     phone: '+90 555 333 44 55',
     district: 'Ataşehir',
     region: 'İstanbul Anadolu',
+    // --- KONUM BİLGİSİ EKLENDİ ---
+    lat: 40.9950,
+    lng: 29.1235,
     dailyVisitTarget: 18,
     vehicle: 'car',
     workHours: { start: '09:00', end: '18:00' },
@@ -109,6 +121,9 @@ export const teamReps: SalesUser[] = [
     phone: '+90 555 444 55 66',
     district: 'Maltepe',
     region: 'İstanbul Anadolu',
+    // --- KONUM BİLGİSİ EKLENDİ ---
+    lat: 40.9312,
+    lng: 29.1396,
     dailyVisitTarget: 22,
     vehicle: 'bike',
     workHours: { start: '10:00', end: '19:00' },
