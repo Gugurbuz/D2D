@@ -5,6 +5,7 @@ import {
   IdCard, Camera, Smartphone, FileText, PenLine, Send,
   ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
   Loader2, ScanLine, Nfc, Maximize2, Hourglass, Sparkles, TrendingUp, ChevronsRight,
+  Home, Building, Factory // Müşteri tipi için yeni ikonlar
 } from 'lucide-react';
 
 // --- GEREKLİ TİPLER ---
@@ -17,7 +18,8 @@ export interface Customer {
   phone: string;
   status: 'Pending' | 'Completed' | 'Rejected' | 'Postponed' | 'Unreachable' | 'Evaluating';
   notes?: string;
-  // Teklif ekranı için eklenen yeni alanlar
+  // Teklif ekranı için güncellenen alanlar
+  subscriberType: 'Mesken' | 'Ticarethane' | 'Sanayi';
   isEligible: boolean;
   currentProvider: string;
   currentKwhPrice: number;
@@ -372,4 +374,6 @@ const App = () => {
 }
 
 export default App;
+
+ what do you want to do with this code?
 
