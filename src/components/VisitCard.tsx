@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Play, MapPin, UserCheck, StickyNote } from "lucide-react";
+import { Eye, Play, MapPin, UserCheck, StickyNote, Hash, Calendar } from "lucide-react";
 import type { Customer } from "../RouteMap";
 import { Chip } from "./Chip";
 
@@ -24,11 +24,30 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
   return (
     <div className="bg-white border border-gray-200 hover:border-cyan-600 rounded-xl p-5 transition-all duration-200 hover:shadow-md">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
+        {/* SOL TARAF */}
         <div className="flex-1 space-y-2">
+          {/* İsim */}
           <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
+
+          {/* Adres */}
           <div className="text-sm text-gray-600 flex items-center gap-1">
             <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
           </div>
+
+          {/* 🔹 Yeni Ek Bilgiler */}
+          <div className="text-xs text-gray-500 space-y-1 mt-1">
+            <div className="flex items-center gap-1">
+              <Hash className="w-3 h-3 text-gray-400" /> <span>Müşteri No:</span> {customer.customerNumber}
+            </div>
+            <div className="flex items-center gap-1">
+              <Hash className="w-3 h-3 text-gray-400" /> <span>Tesisat No:</span> {customer.installationNumber}
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-gray-400" /> <span>Ziyaret Tarihi:</span> {customer.visitDate}
+            </div>
+          </div>
+
+          {/* Chip alanları */}
           <div className="mt-2 flex flex-wrap gap-2">
             <Chip tone={statusTone}>{customer.status}</Chip>
             <Chip tone={priorityTone}>{customer.priority} Öncelik</Chip>
@@ -41,6 +60,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
         </div>
 
+        {/* SAĞ TARAF */}
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
             <div className="text-sm font-medium text-gray-900">{customer.plannedTime}</div>
@@ -48,6 +68,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
 
           <div className="flex flex-wrap justify-end gap-2">
+            {/* Detay butonu */}
             <button
               onClick={onDetail}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs transition"
@@ -57,6 +78,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
               <Eye className="w-4 h-4" /> Detay
             </button>
 
+            {/* Başlat butonu */}
             {customer.status === "Bekliyor" && (
               <button
                 onClick={onStart}
@@ -68,6 +90,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
               </button>
             )}
 
+            {/* Not ekle */}
             <button
               onClick={() => alert("Not Ekle özelliği geliştirilecek")}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition"
