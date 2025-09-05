@@ -172,6 +172,8 @@ const ContractModal: React.FC<{ customer: Customer; signatureDataUrl: string | n
 const SolarLeadModal: React.FC<{ customer: Customer; onClose: () => void; }> = ({ customer, onClose }) => {
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
     const [kvkkAccepted, setKvkkAccepted] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     const handleProductChange = (product: string) => {
         setSelectedProducts(prev => 
@@ -180,8 +182,9 @@ const SolarLeadModal: React.FC<{ customer: Customer; onClose: () => void; }> = (
     };
 
     const handleSubmit = () => {
+        setError(null);
         if (!kvkkAccepted || selectedProducts.length === 0) {
-            alert("Lütfen en az bir ürün seçin ve KVKK metnini onaylayın.");
+            setError("Lütfen en az bir ürün seçin ve KVKK metnini onaylayın.");
             return;
         }
 
@@ -194,55 +197,53 @@ const SolarLeadModal: React.FC<{ customer: Customer; onClose: () => void; }> = (
         };
         
         console.log("SOLAR LEAD CREATED:", leadData);
-        alert("Güneş enerjisi çözümleri talebiniz ilgili ekibe başarıyla iletilmiştir. Sizinle en kısa sürede iletişime geçilecektir.");
-        onClose();
+        setIsSubmitted(true);
     };
 
     const products = ['Güneş Paneli', 'Depolama Ünitesi', 'Şarj İstasyonu'];
 
     return (
         <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10050] bg-black/60 flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                    <XCircle className="w-6 h-6"/>
-                </button>
-                <h2 className="text-xl font-bold text-gray-800">Güneş Enerjisi Çözümleri Talep Formu</h2>
-                <p className="text-sm text-gray-600 mt-1">Bu form ile ilgili ekibe talep oluşturulacak ve müşteriyle detaylar için iletişime geçilecektir.</p>
-                
-                <div className="mt-6 space-y-4">
-                    <div>
-                        <label className="text-xs font-medium text-gray-500">Müşteri Adı Soyadı</label>
-                        <input type="text" value={customer.name} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" />
+             <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
+                {isSubmitted ? (
+                    <div className="text-center p-4">
+                        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                        <h2 className="text-xl font-bold text-gray-800">Talep Başarıyla Alındı!</h2>
+                        <p className="text-sm text-gray-600 mt-2">Güneş enerjisi çözümleri talebiniz ilgili ekibe başarıyla iletilmiştir. Müşterimizle en kısa sürede iletişime geçilecektir.</p>
+                        <button onClick={onClose} className="mt-6 w-full bg-green-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-700">Harika, Kapat</button>
                     </div>
-                     <div>
-                        <label className="text-xs font-medium text-gray-500">Telefon Numarası</label>
-                        <input type="text" value={customer.phone} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-gray-500 mb-2">Talep Edilen Çözümler</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                            {products.map(product => (
-                                <label key={product} className={`p-3 border rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${selectedProducts.includes(product) ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-gray-50'}`}>
-                                    <input type="checkbox" checked={selectedProducts.includes(product)} onChange={() => handleProductChange(product)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB]" />
-                                    <span className="text-sm font-medium text-gray-700">{product}</span>
+                ) : (
+                    <>
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><XCircle className="w-6 h-6"/></button>
+                        <h2 className="text-xl font-bold text-gray-800">Güneş Enerjisi Çözümleri Talep Formu</h2>
+                        <p className="text-sm text-gray-600 mt-1">Bu form ile ilgili ekibe talep oluşturulacak ve müşteriyle detaylar için iletişime geçilecektir.</p>
+                        
+                        <div className="mt-6 space-y-4">
+                            <div><label className="text-xs font-medium text-gray-500">Müşteri Adı Soyadı</label><input type="text" value={customer.name} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" /></div>
+                            <div><label className="text-xs font-medium text-gray-500">Telefon Numarası</label><input type="text" value={customer.phone} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" /></div>
+                            <div>
+                                <p className="text-xs font-medium text-gray-500 mb-2">Talep Edilen Çözümler</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {products.map(product => (<label key={product} className={`p-3 border rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${selectedProducts.includes(product) ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-gray-50'}`}><input type="checkbox" checked={selectedProducts.includes(product)} onChange={() => handleProductChange(product)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB]" /><span className="text-sm font-medium text-gray-700">{product}</span></label>))}
+                                </div>
+                            </div>
+                            <div className="pt-4 border-t">
+                                <label className="flex items-start gap-3 cursor-pointer">
+                                    <input type="checkbox" checked={kvkkAccepted} onChange={e => setKvkkAccepted(e.target.checked)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB] mt-0.5" />
+                                    <span className="text-xs text-gray-600">Müşterinin, kişisel verilerinin Güneş Enerjisi Çözümleri hakkında bilgilendirme ve teklif sunulması amacıyla işlenmesine ve kendisiyle bu kanallar üzerinden iletişime geçilmesine onay verdiğini beyan ederim.</span>
                                 </label>
-                            ))}
+                            </div>
                         </div>
-                    </div>
-                    <div className="pt-4 border-t">
-                         <label className="flex items-start gap-3 cursor-pointer">
-                            <input type="checkbox" checked={kvkkAccepted} onChange={e => setKvkkAccepted(e.target.checked)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB] mt-0.5" />
-                            <span className="text-xs text-gray-600">Müşterinin, kişisel verilerinin Güneş Enerjisi Çözümleri hakkında bilgilendirme ve teklif sunulması amacıyla işlenmesine ve kendisiyle bu kanallar üzerinden iletişime geçilmesine onay verdiğini beyan ederim.</span>
-                        </label>
-                    </div>
-                </div>
 
-                <div className="mt-8 flex justify-end gap-3">
-                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200">Vazgeç</button>
-                    <button onClick={handleSubmit} disabled={!kvkkAccepted || selectedProducts.length === 0} className="px-6 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:bg-gray-300">
-                        Talep Oluştur
-                    </button>
-                </div>
+                        <div className="mt-8 flex flex-col items-end gap-3">
+                            {error && <p className="text-sm text-red-600 text-right w-full">{error}</p>}
+                            <div className="flex gap-3">
+                                <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200">Vazgeç</button>
+                                <button onClick={handleSubmit} disabled={!kvkkAccepted || selectedProducts.length === 0} className="px-6 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:bg-gray-300">Talep Oluştur</button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
