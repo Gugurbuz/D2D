@@ -12,6 +12,10 @@ import {
   StarOff,
   Navigation, // YENİ EKLENDİ
 } from "lucide-react";
+import MarkerClusterGroup from "react-leaflet-cluster";
+import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
+import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
+
 
 /* ==== Tipler ==== */
 export type Customer = {
