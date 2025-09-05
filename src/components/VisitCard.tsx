@@ -26,12 +26,11 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* SOL TARAF */}
         <div className="flex-1 space-y-2">
-          {/* İsim + yeni bilgiler tek satırda */}
+          {/* İsim + müşteri & tesisat no */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
-            <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber}</div>
-            <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber}</div>
-            <div className="text-xs text-gray-500">Tarih: {customer.visitDate}</div>
+            <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber ?? "-"}</div>
+            <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber ?? "-"}</div>
           </div>
 
           {/* Adres */}
@@ -56,6 +55,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
             <div className="text-sm font-medium text-gray-900">{customer.plannedTime}</div>
+            <div className="text-xs text-gray-500">{customer.visitDate ?? "-"}</div>
             <div className="text-xs text-gray-500">{customer.distance}</div>
           </div>
 
