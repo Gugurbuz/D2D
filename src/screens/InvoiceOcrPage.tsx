@@ -100,7 +100,7 @@ export default function InvoiceOcrPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Kamera state
-  const [cameraOn, setCameraOn] = useState(false); // ⬅️ tam ekran modal görünürlüğü
+  const [cameraOn, setCameraOn] = useState(false); // tam ekran modal görünürlüğü
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -129,18 +129,17 @@ export default function InvoiceOcrPage() {
 
   // cameraOn => body scroll kilidi
   useEffect(() => {
-    if (cameraOn) {
-      const prev = {
-        overflow: document.body.style.overflow,
-        height: document.body.style.height,
-      };
-      document.body.style.overflow = "hidden";
-      document.body.style.height = "100vh";
-      return () => {
-        document.body.style.overflow = prev.overflow;
-        document.body.style.height = prev.height;
-      };
-    }
+    if (!cameraOn) return;
+    const prev = {
+      overflow: document.body.style.overflow,
+      height: document.body.style.height,
+    };
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100vh";
+    return () => {
+      document.body.style.overflow = prev.overflow;
+      document.body.style.height = prev.height;
+    };
   }, [cameraOn]);
 
   // stream bağlama ve play
@@ -152,9 +151,7 @@ export default function InvoiceOcrPage() {
     (v as any).srcObject = stream;
     const p = v.play();
     if (p && typeof p.then === "function") {
-      p.catch(() => {
-        /* autoplay engeli olabilir, kullanıcı etkileşimi var zaten */
-      });
+      p.catch(() => {});
     }
   }, [stream]);
 
@@ -250,6 +247,7 @@ export default function InvoiceOcrPage() {
     }
   }
 
+  // === OCR: Vision çağrısı (tek sefer json parse + fallback) ===
   async function runCloudVisionOcr(file: File) {
     if (!apiKey) {
       setError("Google Cloud API anahtarı eksik.");
@@ -264,13 +262,11 @@ export default function InvoiceOcrPage() {
 
     try {
       setLoadingMessage("Fatura okunuyor…");
-      const cleanBase64 = (await fileToBase64(file))
-        .replace(/^data:image\/\w+;base64/, "")
-        .replace(/^,/, "");
+      const base64 = (await fileToBase64(file)).replace(/^data:.*;base64,/, "");
       const body = {
         requests: [
           {
-            image: { content: cleanBase64 },
+            image: { content: base64 },
             features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
           },
         ],
@@ -283,9 +279,24 @@ export default function InvoiceOcrPage() {
           body: JSON.stringify(body),
         }
       );
-      if (!res.ok) throw new Error((await res.json()).error.message);
+      const json = await res.json(); // ⬅️ TEK KEZ OKU
+      if (!res.ok) {
+        const msg =
+          json?.error?.message ||
+          json?.error ||
+          "Google Vision hatası";
+        throw new Error(msg);
+      }
+      // fullTextAnnotation yoksa textAnnotations[0].description fallback
       const detected =
-        (await res.json()).responses[0]?.fullTextAnnotation?.text || "";
+        json?.responses?.[0]?.fullTextAnnotation?.text ||
+        json?.responses?.[0]?.textAnnotations?.[0]?.description ||
+        "";
+
+      if (!detected.trim()) {
+        throw new Error("Görüntüden metin çıkarılamadı.");
+      }
+
       setRawText(detected);
       await processTextWithAI(detected);
     } catch (e: any) {
@@ -355,6 +366,7 @@ export default function InvoiceOcrPage() {
     setCameraOn(false);
   }
 
+  // ✅ Fotoğrafı güvenilir şekilde al: canvas.toBlob
   async function capturePhoto() {
     if (!videoRef.current || !canvasRef.current) return;
 
@@ -369,13 +381,18 @@ export default function InvoiceOcrPage() {
       });
     }
 
-    const c = canvasRef.current,
-      v = videoRef.current;
+    const c = canvasRef.current, v = videoRef.current;
     c.width = v.videoWidth;
     c.height = v.videoHeight;
     c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
-    const blob = await (await fetch(c.toDataURL("image/jpeg"))).blob();
-    await runCloudVisionOcr(new File([blob], "capture.jpg", { type: "image/jpeg" }));
+
+    const blob: Blob = await new Promise((resolve, reject) => {
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("Görüntü oluşturulamadı."))), "image/jpeg", 0.92);
+    });
+
+    const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    setImagePreview(URL.createObjectURL(file));
+    await runCloudVisionOcr(file);
     closeCamera(); // çekince kapat
   }
 
