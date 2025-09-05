@@ -21,12 +21,11 @@ import {
 } from "lucide-react";
 
 /* =======================
-   Tipler
+   Tipler (Değişiklik yok)
    ======================= */
-// GÜNCELLEME: Müşteriye, hangi temsilciye atandığını belirten `assignedRepId` alanı eklendi.
 export type Customer = {
   id: string;
-  assignedRepId?: string; // Temsilci ID'si. Opsiyonel olabilir.
+  assignedRepId?: string; 
   name: string;
   address: string;
   district: string;
@@ -44,7 +43,6 @@ export type Customer = {
   phone: string;
 };
 
-// GÜNCELLEME: SalesRep tipine `id` alanı eklendi.
 export type SalesRep = {
   id: string;
   name: string;
@@ -60,22 +58,18 @@ interface Props {
 }
 
 /* =======================
-   Varsayılan veri
+   Varsayılan veri (Değişiklik yok)
    ======================= */
-// GÜNCELLEME: Varsayılan temsilciye test için bir ID atandı.
 const defaultSalesRep: SalesRep = { id: "rep-1", name: "Mehmet Yılmaz", lat: 40.9839, lng: 29.0285 };
 
-// GÜNCELLEME: Müşterilere `assignedRepId` alanları eklendi.
 const anadoluCustomers: Customer[] = [
-  { id: "1", assignedRepId: "rep-1", name: "Buse Aksoy", address: "Bağdat Cd. No:120", district: "Maltepe", plannedTime: "09:00", priority: "Düşük", tariff: "Mesken", meterNumber: "210000001", consumption: "270 kWh/ay", offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km", lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
-  { id: "2", assignedRepId: "rep-2", name: "Kaan Er", address: "Alemdağ Cd. No:22", district: "Ümraniye", plannedTime: "09:20", priority: "Orta", tariff: "Mesken", meterNumber: "210000002", consumption: "300 kWh/ay", offerHistory: ["2024-08: %10 indirim"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km", lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
-  { id: "3", assignedRepId: "rep-3", name: "Canan Sezer", address: "Finans Mrk. A1", district: "Ataşehir", plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km", lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
-  { id: "4", assignedRepId: "rep-1", name: "Kübra Oral", address: "İnönü Mh. No:18", district: "Kadıköy", plannedTime: "10:00", priority: "Orta", tariff: "Mesken", meterNumber: "210000004", consumption: "310 kWh/ay", offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km", lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
-  { id: "5", assignedRepId: "rep-1", name: "Ayça Erden", address: "Koşuyolu Cd. 7", district: "Kadıköy", plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay", offerHistory: ["2024-10: %10 indirim"], status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km", lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
-  { id: "6", assignedRepId: "rep-2", name: "Meral Kılıç", address: "Çengelköy Sahil", district: "Üsküdar", plannedTime: "10:40", priority: "Düşük", tariff: "Mesken", meterNumber: "210000006", consumption: "260 kWh/ay", offerHistory: ["2024-03: Hoş geldin"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
-  // ...diğer müşteriler atanmamış veya farklı ID'lere atanmış olabilir...
+  { id: "1", assignedRepId: "rep-1", name: "Buse Aksoy", address: "Bağdat Cd. No:120", district: "Maltepe", plannedTime: "09:00", priority: "Düşük", tariff: "Mesken", meterNumber: "210000001", consumption: "270 kWh/ay", offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km", lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
+  { id: "2", assignedRepId: "rep-2", name: "Kaan Er", address: "Alemdağ Cd. No:22", district: "Ümraniye", plannedTime: "09:20", priority: "Orta", tariff: "Mesken", meterNumber: "210000002", consumption: "300 kWh/ay", offerHistory: ["2024-08: %10 indirim"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km", lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
+  { id: "3", assignedRepId: "rep-3", name: "Canan Sezer", address: "Finans Mrk. A1", district: "Ataşehir", plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km", lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
+  { id: "4", assignedRepId: "rep-1", name: "Kübra Oral", address: "İnönü Mh. No:18", district: "Kadıköy", plannedTime: "10:00", priority: "Orta", tariff: "Mesken", meterNumber: "210000004", consumption: "310 kWh/ay", offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km", lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
+  { id: "5", assignedRepId: "rep-1", name: "Ayça Erden", address: "Koşuyolu Cd. 7", district: "Kadıköy", plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay", offerHistory: ["2024-10: %10 indirim"], status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km", lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
+  { id: "6", assignedRepId: "rep-2", name: "Meral Kılıç", address: "Çengelköy Sahil", district: "Üsküdar", plannedTime: "10:40", priority: "Düşük", tariff: "Mesken", meterNumber: "210000006", consumption: "260 kWh/ay", offerHistory: ["2024-03: Hoş geldin"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
 ];
-
 
 // ... Diğer fonksiyonlar (ikonlar, yardımcılar, OSRM vb.) aynı kalıyor ...
 const repIcon = new L.Icon({ iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491", iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -28] });
@@ -95,15 +89,9 @@ async function buildGeometryFromOrder(orderedLatLngs: LatLng[]) { const coords: 
    ======================= */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
-  // `baseCustomers`'ı `allCustomers` olarak yeniden adlandıralım.
   const allCustomers = customers && customers.length > 0 ? customers : anadoluCustomers;
-
-  // YENİ: Filtreleme mantığını temsilci ID'sine göre güncelleyelim.
-  const customersForRep = allCustomers.filter(
-    (customer) => customer.assignedRepId === rep.id
-  );
-
-  // GÜNCELLEME: State'i filtrelenmiş müşteri listesiyle (`customersForRep`) başlatalım.
+  const customersForRep = allCustomers.filter(customer => customer.assignedRepId === rep.id);
+  
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(customersForRep);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
@@ -115,20 +103,59 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
 
-  // ... swipe panel, toTelHref, highlightCustomer, fitPolylineBounds fonksiyonları aynı ...
+  // ... swipe panel ve toTelHref fonksiyonları ...
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => { if (touchStartX.current == null) return; const dx = e.changedTouches[0].clientX - touchStartX.current; if (dx > 50) setPanelOpen(true); if (dx < -50) setPanelOpen(false); touchStartX.current = null; };
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
-  const highlightCustomer = (c: Customer, _i: number, pan = true) => { setSelectedId(c.id); const m = markerRefs.current[c.id]; if (pan && mapRef.current) { mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true }); } if (m) m.openPopup(); const row = document.getElementById(`cust-row-${c.id}`); if (row) row.scrollIntoView({ behavior: "smooth", block: "nearest" }); };
-  const fitPolylineBounds = (poly: LatLng[]) => { if (!mapRef.current || poly.length < 2) return; const bounds = L.latLngBounds(poly.map(([la, ln]) => L.latLng(la, ln))); mapRef.current.fitBounds(bounds, { padding: [24, 24] }); };
 
+  // YENİ: Müşteri seçimi için merkezi kontrol fonksiyonu
+  const handleCustomerSelect = (customer: Customer | null) => {
+    if (!customer) {
+      setSelectedId(null);
+      return;
+    }
+    
+    // State'i güncelle (marker ve panelde highlight için)
+    setSelectedId(customer.id);
+
+    // Haritayı seçilen müşteriye ortala
+    if (mapRef.current) {
+      mapRef.current.setView([customer.lat, customer.lng], Math.max(mapRef.current.getZoom(), 15), { animate: true });
+    }
+    
+    // Sağ paneldeki listeyi seçilen müşteriye kaydır
+    const row = document.getElementById(`cust-row-${customer.id}`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Marker'ın popup'ını programatik olarak aç
+    // Not: Leaflet referansının oluşması için küçük bir gecikme gerekebilir.
+    setTimeout(() => {
+      const marker = markerRefs.current[customer.id];
+      if (marker) {
+        marker.openPopup();
+      }
+    }, 100);
+  };
+  
+  // YENİ: Popup kapandığında seçimi sıfırlayan fonksiyon
+  const handlePopupClose = () => {
+    setSelectedId(null);
+  };
+
+  const fitPolylineBounds = (poly: LatLng[]) => {
+    if (!mapRef.current || poly.length < 2) return;
+    const bounds = L.latLngBounds(poly.map(([la, ln]) => L.latLng(la, ln)));
+    mapRef.current.fitBounds(bounds, { padding: [24, 24] });
+  };
+
+  // ... handleOptimize fonksiyonunda `customersForRep` kullanılıyor, değişiklik yok ...
   const handleOptimize = async () => {
     setLoading(true);
     try {
-      // GÜNCELLEME: Rota optimizasyonunda `baseCustomers` yerine `customersForRep` kullanılacak.
       const start = { lat: rep.lat, lng: rep.lng };
-
       if (!starredId) {
         const points = [start, ...customersForRep.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
         const tripData = await osrmTripSafe(points);
@@ -139,11 +166,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           const latlngs: LatLng[] = tripData.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
           setRouteCoords(latlngs);
           setRouteKm((tripData.trips[0].distance as number) / 1000);
-          if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0], 0, true);
+          if (sortedCustomers[0]) handleCustomerSelect(sortedCustomers[0]);
           fitPolylineBounds(latlngs);
           return;
         }
-
         const greedyPoints: LatLng[] = [[rep.lat, rep.lng], ...customersForRep.map((c) => [c.lat, c.lng])];
         const orderIdx = greedyOrder(greedyPoints, 0);
         const orderedLatLngs = orderIdx.map((i) => greedyPoints[i]);
@@ -152,19 +178,16 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         const geom = await buildGeometryFromOrder(orderedLatLngs);
         setRouteCoords(geom.coords);
         setRouteKm(geom.km);
-        if (orderedCusts[0]) highlightCustomer(orderedCusts[0], 0, true);
+        if (orderedCusts[0]) handleCustomerSelect(orderedCusts[0]);
         fitPolylineBounds(geom.coords);
       } else {
         const star = customersForRep.find((c) => c.id === starredId)!;
         const others = customersForRep.filter((c) => c.id !== starredId);
-
         const firstLeg = await osrmRouteSafe([rep.lat, rep.lng], [star.lat, star.lng]);
         const firstLegCoords: LatLng[] = firstLeg ? firstLeg.geometry.coordinates.map(([lng, lat]) => [lat, lng] as LatLng) : ([[rep.lat, rep.lng], [star.lat, star.lng]] as LatLng[]);
         const firstLegKm = firstLeg ? firstLeg.distance / 1000 : haversineKm([rep.lat, rep.lng], [star.lat, star.lng]);
-
         const points2 = [{ lat: star.lat, lng: star.lng }, ...others.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
         const trip2 = await osrmTripSafe(points2);
-
         if (trip2) {
           const ordered2 = trip2.waypoints.map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index })).sort((a: any, b: any) => a.order - b.order).map((x: any) => points2[x.inputIdx]);
           const sortedCustomers = ordered2.map((p: any, idx: number) => (idx === 0 ? star : (p.ref as Customer)));
@@ -173,11 +196,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           const merged = firstLegCoords.concat(restCoords.slice(1));
           setRouteCoords(merged);
           setRouteKm(firstLegKm + (trip2.trips[0].distance as number) / 1000);
-          highlightCustomer(star, 0, true);
+          handleCustomerSelect(star);
           fitPolylineBounds(merged);
           return;
         }
-        
         const greedyPoints2: LatLng[] = [[rep.lat, rep.lng], [star.lat, star.lng], ...others.map((c) => [c.lat, c.lng] as LatLng)];
         const orderIdx2 = [0, 1].concat(greedyOrder(greedyPoints2.slice(1), 0).slice(1).map((i) => i + 1));
         const orderedLatLngs2 = orderIdx2.map((i) => greedyPoints2[i]);
@@ -186,7 +208,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         const geom2 = await buildGeometryFromOrder(orderedLatLngs2);
         setRouteCoords(geom2.coords);
         setRouteKm(geom2.km);
-        highlightCustomer(star, 0, true);
+        handleCustomerSelect(star);
         fitPolylineBounds(geom2.coords);
       }
     } finally {
@@ -198,9 +220,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (starredId !== null) handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
-
-  // GÜNCELLEME: `useEffect`'in `baseCustomers` yerine `customersForRep`'i izlemesini sağlayalım.
-  // Bu, prop'lar değiştiğinde listenin doğru şekilde güncellenmesini sağlar.
+  
   useEffect(() => {
     setOrderedCustomers(customersForRep);
   }, [customersForRep]);
@@ -208,10 +228,74 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const center: LatLng = [rep.lat, rep.lng];
 
   return (
-    // ... JSX (return) kısmında değişiklik yok ...
-    // Tüm render işlemleri `orderedCustomers` üzerinden yapıldığı için
-    // bu kısım otomatik olarak doğru çalışacaktır.
-    <div className="relative w-full"> <div className="mb-3 flex items-center justify-between"> <div className="flex items-center gap-2 text-gray-900 font-semibold"> <RouteIcon className="w-5 h-5 text-[#0099CB]" /> Rota Haritası </div> <div className="flex items-center gap-3"> <div className="text-sm text-gray-700"> Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b> </div> <button onClick={handleOptimize} disabled={loading} className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`} > {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"} </button> <FullscreenBtn /> </div> </div> <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl"> <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} whenCreated={(m) => (mapRef.current = m)} className="z-0" > <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap contributors" /> <Marker position={[rep.lat, rep.lng]} icon={repIcon}> <Popup><b>{rep.name}</b></Popup> </Marker> {orderedCustomers.map((c, i) => ( <Marker key={c.id} position={[c.lat, c.lng]} icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })} zIndexOffset={1000 - i} ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }} eventHandlers={{ click: () => { setSelectedId(c.id); const m = markerRefs.current[c.id]; if (m) m.openPopup(); }, }} > <Popup> <div className="space-y-1"> <div className="flex items-center gap-2"> <b>{i + 1}. {c.name}</b> <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStarredId((prev) => (prev === c.id ? null : c.id)); }} aria-label={starredId === c.id ? "Yıldızı kaldır" : "İlk durak yap" } className="p-1 rounded hover:bg-gray-100" > <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} /> </button> </div> <div>{c.address}, {c.district}</div> <div>Saat: {c.plannedTime}</div> <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div> <a href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors" > <Navigation className="w-4 h-4" /> <span>Navigasyonu Başlat</span> </a> </div> </Popup> </Marker> ))} {routeCoords.length > 0 && ( <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} /> )} </MapContainer> <div className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${ panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]" } flex`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} > <button onClick={() => setPanelOpen((o) => !o)} className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white" title={panelOpen ? "Paneli kapat" : "Paneli aç"} > {panelOpen ? ( <Minimize2 className="w-4 h-4 -rotate-90" /> ) : ( <div className="flex flex-col items-center"> <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span> <Minimize2 className="w-4 h-4 rotate-90" /> </div> )} </button> <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full"> <div className="flex items-center gap-2"> <RouteIcon className="w-5 h-5 text-[#0099CB]" /> <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span> </div> <div className="text-[11px] text-gray-600"> ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir. </div> <SimpleBar style={{ maxHeight: "100%" }}> {orderedCustomers.map((c, i) => { const selected = selectedId === c.id; const starred = starredId === c.id; return ( <div key={c.id} id={`cust-row-${c.id}`} className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`} onClick={() => { setSelectedId(c.id); if (mapRef.current) { mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true }); } const m = markerRefs.current[c.id]; if (m) m.openPopup(); }} > <span className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${ starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]" }`} title={`${i + 1}. müşteri`} > {i + 1} </span> <div className="min-w-0"> <div className="font-medium text-gray-900 truncate">{c.name}</div> <div className="text-xs text-gray-500 truncate"> {c.address}, {c.district} </div> <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e) => e.stopPropagation()}> {c.phone} </a> </div> <button className="ml-auto p-1.5 rounded-lg hover:bg-gray-100" title={starred ? "İlk duraktan kaldır" : "İlk durak yap"} onClick={(e) => { e.stopPropagation(); setStarredId((prev) => (prev === c.id ? null : c.id)); }} > {starred ? ( <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" /> ) : ( <StarOff className="w-5 h-5 text-gray-500" /> )} </button> <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span> </div> ); })} </SimpleBar> </div> </div> {loading && ( <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10"> <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700"> Rota Hesaplanıyor… </div> </div> )} </div> </div>
+    <div className="relative w-full">
+      {/* ... Üst bar (değişiklik yok) ... */}
+      <div className="mb-3 flex items-center justify-between"> <div className="flex items-center gap-2 text-gray-900 font-semibold"> <RouteIcon className="w-5 h-5 text-[#0099CB]" /> Rota Haritası </div> <div className="flex items-center gap-3"> <div className="text-sm text-gray-700"> Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b> </div> <button onClick={handleOptimize} disabled={loading} className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`} > {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"} </button> <FullscreenBtn /> </div> </div>
+
+      {/* Harita */}
+      <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
+        <MapContainer center={center} zoom={13} style={{ height: "100%", width: "100%" }} whenCreated={(m) => (mapRef.current = m)} className="z-0" >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="© OpenStreetMap contributors" />
+          <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
+            <Popup><b>{rep.name}</b></Popup>
+          </Marker>
+          {orderedCustomers.map((c, i) => (
+            <Marker
+              key={c.id}
+              position={[c.lat, c.lng]}
+              icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
+              zIndexOffset={selectedId === c.id ? 2000 : 1000 - i} // Seçili olan en üste gelsin
+              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+                // GÜNCELLEME: Merkezi fonksiyonları kullanan olay dinleyicileri
+              eventHandlers={{
+                  click: () => {
+                    handleCustomerSelect(c);
+                  },
+                  popupclose: () => {
+                    handlePopupClose();
+                  }
+              }}
+            >
+                {/* Popup içeriği aynı kalıyor */}
+              <Popup> <div className="space-y-1"> <div className="flex items-center gap-2"> <b>{i + 1}. {c.name}</b> <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setStarredId((prev) => (prev === c.id ? null : c.id)); }} aria-label={starredId === c.id ? "Yıldızı kaldır" : "İlk durak yap" } className="p-1 rounded hover:bg-gray-100" > <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} /> </button> </div> <div>{c.address}, {c.district}</div> <div>Saat: {c.plannedTime}</div> <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div> <a href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`} target="_blank" rel="noopener noreferrer" className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors" > <Navigation className="w-4 h-4" /> <span>Navigasyonu Başlat</span> </a> </div> </Popup>
+            </Marker>
+          ))}
+          {routeCoords.length > 0 && ( <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} /> )}
+        </MapContainer>
+
+        {/* Sağ panel */}
+        <div className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${ panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]" } flex`} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} >
+          {/* ... panel açma/kapama butonu (değişiklik yok) ... */}
+          <button onClick={() => setPanelOpen((o) => !o)} className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white" title={panelOpen ? "Paneli kapat" : "Paneli aç"} > {panelOpen ? ( <Minimize2 className="w-4 h-4 -rotate-90" /> ) : ( <div className="flex flex-col items-center"> <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span> <Minimize2 className="w-4 h-4 rotate-90" /> </div> )} </button>
+          <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full">
+            {/* ... panel başlığı (değişiklik yok) ... */}
+            <div className="flex items-center gap-2"> <RouteIcon className="w-5 h-5 text-[#0099CB]" /> <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span> </div> <div className="text-[11px] text-gray-600"> ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir. </div>
+            <SimpleBar style={{ maxHeight: "100%" }}>
+              {orderedCustomers.map((c, i) => {
+                const selected = selectedId === c.id;
+                const starred = starredId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    id={`cust-row-${c.id}`}
+                    className={`flex items-center gap-2 p-2 rounded transition cursor-pointer ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
+                      // GÜNCELLEME: Paneldeki tıklama olayı da merkezi fonksiyonu kullanıyor.
+                    onClick={() => {
+                        handleCustomerSelect(c);
+                    }}
+                  >
+                    {/* Panel satır içeriği aynı kalıyor */}
+                    <span className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${ starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]" }`} title={`${i + 1}. müşteri`} > {i + 1} </span> <div className="min-w-0"> <div className="font-medium text-gray-900 truncate">{c.name}</div> <div className="text-xs text-gray-500 truncate"> {c.address}, {c.district} </div> <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e) => e.stopPropagation()}> {c.phone} </a> </div> <button className="ml-auto p-1.5 rounded-lg hover:bg-gray-100" title={starred ? "İlk duraktan kaldır" : "İlk durak yap"} onClick={(e) => { e.stopPropagation(); setStarredId((prev) => (prev === c.id ? null : c.id)); }} > {starred ? ( <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" /> ) : ( <StarOff className="w-5 h-5 text-gray-500" /> )} </button> <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+                  </div>
+                );
+              })}
+            </SimpleBar>
+          </div>
+        </div>
+        {/* ... Yükleniyor ekranı (değişiklik yok) ... */}
+        {loading && ( <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10"> <div className="rounded-lg bg-white shadow px-5 py-3 text-sm font-semibold text-gray-700"> Rota Hesaplanıyor… </div> </div> )}
+      </div>
+    </div>
   );
 };
 
