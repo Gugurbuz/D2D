@@ -34,11 +34,11 @@ export type Customer = {
   lat: number;
   lng: number;
   phone: string;
-  assignedRepId: string; // Müşterinin hangi satış uzmanına ait olduğunu belirtir
+  assignedRepId: string; // <-- GÜNCELLENDİ: Alan adı sizin veri yapınızla uyumlu hale getirildi
 };
 
 export type SalesRep = {
-  id: string; // Satış uzmanını benzersiz kılar
+  id: string;
   name: string;
   lat: number;
   lng: number;
@@ -56,18 +56,18 @@ const defaultSalesRep: SalesRep = { id: "rep1", name: "Satış Uzmanı (Varsayı
 
 const allMockCustomers: Customer[] = [
   // rep1'e atanan müşteriler
-  { id: "1",  name: "Buse Aksoy",   address: "Bağdat Cd. No:120", district: "Maltepe",     plannedTime: "09:00", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000001", consumption: "270 kWh/ay",  offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01", salesRepId: "rep1" },
-  { id: "2",  name: "Kaan Er",      address: "Alemdağ Cd. No:22", district: "Ümraniye",    plannedTime: "09:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000002", consumption: "300 kWh/ay",  offerHistory: ["2024-08: %10 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02", salesRepId: "rep1" },
-  { id: "3",  name: "Canan Sezer",  address: "Finans Mrk. A1",   district: "Ataşehir",    plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03", salesRepId: "rep1" },
-  { id: "4",  name: "Kübra Oral",   address: "İnönü Mh. No:18",   district: "Kadıköy",     plannedTime: "10:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000004", consumption: "310 kWh/ay",  offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04", salesRepId: "rep1" },
-  { id: "5",  name: "Ayça Erden",   address: "Koşuyolu Cd. 7",   district: "Kadıköy",     plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"],      status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05", salesRepId: "rep1" },
+  { id: "1",  name: "Buse Aksoy",   address: "Bağdat Cd. No:120", district: "Maltepe",     plannedTime: "09:00", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000001", consumption: "270 kWh/ay",  offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01", assignedRepId: "rep1" },
+  { id: "2",  name: "Kaan Er",      address: "Alemdağ Cd. No:22", district: "Ümraniye",    plannedTime: "09:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000002", consumption: "300 kWh/ay",  offerHistory: ["2024-08: %10 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02", assignedRepId: "rep1" },
+  { id: "3",  name: "Canan Sezer",  address: "Finans Mrk. A1",   district: "Ataşehir",    plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03", assignedRepId: "rep1" },
+  { id: "4",  name: "Kübra Oral",   address: "İnönü Mh. No:18",   district: "Kadıköy",     plannedTime: "10:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000004", consumption: "310 kWh/ay",  offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04", assignedRepId: "rep1" },
+  { id: "5",  name: "Ayça Erden",   address: "Koşuyolu Cd. 7",   district: "Kadıköy",     plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"],      status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05", assignedRepId: "rep1" },
   
   // rep2'ye (başka bir satış uzmanı) atanan müşteriler
-  { id: "12", name: "Gizem Acar",   address: "İdealtepe No:11",  district: "Maltepe",     plannedTime: "12:40", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000012", consumption: "295 kWh/ay",  offerHistory: ["2025-01: Paket"],            status: "Bekliyor", estimatedDuration: "30 dk", distance: "3.0 km",  lat: 40.9497, lng: 29.1228, phone: "0555 111 22 12", salesRepId: "rep2" },
-  { id: "13", name: "Seda Karaca",  address: "Başak Cd. No:2",   district: "Kartal",      plannedTime: "13:10", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000013", consumption: "300 kWh/ay",  offerHistory: ["2024-02: Kombi kampanya"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "6.2 km",  lat: 40.9127, lng: 29.2137, phone: "0555 111 22 13", salesRepId: "rep2" },
-  { id: "14", name: "Tolga Kurt",   address: "Sahil Yolu No:88", district: "Kartal",      plannedTime: "13:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000014", consumption: "295 kWh/ay",  offerHistory: ["2024-06: Sadakat paketi"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.5 km",  lat: 40.9075, lng: 29.1947, phone: "0555 111 22 14", salesRepId: "rep2" },
-  { id: "15", name: "Melih Uçar",   address: "Velibaba Mh. 10",  district: "Pendik",      plannedTime: "14:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000015", consumption: "1350 kWh/ay", offerHistory: ["2024-01: Endüstriyel tarife"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "12.0 km", lat: 40.9009, lng: 29.2312, phone: "0555 111 22 15", salesRepId: "rep2" },
-  { id: "16", name: "İpek Gür",     address: "Esenyalı Mh. 17",  district: "Pendik",      plannedTime: "14:30", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000016", consumption: "280 kWh/ay",  offerHistory: ["2023-12: E-devlet onay"],    status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.8 km", lat: 40.8784, lng: 29.2743, phone: "0555 111 22 16", salesRepId: "rep2" },
+  { id: "12", name: "Gizem Acar",   address: "İdealtepe No:11",  district: "Maltepe",     plannedTime: "12:40", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000012", consumption: "295 kWh/ay",  offerHistory: ["2025-01: Paket"],            status: "Bekliyor", estimatedDuration: "30 dk", distance: "3.0 km",  lat: 40.9497, lng: 29.1228, phone: "0555 111 22 12", assignedRepId: "rep2" },
+  { id: "13", name: "Seda Karaca",  address: "Başak Cd. No:2",   district: "Kartal",      plannedTime: "13:10", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000013", consumption: "300 kWh/ay",  offerHistory: ["2024-02: Kombi kampanya"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "6.2 km",  lat: 40.9127, lng: 29.2137, phone: "0555 111 22 13", assignedRepId: "rep2" },
+  { id: "14", name: "Tolga Kurt",   address: "Sahil Yolu No:88", district: "Kartal",      plannedTime: "13:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000014", consumption: "295 kWh/ay",  offerHistory: ["2024-06: Sadakat paketi"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.5 km",  lat: 40.9075, lng: 29.1947, phone: "0555 111 22 14", assignedRepId: "rep2" },
+  { id: "15", name: "Melih Uçar",   address: "Velibaba Mh. 10",  district: "Pendik",      plannedTime: "14:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000015", consumption: "1350 kWh/ay", offerHistory: ["2024-01: Endüstriyel tarife"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "12.0 km", lat: 40.9009, lng: 29.2312, phone: "0555 111 22 15", assignedRepId: "rep2" },
+  { id: "16", name: "İpek Gür",     address: "Esenyalı Mh. 17",  district: "Pendik",      plannedTime: "14:30", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000016", consumption: "280 kWh/ay",  offerHistory: ["2023-12: E-devlet onay"],    status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.8 km", lat: 40.8784, lng: 29.2743, phone: "0555 111 22 16", assignedRepId: "rep2" },
 ];
 
 /* ==== İkonlar ==== */
@@ -111,17 +111,17 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   // ANA FİLTRELEME MANTIĞI
   useEffect(() => {
     const allCustomers = customers && customers.length ? customers : allMockCustomers;
-    const filtered = allCustomers.filter(c => c.salesRepId === rep.id);
+    // GÜNCELLENDİ: `c.assignedRepId` kullanılarak filtreleme yapılıyor.
+    const filtered = allCustomers.filter(c => c.assignedRepId === rep.id);
     
     setAssignedCustomers(filtered);
-    setOrderedCustomers(filtered); // Rota optimize edilene kadar varsayılan sıralama
+    setOrderedCustomers(filtered);
     
-    // Kullanıcı değiştiğinde haritayı ve rotayı sıfırla
     setRouteCoords([]);
     setRouteKm(null);
     setSelectedId(null);
     setStarredId(null);
-  }, [rep.id, customers]); // `rep.id` veya `customers` prop'u değişince bu blok yeniden çalışır
+  }, [rep.id, customers]);
 
   async function osrmTrip(coords: string, pointCount: number) {
     const radiuses = makeRadiusesParam(pointCount, 1000);
@@ -195,7 +195,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   useEffect(() => {
     handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [starredId, assignedCustomers]); // assignedCustomers değiştiğinde de optimizasyonu tetikle
+  }, [starredId, assignedCustomers]);
 
   const center: LatLng = [rep.lat, rep.lng];
 
