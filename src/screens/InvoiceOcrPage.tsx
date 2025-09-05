@@ -95,7 +95,7 @@ export default function InvoiceOcrPage() {
   const [data, setData] = useState<InvoiceData>(initialData);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
-  const [rawText, setRawText] = useState<string>("");
+  const [rawText, setRawText] = useState<string>(""); // tutuluyor ama artık UI'da gösterilmiyor
   const [error, setError] = useState<string | null>(null);
   const [cameraOn, setCameraOn] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -106,11 +106,11 @@ export default function InvoiceOcrPage() {
 
   const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
-  // Özet alanını 4 satırla kısıtlamak için stil
+  // Özet alanını 3-4 satırla kısıtla
   const summaryClampStyle: React.CSSProperties = {
     display: "-webkit-box",
-    WebkitLineClamp: 4, // maks 4 satır
-    WebkitBoxOrient: "vertical",
+    WebkitLineClamp: 4,
+    WebkitBoxOrient: "vertical" as any,
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "normal",
@@ -298,6 +298,22 @@ export default function InvoiceOcrPage() {
     await runCloudVisionOcr(new File([blob], "capture.jpg", { type: "image/jpeg" }));
     stopCamera();
   }
+
+  // Detay tablosu satırları (AI'dan gelen yapılandırılmış veri)
+  const detailRows = [
+    { label: "Rakip Şirket", value: data.companyName },
+    { label: "Müşteri Adı Soyadı", value: data.customer?.name },
+    { label: "Adres", value: data.customer?.address },
+    { label: "Tesisat No", value: data.supplyDetails?.installationNumber },
+    { label: "Tarife", value: data.tariff },
+    { label: "Yıllık Tüketim (kWh)", value: data.annualConsumption },
+    { label: "Ortalama Tüketim (kWh)", value: data.avgConsumption },
+    { label: "SKTT Durumu", value: data.skttStatus },
+    { label: "Tüketim (kWh)", value: data.meterReadings?.consumption?.total_kWh },
+    { label: "Birim Fiyat", value: data.charges?.energyLow?.unitPrice },
+  ].filter((r) => r.value !== undefined && r.value !== null && String(r.value) !== "");
+
+  const hasAnyAIData = detailRows.length > 0 || !!summary;
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
@@ -581,16 +597,35 @@ export default function InvoiceOcrPage() {
                   </div>
                 </div>
 
-                {/* ------- Ham OCR ------- */}
-                {rawText && (
+                {/* ------- Detayları Göster (tablo) ------- */}
+                {hasAnyAIData && (
                   <div className="pt-2">
                     <details>
                       <summary className="cursor-pointer text-sm text-gray-600 select-none">
-                        Ham Fatura Metnini Göster
+                        Detayları Göster
                       </summary>
-                      <pre className="mt-2 max-h-48 overflow-auto text-xs bg-gray-50 p-3 rounded-lg border">
-                        {rawText}
-                      </pre>
+                      <div className="mt-2 bg-gray-50 p-3 rounded-lg border">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="text-left px-3 py-2 w-56">Alan</th>
+                              <th className="text-left px-3 py-2">Değer</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detailRows.map((r, i) => (
+                              <tr key={i} className="border-t">
+                                <td className="px-3 py-2 font-medium text-gray-700">
+                                  {r.label}
+                                </td>
+                                <td className="px-3 py-2 text-gray-800 break-words">
+                                  {String(r.value)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </details>
                   </div>
                 )}
