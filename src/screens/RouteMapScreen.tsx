@@ -1,27 +1,15 @@
+// src/screens/RouteMapScreen.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-// (İstersen kullanırsın)
-import MarkerClusterGroup from "react-leaflet-cluster";
-import "react-leaflet-cluster/dist/assets/MarkerCluster.css";
-import "react-leaflet-cluster/dist/assets/MarkerCluster.Default.css";
-
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
+import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff, Navigation } from "lucide-react";
 
-import {
-  Maximize2,
-  Minimize2,
-  Route as RouteIcon,
-  Star,
-  StarOff,
-  Navigation,
-} from "lucide-react";
+import { optimizeRoute, LatLng } from "../lib/osrm";
 
-/* =======================
-   Tipler
-   ======================= */
+// ==== Tipler (uygun gördüğün yere taşıyabilirsin) ====
 export type Customer = {
   id: string;
   name: string;
@@ -47,46 +35,12 @@ export type SalesRep = {
   lng: number;
 };
 
-type LatLng = [number, number];
-
 interface Props {
-  customers?: Customer[];
-  salesRep?: SalesRep;
+  customers: Customer[];   // 🔴 Artık zorunlu (default veri YOK)
+  salesRep: SalesRep;      // 🔴 Zorunlu
 }
 
-/* =======================
-   Varsayılan veri
-   ======================= */
-const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
-
-const anadoluCustomers: Customer[] = [
-  { id: "1",  name: "Buse Aksoy",   address: "Bağdat Cd. No:120", district: "Maltepe",     plannedTime: "09:00", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000001", consumption: "270 kWh/ay",  offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km",  lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
-  { id: "2",  name: "Kaan Er",      address: "Alemdağ Cd. No:22", district: "Ümraniye",    plannedTime: "09:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000002", consumption: "300 kWh/ay",  offerHistory: ["2024-08: %10 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "9.6 km",  lat: 41.0165, lng: 29.1248, phone: "0555 111 22 02" },
-  { id: "3",  name: "Canan Sezer",  address: "Finans Mrk. A1",   district: "Ataşehir",    plannedTime: "09:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000003", consumption: "1400 kWh/ay", offerHistory: ["2024-09: Kurumsal teklif"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "6.2 km",  lat: 40.9923, lng: 29.1274, phone: "0555 111 22 03" },
-  { id: "4",  name: "Kübra Oral",   address: "İnönü Mh. No:18",   district: "Kadıköy",     plannedTime: "10:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000004", consumption: "310 kWh/ay",  offerHistory: ["2024-11: Sadakat indirimi"], status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.1 km",  lat: 40.9857, lng: 29.0496, phone: "0555 111 22 04" },
-  { id: "5",  name: "Ayça Erden",   address: "Koşuyolu Cd. 7",   district: "Kadıköy",     plannedTime: "10:20", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000005", consumption: "980 kWh/ay",  offerHistory: ["2024-10: %10 indirim"],      status: "Bekliyor", estimatedDuration: "35 dk", distance: "8.3 km",  lat: 41.0004, lng: 29.0498, phone: "0555 111 22 05" },
-  { id: "6",  name: "Meral Kılıç",  address: "Çengelköy Sahil",  district: "Üsküdar",     plannedTime: "10:40", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000006", consumption: "260 kWh/ay",  offerHistory: ["2024-03: Hoş geldin"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "12.1 km", lat: 41.0573, lng: 29.0557, phone: "0555 111 22 06" },
-  { id: "7",  name: "Tuğçe Polat",  address: "Kısıklı Cd. 15",   district: "Üsküdar",     plannedTime: "11:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000007", consumption: "290 kWh/ay",  offerHistory: ["2024-12: Sadakat"],          status: "Bekliyor", estimatedDuration: "25 dk", distance: "10.8 km", lat: 41.0333, lng: 29.0672, phone: "0555 111 22 07" },
-  { id: "8",  name: "Selim Yurt",   address: "Atatürk Cd. No:5", district: "Sancaktepe",  plannedTime: "11:20", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000008", consumption: "320 kWh/ay",  offerHistory: ["2025-03: Yeni teklif"],      status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.2 km", lat: 41.0152, lng: 29.2316, phone: "0555 111 22 08" },
-  { id: "9",  name: "Zeynep Koç",   address: "Sarıgazi Mh. 23",  district: "Sancaktepe",  plannedTime: "11:40", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000009", consumption: "1120 kWh/ay", offerHistory: ["2024-08: Turizm indirimi"], status: "Bekliyor", estimatedDuration: "45 dk", distance: "16.1 km", lat: 41.0074, lng: 29.2447, phone: "0555 111 22 09" },
-  { id: "10", name: "Yasin Ateş",   address: "Şerifali Mh. 4",   district: "Ümraniye",    plannedTime: "12:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000010", consumption: "310 kWh/ay",  offerHistory: ["2024-07: Sadakat"],          status: "Bekliyor", estimatedDuration: "30 dk", distance: "11.1 km", lat: 41.0179, lng: 29.1376, phone: "0555 111 22 10" },
-  { id: "11", name: "Derya Kılıç",  address: "Küçükyalı Sahil",  district: "Maltepe",     plannedTime: "12:20", priority: "Düşük",  tariff: "İş Yeri", meterNumber: "210000011", consumption: "900 kWh/ay",  offerHistory: ["2024-04: AVM tarifesi"],     status: "Bekliyor", estimatedDuration: "35 dk", distance: "2.2 km",  lat: 40.9488, lng: 29.1444, phone: "0555 111 22 11" },
-  { id: "12", name: "Gizem Acar",   address: "İdealtepe No:11",  district: "Maltepe",     plannedTime: "12:40", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000012", consumption: "295 kWh/ay",  offerHistory: ["2025-01: Paket"],            status: "Bekliyor", estimatedDuration: "30 dk", distance: "3.0 km",  lat: 40.9497, lng: 29.1228, phone: "0555 111 22 12" },
-  { id: "13", name: "Seda Karaca",  address: "Başak Cd. No:2",   district: "Kartal",      plannedTime: "13:10", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000013", consumption: "300 kWh/ay",  offerHistory: ["2024-02: Kombi kampanya"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "6.2 km",  lat: 40.9127, lng: 29.2137, phone: "0555 111 22 13" },
-  { id: "14", name: "Tolga Kurt",   address: "Sahil Yolu No:88", district: "Kartal",      plannedTime: "13:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000014", consumption: "295 kWh/ay",  offerHistory: ["2024-06: Sadakat paketi"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "7.5 km",  lat: 40.9075, lng: 29.1947, phone: "0555 111 22 14" },
-  { id: "15", name: "Melih Uçar",   address: "Velibaba Mh. 10",  district: "Pendik",      plannedTime: "14:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000015", consumption: "1350 kWh/ay", offerHistory: ["2024-01: Endüstriyel tarife"], status: "Bekliyor", estimatedDuration: "50 dk", distance: "12.0 km", lat: 40.9009, lng: 29.2312, phone: "0555 111 22 15" },
-  { id: "16", name: "İpek Gür",     address: "Esenyalı Mh. 17",  district: "Pendik",      plannedTime: "14:30", priority: "Düşük",  tariff: "Mesken",  meterNumber: "210000016", consumption: "280 kWh/ay",  offerHistory: ["2023-12: E-devlet onay"],    status: "Bekliyor", estimatedDuration: "25 dk", distance: "14.8 km", lat: 40.8784, lng: 29.2743, phone: "0555 111 22 16" },
-  { id: "17", name: "Kerem Efe",    address: "Barbaros Mh. 5",   district: "Tuzla",       plannedTime: "15:00", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000017", consumption: "310 kWh/ay",  offerHistory: ["2023-11: Online randevu"],   status: "Bekliyor", estimatedDuration: "30 dk", distance: "19.2 km", lat: 40.8380, lng: 29.3033, phone: "0555 111 22 17" },
-  { id: "18", name: "Naz Acar",     address: "İstasyon Mh. 3",   district: "Tuzla",       plannedTime: "15:30", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000018", consumption: "920 kWh/ay",  offerHistory: ["2023-10: Ticari sabit"],     status: "Bekliyor", estimatedDuration: "40 dk", distance: "21.0 km", lat: 40.8228, lng: 29.3345, phone: "0555 111 22 18" },
-  { id: "19", name: "Mina Eren",    address: "Acarlar Mh. 2",    district: "Beykoz",      plannedTime: "16:00", priority: "Yüksek", tariff: "Mesken",  meterNumber: "210000019", consumption: "290 kWh/ay",  offerHistory: ["2025-02: Özel teklif"],      status: "Bekliyor", estimatedDuration: "30 dk", distance: "24.2 km", lat: 41.1459, lng: 29.1111, phone: "0555 111 22 19" },
-  { id: "20", name: "Efe Çınar",    address: "Şahinbey Cd. 9",   district: "Sultanbeyli", plannedTime: "16:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000020", consumption: "300 kWh/ay",  offerHistory: ["2024-05: %8 indirim"],       status: "Bekliyor", estimatedDuration: "25 dk", distance: "16.8 km", lat: 40.9677, lng: 29.2622, phone: "0555 111 22 20" },
-  { id: "21", name: "Elif Aydın",   address: "Merkez Mh. 1",     district: "Çekmeköy",    plannedTime: "17:00", priority: "Yüksek", tariff: "İş Yeri", meterNumber: "210000021", consumption: "1120 kWh/ay", offerHistory: ["2024-08: Esnek paket"],     status: "Bekliyor", estimatedDuration: "45 dk", distance: "18.1 km", lat: 41.0546, lng: 29.2013, phone: "0555 111 22 21" },
-  { id: "22", name: "Onur Demirel", address: "Çamlık Mh. 6",     district: "Çekmeköy",    plannedTime: "17:30", priority: "Orta",   tariff: "Mesken",  meterNumber: "210000022", consumption: "330 kWh/ay",  offerHistory: ["2024-05: Otomatik ödeme"],   status: "Bekliyor", estimatedDuration: "25 dk", distance: "19.0 km", lat: 41.0466, lng: 29.2233, phone: "0555 111 22 22" },
-];
-
-/* =======================
-   Harita ikonları
-   ======================= */
+// ==== Ikonlar ====
 const repIcon = new L.Icon({
   iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491",
   iconSize: [32, 32],
@@ -108,125 +62,15 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
   });
 }
 
-/* =======================
-   Yardımcılar
-   ======================= */
-function haversineKm(a: LatLng, b: LatLng) {
-  const R = 6371;
-  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
-  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
-  const lat1 = (a[0] * Math.PI) / 180;
-  const lat2 = (b[0] * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 const fmtKm = (km: number | null) =>
   km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
-// OSRM güvenli string yardımcıları
-const toCoordStr = (lat: number, lng: number) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
-const makeRadiusesParam = (n: number, r = 1000) => new Array(n).fill(String(r)).join(";");
-
-/* =======================
-   OSRM çağrıları (safe)
-   ======================= */
-async function osrmTripSafe(points: { lat: number; lng: number }[]) {
-  try {
-    const coords = points.map((p) => toCoordStr(p.lat, p.lng)).join(";");
-    const radiuses = makeRadiusesParam(points.length, 1000);
-    const url = encodeURI(
-      `https://router.project-osrm.org/trip/v1/driving/${coords}` +
-        `?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&radiuses=${radiuses}`
-    );
-    const res = await fetch(url);
-    const text = await res.text();
-    if (!res.ok) return null;
-    const data = JSON.parse(text);
-    if (data.code !== "Ok" || !data.trips?.[0]) return null;
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-async function osrmRouteSafe(from: LatLng, to: LatLng) {
-  try {
-    const coords = `${toCoordStr(from[0], from[1])};${toCoordStr(to[0], to[1])}`;
-    const url = encodeURI(
-      `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson&annotations=false&steps=false`
-    );
-    const res = await fetch(url);
-    const text = await res.text();
-    if (!res.ok) return null;
-    const data = JSON.parse(text);
-    if (data.code !== "Ok" || !data.routes?.[0]) return null;
-    return data.routes[0] as { distance: number; geometry: { coordinates: [number, number][] } };
-  } catch {
-    return null;
-  }
-}
-
-/* Greedy TSP (en yakın komşu) — sadece sıralama bulur */
-function greedyOrder(points: LatLng[], startIndex = 0): number[] {
-  const n = points.length;
-  const used = new Array(n).fill(false);
-  const order = [startIndex];
-  used[startIndex] = true;
-  for (let k = 1; k < n; k++) {
-    const last = points[order[order.length - 1]];
-    let best = -1;
-    let bestD = Infinity;
-    for (let i = 0; i < n; i++) {
-      if (used[i]) continue;
-      const d = haversineKm(last, points[i]);
-      if (d < bestD) {
-        bestD = d;
-        best = i;
-      }
-    }
-    used[best] = true;
-    order.push(best);
-  }
-  return order;
-}
-
-/* Yolu OSRM route ile çiz (segment segment); olmazsa düz çizgi */
-async function buildGeometryFromOrder(orderedLatLngs: LatLng[]) {
-  const coords: LatLng[] = [];
-  let totalKm = 0;
-
-  if (orderedLatLngs.length === 0) return { coords, km: 0 };
-
-  coords.push(orderedLatLngs[0]);
-
-  for (let i = 1; i < orderedLatLngs.length; i++) {
-    const a = orderedLatLngs[i - 1];
-    const b = orderedLatLngs[i];
-
-    const route = await osrmRouteSafe(a, b);
-    if (route) {
-      const seg = route.geometry.coordinates.map(([lng, lat]) => [lat, lng] as LatLng);
-      // bir önceki nokta zaten eklendi
-      coords.push(...seg.slice(1));
-      totalKm += route.distance / 1000;
-    } else {
-      // OSRM yoksa düz bağla
-      coords.push(b);
-      totalKm += haversineKm(a, b);
-    }
-  }
-
-  return { coords, km: totalKm };
-}
-
-/* =======================
-   Bileşen
-   ======================= */
+// ==== Ekran ====
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
-  const rep = salesRep || defaultSalesRep;
-  const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
+  const mapRef = useRef<L.Map | null>(null);
+  const markerRefs = useRef<Record<string, L.Marker>>({});
 
-  const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
+  const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(customers || []);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -234,23 +78,17 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  const markerRefs = useRef<Record<string, L.Marker>>({});
-  const mapRef = useRef<L.Map | null>(null);
-
-  // swipe panel
-  const touchStartX = useRef<number | null>(null);
-  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (dx > 50) setPanelOpen(true);
-    if (dx < -50) setPanelOpen(false);
-    touchStartX.current = null;
-  };
+  useEffect(() => {
+    setOrderedCustomers(customers || []);
+    setRouteCoords([]);
+    setRouteKm(null);
+    setSelectedId(null);
+    setStarredId(null);
+  }, [customers]);
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
-  const highlightCustomer = (c: Customer, _i: number, pan = true) => {
+  const highlightCustomer = (c: Customer, pan = true) => {
     setSelectedId(c.id);
     const m = markerRefs.current[c.id];
     if (pan && mapRef.current) {
@@ -264,106 +102,38 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const handleOptimize = async () => {
     setLoading(true);
     try {
-      // 1) OSRM trip ile dene
-      const start = { lat: rep.lat, lng: rep.lng };
-
-      if (!starredId) {
-        const points = [start, ...baseCustomers.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
-        const tripData = await osrmTripSafe(points);
-        if (tripData) {
-          // waypoint_index'e göre sırala
-          const ordered = tripData.waypoints
-            .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
-            .sort((a: any, b: any) => a.order - b.order)
-            .map((x: any) => points[x.inputIdx]);
-
-          const sortedCustomers = ordered.slice(1).map((p: any) => p.ref as Customer);
-          setOrderedCustomers(sortedCustomers);
-
-          const latlngs: LatLng[] = tripData.trips[0].geometry.coordinates.map(
-            ([lng, lat]: [number, number]) => [lat, lng]
-          );
-          setRouteCoords(latlngs);
-          setRouteKm((tripData.trips[0].distance as number) / 1000);
-
-          if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0], 0, true);
-          return;
-        }
-        // trip yoksa greedy fallback
-        const greedyPoints: LatLng[] = [[rep.lat, rep.lng], ...baseCustomers.map((c) => [c.lat, c.lng])];
-        const orderIdx = greedyOrder(greedyPoints, 0); // 0 = rep
-        const orderedLatLngs = orderIdx.map((i) => greedyPoints[i]);
-        const orderedCusts = orderIdx.slice(1).map((i) => baseCustomers[i - 1]);
-        setOrderedCustomers(orderedCusts);
-        const geom = await buildGeometryFromOrder(orderedLatLngs);
-        setRouteCoords(geom.coords);
-        setRouteKm(geom.km);
-        if (orderedCusts[0]) highlightCustomer(orderedCusts[0], 0, true);
-      } else {
-        // yıldızlı: rep -> star, sonra star + diğerleri
-        const star = baseCustomers.find((c) => c.id === starredId)!;
-        const others = baseCustomers.filter((c) => c.id !== starredId);
-
-        // önce rep->star yolu (route)
-        const firstLeg = await osrmRouteSafe([rep.lat, rep.lng], [star.lat, star.lng]);
-        const firstLegCoords: LatLng[] = firstLeg
-          ? firstLeg.geometry.coordinates.map(([lng, lat]) => [lat, lng] as LatLng)
-          : ([[rep.lat, rep.lng], [star.lat, star.lng]] as LatLng[]);
-        const firstLegKm = firstLeg ? firstLeg.distance / 1000 : haversineKm([rep.lat, rep.lng], [star.lat, star.lng]);
-
-        // kalanlar için trip dene (star başlangıç)
-        const points2 = [{ lat: star.lat, lng: star.lng }, ...others.map((c) => ({ lat: c.lat, lng: c.lng, ref: c }))];
-        const trip2 = await osrmTripSafe(points2);
-
-        if (trip2) {
-          const ordered2 = trip2.waypoints
-            .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
-            .sort((a: any, b: any) => a.order - b.order)
-            .map((x: any) => points2[x.inputIdx]);
-
-          const sortedCustomers = ordered2.map((p: any, idx: number) => (idx === 0 ? star : (p.ref as Customer)));
-          setOrderedCustomers(sortedCustomers);
-
-          const restCoords: LatLng[] = trip2.trips[0].geometry.coordinates.map(
-            ([lng, lat]: [number, number]) => [lat, lng]
-          );
-          const merged = firstLegCoords.concat(restCoords.slice(1));
-          setRouteCoords(merged);
-          setRouteKm(firstLegKm + (trip2.trips[0].distance as number) / 1000);
-
-          highlightCustomer(star, 0, true);
-          return;
-        }
-
-        // trip2 de yoksa: greedy fallback (star sabit ilk)
-        const greedyPoints2: LatLng[] = [[rep.lat, rep.lng], [star.lat, star.lng], ...others.map((c) => [c.lat, c.lng] as LatLng)];
-        // rep->star sabit, star'dan sonra greedy:
-        const orderIdx2 = [0, 1].concat(greedyOrder(greedyPoints2.slice(1), 0).slice(1).map((i) => i + 1));
-        const orderedLatLngs2 = orderIdx2.map((i) => greedyPoints2[i]);
-        const orderedCusts2 = [star, ...orderIdx2.slice(2).map((i) => others[i - 2])];
-        setOrderedCustomers(orderedCusts2);
-
-        // geometri: önce firstLeg, sonra kalan
-        const geom2 = await buildGeometryFromOrder(orderedLatLngs2);
-        setRouteCoords(geom2.coords);
-        setRouteKm(geom2.km);
-        highlightCustomer(star, 0, true);
-      }
+      const { orderedStops, polyline, distanceKm } = await optimizeRoute({
+        rep: { lat: salesRep.lat, lng: salesRep.lng },
+        stops: customers,
+        starredId,
+      });
+      setOrderedCustomers(orderedStops as Customer[]);
+      setRouteCoords(polyline);
+      setRouteKm(distanceKm);
+      if (orderedStops[0]) highlightCustomer(orderedStops[0] as Customer, true);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // yıldız değişince otomatik optimize
     if (starredId !== null) handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
 
-  useEffect(() => {
-    setOrderedCustomers(baseCustomers);
-  }, [baseCustomers]);
+  if (!customers || customers.length === 0) {
+    return (
+      <div className="p-6 rounded-xl border bg-white">
+        <div className="text-gray-800 font-semibold">Rota Haritası</div>
+        <div className="text-sm text-gray-600 mt-2">
+          Gösterilecek müşteri yok. Lütfen <b>customers</b> prop&#39;u ile durakları iletin.
+        </div>
+      </div>
+    );
+  }
 
-  const center: LatLng = [rep.lat, rep.lng];
+  const center: LatLng = [salesRep.lat, salesRep.lng];
 
   return (
     <div className="relative w-full">
@@ -380,7 +150,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           <button
             onClick={handleOptimize}
             disabled={loading}
-            className={`px-4 py-2 rounded-lg font-semibold ${loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"}`}
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
+            }`}
           >
             {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
@@ -399,8 +171,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
 
-          <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
-            <Popup><b>{rep.name}</b></Popup>
+          <Marker position={[salesRep.lat, salesRep.lng]} icon={repIcon}>
+            <Popup><b>{salesRep.name}</b></Popup>
           </Marker>
 
           {orderedCustomers.map((c, i) => (
@@ -428,8 +200,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                         e.stopPropagation();
                         setStarredId((prev) => (prev === c.id ? null : c.id));
                       }}
-                      aria-label={starredId === c.id ? "Yıldızı kaldır" : "İlk durak yap"
-                      }
+                      aria-label={starredId === c.id ? "Yıldızı kaldır" : "İlk durak yap"}
                       className="p-1 rounded hover:bg-gray-100"
                     >
                       <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
@@ -460,93 +231,22 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         </MapContainer>
 
         {/* Sağ panel */}
-        <div
-          className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
-            panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
-          } flex`}
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-        >
-          <button
-            onClick={() => setPanelOpen((o) => !o)}
-            className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white"
-            title={panelOpen ? "Paneli kapat" : "Paneli aç"}
-          >
-            {panelOpen ? (
-              <Minimize2 className="w-4 h-4 -rotate-90" />
-            ) : (
-              <div className="flex flex-col items-center">
-                <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span>
-                <Minimize2 className="w-4 h-4 rotate-90" />
-              </div>
-            )}
-          </button>
-
-          <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full">
-            <div className="flex items-center gap-2">
-              <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-              <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
-            </div>
-            <div className="text-[11px] text-gray-600">
-              ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
-            </div>
-
-            <SimpleBar style={{ maxHeight: "100%" }}>
-              {orderedCustomers.map((c, i) => {
-                const selected = selectedId === c.id;
-                const starred = starredId === c.id;
-                return (
-                  <div
-                    key={c.id}
-                    id={`cust-row-${c.id}`}
-                    className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
-                    onClick={() => {
-                      setSelectedId(c.id);
-                      if (mapRef.current) {
-                        mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
-                      }
-                      const m = markerRefs.current[c.id];
-                      if (m) m.openPopup();
-                    }}
-                  >
-                    <span
-                      className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
-                        starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
-                      }`}
-                      title={`${i + 1}. müşteri`}
-                    >
-                      {i + 1}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{c.name}</div>
-                      <div className="text-xs text-gray-500 truncate">
-                        {c.address}, {c.district}
-                      </div>
-                      <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e) => e.stopPropagation()}>
-                        {c.phone}
-                      </a>
-                    </div>
-                    <button
-                      className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
-                      title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setStarredId((prev) => (prev === c.id ? null : c.id));
-                      }}
-                    >
-                      {starred ? (
-                        <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
-                      ) : (
-                        <StarOff className="w-5 h-5 text-gray-500" />
-                      )}
-                    </button>
-                    <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
-                  </div>
-                );
-              })}
-            </SimpleBar>
-          </div>
-        </div>
+        <SidePanel
+          customers={orderedCustomers}
+          selectedId={selectedId}
+          starredId={starredId}
+          onRowClick={(c) => {
+            setSelectedId(c.id);
+            if (mapRef.current) {
+              mapRef.current.setView([c.lat, c.lng], Math.max(mapRef.current.getZoom(), 14), { animate: true });
+            }
+            const m = markerRefs.current[c.id];
+            if (m) m.openPopup();
+          }}
+          onToggleStar={(id) => setStarredId((prev) => (prev === id ? null : id))}
+          panelOpen={panelOpen}
+          setPanelOpen={setPanelOpen}
+        />
 
         {loading && (
           <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10">
@@ -560,9 +260,107 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-/* =======================
-   Tam ekran butonu
-   ======================= */
+const SidePanel: React.FC<{
+  customers: Customer[];
+  selectedId: string | null;
+  starredId: string | null;
+  onRowClick: (c: Customer) => void;
+  onToggleStar: (id: string) => void;
+  panelOpen: boolean;
+  setPanelOpen: (b: boolean) => void;
+}> = ({ customers, selectedId, starredId, onRowClick, onToggleStar, panelOpen, setPanelOpen }) => {
+  const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
+
+  // touch swipe
+  const touchStartX = useRef<number | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current == null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx > 50) setPanelOpen(true);
+    if (dx < -50) setPanelOpen(false);
+    touchStartX.current = null;
+  };
+
+  return (
+    <div
+      className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
+        panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
+      } flex`}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
+      <button
+        onClick={() => setPanelOpen(!panelOpen)}
+        className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white"
+        title={panelOpen ? "Paneli kapat" : "Paneli aç"}
+      >
+        {panelOpen ? (
+          <Minimize2 className="w-4 h-4 -rotate-90" />
+        ) : (
+          <div className="flex flex-col items-center">
+            <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span>
+            <Minimize2 className="w-4 h-4 rotate-90" />
+          </div>
+        )}
+      </button>
+
+      <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full">
+        <div className="flex items-center gap-2">
+          <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+          <span className="font-semibold text-gray-700 text-base select-none">Ziyaret Sırası</span>
+        </div>
+        <div className="text-[11px] text-gray-600">
+          ⭐ Bir müşteriyi yıldızlarsan rota önce o müşteriye gider; kalan duraklar en kısa şekilde planlanır. Yıldızı değiştirince rota otomatik güncellenir.
+        </div>
+
+        <SimpleBar style={{ maxHeight: "100%" }}>
+          {customers.map((c, i) => {
+            const selected = selectedId === c.id;
+            const starred = starredId === c.id;
+            return (
+              <div
+                key={c.id}
+                id={`cust-row-${c.id}`}
+                className={`flex items-center gap-2 p-2 rounded transition ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
+                onClick={() => onRowClick(c)}
+              >
+                <span
+                  className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
+                    starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
+                  }`}
+                  title={`${i + 1}. müşteri`}
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <div className="font-medium text-gray-900 truncate">{c.name}</div>
+                  <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
+                  <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e) => e.stopPropagation()}>
+                    {c.phone}
+                  </a>
+                </div>
+                <button
+                  className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
+                  title={starred ? "İlk duraktan kaldır" : "İlk durak yap"}
+                  onClick={(e) => { e.stopPropagation(); onToggleStar(c.id); }}
+                >
+                  {starred ? (
+                    <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
+                  ) : (
+                    <StarOff className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+              </div>
+            );
+          })}
+        </SimpleBar>
+      </div>
+    </div>
+  );
+};
+
 const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
