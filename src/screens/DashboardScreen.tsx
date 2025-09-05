@@ -1,36 +1,11 @@
 /* ----DashboardScreen.tsx------- */
 import React from 'react';
-import { Eye, Play, MapPin, UserCheck, CheckCircle, Timer, Activity, AlertCircle, MoreHorizontal, StickyNote } from 'lucide-react';
+import { Activity, Timer, CheckCircle, AlertCircle, UserCheck, MapPin } from 'lucide-react';
 import { Customer } from '../RouteMap';
 import { Rep } from '../types';
+import VisitCard from '../components/VisitCard';
 
-/* ------------------------ Yardımcı Fonksiyonlar ------------------------ */
-const getStatusTone = (status: Customer['status']) =>
-  status === 'Tamamlandı' ? 'green' : status === 'Yolda' ? 'blue' : 'yellow';
-
-const getPriorityTone = (priority: Customer['priority']) =>
-  priority === 'Yüksek' ? 'red' : priority === 'Orta' ? 'yellow' : 'green';
-
-/* ------------------------ Chip Bileşeni ------------------------ */
-export const Chip = ({ tone = 'gray', children }: { tone?: 'blue' | 'yellow' | 'green' | 'red' | 'gray'; children: React.ReactNode }) => {
-  const tones: Record<string, string> = {
-    blue: 'bg-blue-100 text-blue-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-    green: 'bg-green-100 text-green-800',
-    red: 'bg-red-100 text-red-800',
-    gray: 'bg-gray-100 text-gray-800',
-  };
-  return (
-    <span className={`text-xs px-2 py-1 rounded-full ${tones[tone]} font-medium`}>
-      {children}
-    </span>
-  );
-};
-
-/* ------------------------ KPI Kartı ------------------------ */
-const KpiCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode; tone: string }> = ({
-  label, value, icon, tone,
-}) => {
+const KpiCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode; tone: string }> = ({ label, value, icon, tone }) => {
   const toneClasses: Record<string, string> = {
     cyan: 'bg-cyan-100 text-cyan-700',
     green: 'bg-green-100 text-green-700',
@@ -49,76 +24,6 @@ const KpiCard: React.FC<{ label: string; value: string | number; icon: React.Rea
   );
 };
 
-/* ------------------------ Ziyaret Kartı ------------------------ */
-const VisitCard: React.FC<{
-  customer: Customer;
-  assignedName: string | null;
-  onDetail: () => void;
-  onStart: () => void;
-}> = ({ customer, assignedName, onDetail, onStart }) => {
-  const statusTone = getStatusTone(customer.status);
-  const priorityTone = getPriorityTone(customer.priority);
-  const typeLabel = customer.tariff === 'İş Yeri' ? 'B2B – Sabit Fiyat' : 'B2C – Endeks';
-
-  return (
-    <div className="bg-white border border-gray-200 hover:border-cyan-600 rounded-xl p-5 transition-all duration-200 hover:shadow-md">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="flex-1 space-y-2">
-          <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
-          <div className="text-sm text-gray-600 flex items-center gap-1">
-            <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Chip tone={statusTone}>{customer.status}</Chip>
-            <Chip tone={priorityTone}>{customer.priority} Öncelik</Chip>
-            <Chip tone="blue">{typeLabel}</Chip>
-            {assignedName && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 text-gray-800 border-gray-200">
-                <UserCheck className="w-3 h-3 mr-1" /> {assignedName}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="text-right space-y-2 flex flex-col items-end justify-between">
-          <div>
-            <div className="text-sm font-medium text-gray-900">{customer.plannedTime}</div>
-            <div className="text-xs text-gray-500">{customer.distance}</div>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <button
-              onClick={onDetail}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs transition"
-              aria-label="Ziyaret detayını gör"
-              title="Detay"
-            >
-              <Eye className="w-4 h-4" /> Detay
-            </button>
-            {customer.status === 'Bekliyor' && (
-              <button
-                onClick={onStart}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs transition"
-                aria-label="Ziyareti başlat"
-                title="Başlat"
-              >
-                <Play className="w-4 h-4" /> Başlat
-              </button>
-            )}
-            {/* Ek Aksiyon: Not Ekle */}
-            <button
-              onClick={() => alert('Not Ekle özelliği geliştirilecek')}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition"
-              title="Not Ekle"
-            >
-              <StickyNote className="w-4 h-4" /> Not Ekle
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ------------------------ Ana Dashboard Bileşeni ------------------------ */
 type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
@@ -127,13 +32,7 @@ type Props = {
   setSelectedCustomer: (c: Customer) => void;
 };
 
-const DashboardScreen: React.FC<Props> = ({
-  customers,
-  assignments,
-  allReps,
-  setCurrentScreen,
-  setSelectedCustomer
-}) => {
+const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, setSelectedCustomer }) => {
   const byTime = [...customers].sort((a, b) => a.plannedTime.localeCompare(b.plannedTime));
   const todayList = byTime.slice(0, 4);
 
@@ -187,14 +86,8 @@ const DashboardScreen: React.FC<Props> = ({
                 key={c.id}
                 customer={c}
                 assignedName={getAssignedName(c.id)}
-                onDetail={() => {
-                  setSelectedCustomer(c);
-                  setCurrentScreen('visitDetail');
-                }}
-                onStart={() => {
-                  setSelectedCustomer(c);
-                  setCurrentScreen('visitFlow');
-                }}
+                onDetail={() => { setSelectedCustomer(c); setCurrentScreen('visitDetail'); }}
+                onStart={() => { setSelectedCustomer(c); setCurrentScreen('visitFlow'); }}
               />
             ))}
           </div>
