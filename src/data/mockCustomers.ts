@@ -2,7 +2,7 @@
 
 
 export const mockCustomers: Customer[] = [
-[
+
   {
     "id": "1",
     "name": "Mustafa Aydın",
