@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useState } from 'react';
 import AppLayout from './layouts/AppLayout';
 import MessagesScreen from './screens/MessagesScreen';
@@ -7,7 +8,6 @@ import { Customer } from './RouteMap';
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
 import { generateInvoiceSummary } from "./utils/gptSummary"; 
-
 
 // Kullanıcı verilerini team.ts dosyasından import ediyoruz
 import { teamReps, managerUser } from './data/team';
@@ -29,7 +29,10 @@ import InvoiceOcrPage from "./screens/InvoiceOcrPage";
 
 // Guide sistemi
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
-import { GUIDE_VERSION } from "./guide/guideConfig";
+// NOT: GUIDE_VERSION importunu kaldırdık; kullanılmıyordu ve uyarı çıkarıyordu.
+
+// === Geçici kapatma bayrağı ===
+const GUIDE_ENABLED = false;
 
 function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
@@ -55,10 +58,11 @@ function App() {
 
   const [summary, setSummary] = useState("");
 
-const handleSummary = async () => {
-  const result = await generateInvoiceSummary(data); // `data`: InvoiceData objesi
-  setSummary(result);
-};
+  const handleSummary = async () => {
+    // NOT: 'data' değişkeni burada tanımlı değil; kendi InvoiceData objenle değiştir.
+    // const result = await generateInvoiceSummary(data);
+    // setSummary(result);
+  };
 
   // --- GUIDE eşleştirmeleri ---
   const toAppRole = (r: Role): AppRole =>
@@ -128,100 +132,108 @@ const handleSummary = async () => {
   const guideRole = toAppRole(role);
   const guideScreen = toAppScreen(currentScreen, role);
 
+  // İçerik: Guide açık veya kapalı fark etmeksizin aynı
+  const appContent = (
+    <AppLayout
+      agentName={agentName}
+      role={role}
+      currentScreen={currentScreen}
+      setCurrentScreen={setCurrentScreen}
+    >
+      {/* Ekranların koşullu olarak render edilmesi */}
+      {currentScreen === 'profile' && (
+        <ProfileScreens role={role} />
+      )}
+
+      {currentScreen === 'assignmentMap' && role === 'manager' && (
+        <AssignmentMapScreen
+          customers={customers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          allReps={allReps}
+          onBack={() => setCurrentScreen('assignment')}
+        />
+      )}
+
+      {currentScreen === 'assignment' && role === 'manager' && (
+        <AssignmentScreen
+          customers={customers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          allReps={allReps}
+          setCurrentScreen={setCurrentScreen}
+        />
+      )}
+
+      {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
+      
+      {currentScreen === 'messages' && <MessagesScreen />}
+
+      {currentScreen === 'dashboard' && (
+        <DashboardScreen
+          customers={visibleCustomers}
+          assignments={assignments}
+          allReps={allReps}
+          setCurrentScreen={setCurrentScreen}
+          setSelectedCustomer={setSelectedCustomer}
+        />
+      )}
+
+      {currentScreen === 'visitList' && (
+        <VisitListScreen
+          customers={visibleCustomers}
+          filter={filter}
+          setFilter={setFilter}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          isListening={isListening}
+          onMicClick={handleSpeechToText}
+          assignments={assignments}
+          allReps={allReps}
+          onDetail={(c) => {
+            setSelectedCustomer(c);
+            setCurrentScreen('visitDetail');
+          }}
+          onStart={handleStartVisit}
+        />
+      )}
+
+      {currentScreen === 'visitDetail' && selectedCustomer && (
+        <VisitDetailScreen
+          customer={selectedCustomer}
+          onBack={() => setCurrentScreen('visitList')}
+          onStartVisit={handleStartVisit}
+        />
+      )}
+
+      {currentScreen === 'visitFlow' && selectedCustomer && (
+        <VisitFlowScreen
+          customer={selectedCustomer}
+          onCloseToList={() => setCurrentScreen('visitList')}
+          onCompleteVisit={handleCompleteVisit}
+        />
+      )}
+
+      {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
+
+      {currentScreen === 'routeMap' && (
+        <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
+      )}
+
+      {currentScreen === 'invoiceOcr' && <InvoiceOcrPage />}
+    </AppLayout>
+  );
+
+  // GUIDE kapalıyken sadece içerik döner.
+  if (!GUIDE_ENABLED) {
+    return appContent;
+  }
+
+  // GUIDE açıkken GuideProvider ve HelpFAB ile sarmalar.
   return (
     <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
-      <AppLayout
-        agentName={agentName}
-        role={role}
-        currentScreen={currentScreen}
-        setCurrentScreen={setCurrentScreen}
-      >
-        {/* Ekranların koşullu olarak render edilmesi */}
-        {currentScreen === 'profile' && (
-          <ProfileScreens role={role} />
-        )}
-
-        {currentScreen === 'assignmentMap' && role === 'manager' && (
-          <AssignmentMapScreen
-            customers={customers}
-            assignments={assignments}
-            setAssignments={setAssignments}
-            allReps={allReps}
-            onBack={() => setCurrentScreen('assignment')}
-          />
-        )}
-
-        {currentScreen === 'assignment' && role === 'manager' && (
-          <AssignmentScreen
-            customers={customers}
-            assignments={assignments}
-            setAssignments={setAssignments}
-            allReps={allReps}
-            setCurrentScreen={setCurrentScreen}
-          />
-        )}
-
-        {currentScreen === 'teamMap' && role === 'manager' && <TeamMapScreen />}
-        
-        {currentScreen === 'messages' && <MessagesScreen />}
-
-        {currentScreen === 'dashboard' && (
-          <DashboardScreen
-            customers={visibleCustomers}
-            assignments={assignments}
-            allReps={allReps}
-            setCurrentScreen={setCurrentScreen}
-            setSelectedCustomer={setSelectedCustomer}
-          />
-        )}
-
-        {currentScreen === 'visitList' && (
-          <VisitListScreen
-            customers={visibleCustomers}
-            filter={filter}
-            setFilter={setFilter}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            isListening={isListening}
-            onMicClick={handleSpeechToText}
-            assignments={assignments}
-            allReps={allReps}
-            onDetail={(c) => {
-              setSelectedCustomer(c);
-              setCurrentScreen('visitDetail');
-            }}
-            onStart={handleStartVisit}
-          />
-        )}
-
-        {currentScreen === 'visitDetail' && selectedCustomer && (
-          <VisitDetailScreen
-            customer={selectedCustomer}
-            onBack={() => setCurrentScreen('visitList')}
-            onStartVisit={handleStartVisit}
-          />
-        )}
-
-        {currentScreen === 'visitFlow' && selectedCustomer && (
-          <VisitFlowScreen
-            customer={selectedCustomer}
-            onCloseToList={() => setCurrentScreen('visitList')}
-            onCompleteVisit={handleCompleteVisit}
-          />
-        )}
-
-        {currentScreen === 'reports' && <ReportsScreen customers={visibleCustomers} />}
-
-        {currentScreen === 'routeMap' && (
-          <RouteMapScreen customers={visibleCustomers} salesRep={salesRepForMap} />
-        )}
-        {currentScreen === 'invoiceOcr' && (
-  <InvoiceOcrPage />
-)}
-
-
-        <HelpFAB />
-      </AppLayout>
+      {appContent}
+      <HelpFAB />
     </GuideProvider>
   );
 }
