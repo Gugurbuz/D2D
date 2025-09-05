@@ -31,7 +31,8 @@ export interface Customer {
   visitDate: string; // "2025-09-05" gibi ISO veya "05.09.2025" gibi kısa format
 }
 export type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' | 'Evde Yok' | null;
-export type Role = 'rep' | 'manager';
+// Önerilen yeni hali
+export type Role = string;
 export type Screen =
   | 'login'
   | 'roleSelect'
