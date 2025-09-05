@@ -1,6 +1,6 @@
 import React from "react";
 import { Eye, Play, MapPin, UserCheck, StickyNote } from "lucide-react";
-import type { Customer } from "../RouteMap";
+import type { Customer } from "../types";
 import { Chip } from "./Chip";
 
 const getStatusTone = (status: Customer["status"]) =>
