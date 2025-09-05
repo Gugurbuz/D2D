@@ -1,11 +1,8 @@
 // src/lib/osrm.ts
-// OSRM istemcisi + fallback algoritmaları (greedy + segment route)
-// Amaç: rep (başlangıç) ve duraklar verildiğinde, sıralı durak listesi,
-// polyline (LatLng[]), ve toplam mesafeyi (km) üretmek.
+// OSRM istemcisi + sağlam fallback (greedy + segment route)
+// Not: OSRM'e giderken her noktayı "ref" ile işaretliyoruz, geri dönüşte
+// doğrudan aynı referanslarla ordered listeyi kuruyoruz.
 
-// =======================
-// Tipler
-// =======================
 export type LatLng = [number, number];
 
 export interface RepPoint {
@@ -17,8 +14,7 @@ export interface StopPoint {
   id?: string | number;
   lat: number;
   lng: number;
-  // İsteğe bağlı ek alanlar (#name, #address, vs.) korunur:
-  [k: string]: any;
+  [k: string]: any; // name, address, vs.
 }
 
 export interface OsrmOptimizeResult<TStop extends StopPoint = StopPoint> {
@@ -33,7 +29,7 @@ export interface OsrmOptimizeResult<TStop extends StopPoint = StopPoint> {
 let OSRM_BASE = "https://router.project-osrm.org";
 
 export function setOsrmBase(url: string) {
-  OSRM_BASE = url.replace(/\/+$/, ""); // sondaki / temizle
+  OSRM_BASE = url.replace(/\/+$/, "");
 }
 
 const toCoordStr = (lat: number, lng: number) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
@@ -87,9 +83,10 @@ async function osrmTripSafe(points: { lat: number; lng: number }[]) {
   try {
     const coords = points.map((p) => toCoordStr(p.lat, p.lng)).join(";");
     const radiuses = makeRadiusesParam(points.length, 1000);
+    // destination=any → son nokta serbest (400 riskini azaltır)
     const url = encodeURI(
       `${OSRM_BASE}/trip/v1/driving/${coords}` +
-        `?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson&radiuses=${radiuses}`
+        `?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson&radiuses=${radiuses}`
     );
     const res = await fetch(url);
     const text = await res.text();
@@ -97,7 +94,7 @@ async function osrmTripSafe(points: { lat: number; lng: number }[]) {
     const data = JSON.parse(text);
     if (data.code !== "Ok" || !data.trips?.[0]) return null;
     return data;
-  } catch {
+  } catch (err) {
     return null;
   }
 }
@@ -120,7 +117,7 @@ async function osrmRouteSafe(from: LatLng, to: LatLng) {
 }
 
 // =======================
-// Geometri kurucu (segment bazlı)
+// Geometri (segment bazlı)
 // =======================
 async function buildGeometryFromOrder(orderedLatLngs: LatLng[]) {
   const coords: LatLng[] = [];
@@ -149,7 +146,7 @@ async function buildGeometryFromOrder(orderedLatLngs: LatLng[]) {
 }
 
 // =======================
-// Yüksek seviye optimize
+// Optimize (yüksek seviye)
 // =======================
 export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params: {
   rep: RepPoint;
@@ -163,7 +160,7 @@ export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params:
     return { orderedStops: [] as TStop[], polyline: [] as LatLng[], distanceKm: 0 };
   }
 
-  // 1) stops'ı temizle + kopyala (referansları koruyoruz)
+  // 1) stops'ı temizle + kopyala
   const inputStops = (params.stops || []).filter(
     (s) => Number.isFinite(s.lat) && Number.isFinite(s.lng)
   ) as TStop[];
@@ -178,7 +175,6 @@ export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params:
     return { orderedStops: [] as TStop[], polyline: [[rep.lat, rep.lng]] as LatLng[], distanceKm: 0 };
   }
   if (!starredId && inputStops.length === 1) {
-    // Sadece 1 durak: route ile çiz
     const only = inputStops[0];
     const route = await osrmRouteSafe([rep.lat, rep.lng], [only.lat, only.lng]);
     if (route) {
@@ -196,21 +192,22 @@ export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params:
     }
   }
 
-  // 3) YILDIZ YOK → TRIP dene → fallback greedy
+  // 3) YILDIZ YOK → TRIP dene (ref ile) → fallback greedy
   if (!starredId) {
-    const points = [{ lat: rep.lat, lng: rep.lng }, ...inputStops.map((s) => ({ lat: s.lat, lng: s.lng }))];
-    const trip = await osrmTripSafe(points);
+    const tripPoints = [
+      { kind: "rep" as const, lat: rep.lat, lng: rep.lng },
+      ...inputStops.map((s) => ({ kind: "stop" as const, lat: s.lat, lng: s.lng, ref: s })),
+    ];
+    const trip = await osrmTripSafe(tripPoints);
     if (trip) {
-      // waypoint_index'e göre sırala
-      const ordered = trip.waypoints
+      const orderedByTrip = trip.waypoints
         .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
         .sort((a: any, b: any) => a.order - b.order)
-        .map((x: any) => points[x.inputIdx]);
+        .map((x: any) => tripPoints[x.inputIdx]);
 
-      // rep'i atla → durakları orijinal referansla eşle
-      const orderedStops = ordered.slice(1).map((p: any) => {
-        return inputStops.find((s) => s.lat === p.lat && s.lng === p.lng)!;
-      });
+      const orderedStops = orderedByTrip
+        .filter((p: any) => p.kind === "stop")
+        .map((p: any) => p.ref as TStop);
 
       const polyline: LatLng[] = trip.trips[0].geometry.coordinates.map(
         ([lng, lat]: [number, number]) => [lat, lng]
@@ -229,10 +226,10 @@ export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params:
     return { orderedStops, polyline: geom.coords, distanceKm: geom.km };
   }
 
-  // 4) YILDIZ VAR → rep->star ROUTE + star'dan TRIP → fallback greedy
+  // 4) YILDIZ VAR → rep->star ROUTE + star'dan TRIP (ref ile) → fallback greedy
   const star = inputStops.find((s) => String(s.id) === String(starredId));
-  // Yıldız id'si bulunamazsa yıldız yok gibi devam et
   if (!star) {
+    // id bulunamadıysa yıldızsız gibi davran
     return optimizeRoute<TStop>({ rep, stops: inputStops, starredId: null });
   }
   const others = inputStops.filter((s) => String(s.id) !== String(starredId));
@@ -244,19 +241,20 @@ export async function optimizeRoute<TStop extends StopPoint = StopPoint>(params:
     : ([ [rep.lat, rep.lng], [star.lat, star.lng] ] as LatLng[]);
   const firstKm = firstLeg ? firstLeg.distance / 1000 : haversineKm([rep.lat, rep.lng], [star.lat, star.lng]);
 
-  // star + others ile TRIP
-  const points2 = [{ lat: star.lat, lng: star.lng }, ...others.map((s) => ({ lat: s.lat, lng: s.lng }))];
-  const trip2 = await osrmTripSafe(points2);
+  // star + others ile TRIP (ref'li)
+  const tripPoints2 = [
+    { kind: "stop" as const, lat: star.lat, lng: star.lng, ref: star }, // source=first sayesinde ilk
+    ...others.map((s) => ({ kind: "stop" as const, lat: s.lat, lng: s.lng, ref: s })),
+  ];
+  const trip2 = await osrmTripSafe(tripPoints2);
   if (trip2) {
     const ordered2 = trip2.waypoints
       .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
       .sort((a: any, b: any) => a.order - b.order)
-      .map((x: any) => points2[x.inputIdx]);
+      .map((x: any) => tripPoints2[x.inputIdx]);
 
-    const restStops = ordered2.slice(1).map((p: any) => {
-      return others.find((s) => s.lat === p.lat && s.lng === p.lng)!;
-    });
-    const orderedStops = [star, ...restStops];
+    // star girişte zaten ilk; OSRM sıralaması yine de ilk bırakır (source=first)
+    const orderedStops = ordered2.map((p: any) => p.ref as TStop);
 
     const restPolyline: LatLng[] = trip2.trips[0].geometry.coordinates.map(
       ([lng, lat]: [number, number]) => [lat, lng]
