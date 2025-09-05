@@ -6,12 +6,8 @@ import "leaflet/dist/leaflet.css";
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
 import { Maximize2, Minimize2, Route as RouteIcon, Star, StarOff, Navigation } from "lucide-react";
-
 import { optimizeRoute, LatLng } from "../lib/osrm";
 
-/* =======================
-   Tipler
-   ======================= */
 export type Customer = {
   id: string | number;
   name: string;
@@ -42,14 +38,11 @@ interface Props {
   salesRep: SalesRep;
 }
 
-/* =======================
-   Yardımcılar / ikonlar
-   ======================= */
+/* --- yardımcılar / ikonlar --- */
 const toNum = (v: any) => {
   const n = typeof v === "string" ? parseFloat(v) : Number(v);
   return Number.isFinite(n) ? n : null;
 };
-
 const fmtKm = (km: number | null) =>
   km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
@@ -59,7 +52,6 @@ const repIcon = new L.Icon({
   iconAnchor: [16, 32],
   popupAnchor: [0, -28],
 });
-
 function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }) {
   const highlight = !!opts?.highlight;
   const starred = !!opts?.starred;
@@ -74,14 +66,12 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
   });
 }
 
-/* =======================
-   Ekran
-   ======================= */
+/* --- ekran --- */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const mapRef = useRef<L.Map | null>(null);
   const markerRefs = useRef<Record<string, L.Marker>>({});
 
-  // rep & customers'ı güvene al
+  // rep & customers sayısallaştır
   const safeRep = useMemo(() => {
     const lat = toNum(salesRep?.lat);
     const lng = toNum(salesRep?.lng);
@@ -99,7 +89,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       .filter(Boolean) as Customer[];
   }, [customers]);
 
-  // state
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(validCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
@@ -108,7 +97,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | number | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // inputs değişince sıfırla
   useEffect(() => {
     setOrderedCustomers(validCustomers);
     setRouteCoords([]);
@@ -142,7 +130,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     mapRef.current.fitBounds(bounds, { padding: [24, 24] });
   };
 
-  // optimize
   const handleOptimize = async () => {
     if (!safeRep || validCustomers.length === 0) return;
     setLoading(true);
@@ -155,10 +142,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       setOrderedCustomers(orderedStops as Customer[]);
       setRouteCoords(polyline);
       setRouteKm(distanceKm);
-      if (orderedStops[0]) {
-        const first = orderedStops[0] as Customer;
-        highlightCustomer(first, true);
-      }
+      if (orderedStops[0]) highlightCustomer(orderedStops[0] as Customer, true);
       fitPolylineBounds(polyline);
     } catch (e) {
       console.error("optimize error:", e);
@@ -167,7 +151,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     }
   };
 
-  // yıldız değişince otomatik optimize
   useEffect(() => {
     if (starredId !== null) handleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,8 +161,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       <div className="p-6 rounded-xl border bg-white">
         <div className="text-gray-800 font-semibold">Rota Haritası</div>
         <div className="text-sm text-gray-600 mt-2">
-          Geçerli konum veya müşteri bulunamadı. Lütfen <b>salesRep.lat/lng</b> ile
-          <b> customers[].lat/lng</b> alanlarının sayısal olduğundan emin olun.
+          Geçerli konum veya müşteri bulunamadı. <b>salesRep.lat/lng</b> ve
+          <b> customers[].lat/lng</b> sayı olmalı.
         </div>
       </div>
     );
@@ -311,9 +294,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-/* =======================
-   Sağ Panel
-   ======================= */
+/* --- sağ panel --- */
 const SidePanel: React.FC<{
   customers: Customer[];
   selectedId: string | number | null;
@@ -325,7 +306,6 @@ const SidePanel: React.FC<{
 }> = ({ customers, selectedId, starredId, onRowClick, onToggleStar, panelOpen, setPanelOpen }) => {
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
-  // touch swipe
   const touchStartX = useRef<number | null>(null);
   const onTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -430,15 +410,7 @@ const FullscreenBtn: React.FC = () => {
       }}
       className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
     >
-      {isFs ? (
-        <>
-          <Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat
-        </>
-      ) : (
-        <>
-          <Maximize2 className="w-4 h-4" /> Tam Ekran
-        </>
-      )}
+      {isFs ? (<><Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat</>) : (<><Maximize2 className="w-4 h-4" /> Tam Ekran</>)}
     </button>
   );
 };
