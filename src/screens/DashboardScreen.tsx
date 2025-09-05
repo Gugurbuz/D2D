@@ -1,8 +1,16 @@
 import React from 'react';
-import { Eye, Play, MapPin, UserCheck, CheckCircle, Timer, Activity, AlertCircle } from 'lucide-react';
+import { Eye, Play, MapPin, UserCheck, CheckCircle, Timer, Activity, AlertCircle, MoreHorizontal, StickyNote } from 'lucide-react';
 import { Customer } from '../RouteMap';
 import { Rep } from '../types';
 
+/* ------------------------ Yardımcı Fonksiyonlar ------------------------ */
+const getStatusTone = (status: Customer['status']) =>
+  status === 'Tamamlandı' ? 'green' : status === 'Yolda' ? 'blue' : 'yellow';
+
+const getPriorityTone = (priority: Customer['priority']) =>
+  priority === 'Yüksek' ? 'red' : priority === 'Orta' ? 'yellow' : 'green';
+
+/* ------------------------ Chip Bileşeni ------------------------ */
 export const Chip = ({ tone = 'gray', children }: { tone?: 'blue' | 'yellow' | 'green' | 'red' | 'gray'; children: React.ReactNode }) => {
   const tones: Record<string, string> = {
     blue: 'bg-blue-100 text-blue-800',
@@ -18,24 +26,37 @@ export const Chip = ({ tone = 'gray', children }: { tone?: 'blue' | 'yellow' | '
   );
 };
 
-const KpiCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode }> = ({ label, value, icon }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center space-x-3">
-    <div className="p-2 bg-cyan-100 text-cyan-700 rounded-full">{icon}</div>
-    <div>
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="text-xl font-bold text-gray-900">{value}</div>
+/* ------------------------ KPI Kartı ------------------------ */
+const KpiCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode; tone: string }> = ({
+  label, value, icon, tone,
+}) => {
+  const toneClasses: Record<string, string> = {
+    cyan: 'bg-cyan-100 text-cyan-700',
+    green: 'bg-green-100 text-green-700',
+    yellow: 'bg-yellow-100 text-yellow-700',
+    red: 'bg-red-100 text-red-700',
+    blue: 'bg-blue-100 text-blue-700',
+  };
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center space-x-3">
+      <div className={`p-2 rounded-full ${toneClasses[tone]}`}>{icon}</div>
+      <div>
+        <div className="text-xs text-gray-500">{label}</div>
+        <div className="text-xl font-bold text-gray-900">{value}</div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
+/* ------------------------ Ziyaret Kartı ------------------------ */
 const VisitCard: React.FC<{
   customer: Customer;
   assignedName: string | null;
   onDetail: () => void;
   onStart: () => void;
 }> = ({ customer, assignedName, onDetail, onStart }) => {
-  const statusTone = customer.status === 'Tamamlandı' ? 'green' : customer.status === 'Yolda' ? 'blue' : 'yellow';
-  const priorityTone = customer.priority === 'Yüksek' ? 'red' : customer.priority === 'Orta' ? 'yellow' : 'green';
+  const statusTone = getStatusTone(customer.status);
+  const priorityTone = getPriorityTone(customer.priority);
   const typeLabel = customer.tariff === 'İş Yeri' ? 'B2B – Sabit Fiyat' : 'B2C – Endeks';
 
   return (
@@ -81,6 +102,14 @@ const VisitCard: React.FC<{
                 <Play className="w-4 h-4" /> Başlat
               </button>
             )}
+            {/* Ek Aksiyon: Not Ekle */}
+            <button
+              onClick={() => alert('Not Ekle özelliği geliştirilecek')}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition"
+              title="Not Ekle"
+            >
+              <StickyNote className="w-4 h-4" /> Not Ekle
+            </button>
           </div>
         </div>
       </div>
@@ -88,6 +117,7 @@ const VisitCard: React.FC<{
   );
 };
 
+/* ------------------------ Ana Dashboard Bileşeni ------------------------ */
 type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
@@ -119,18 +149,18 @@ const DashboardScreen: React.FC<Props> = ({
   };
 
   return (
-    <div className="px-6 pb-10 space-y-10">
+    <div className="px-6 pb-10 space-y-10" role="main" aria-label="Dashboard ekranı">
       {/* KPI Cards */}
       <div className="pt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-        <KpiCard label="Toplam Ziyaret" value={planned} icon={<Activity className="w-4 h-4" />} />
-        <KpiCard label="Yolda" value={onTheWay} icon={<Timer className="w-4 h-4" />} />
-        <KpiCard label="Tamamlandı" value={done} icon={<CheckCircle className="w-4 h-4" />} />
-        <KpiCard label="Bekleyen" value={waiting} icon={<AlertCircle className="w-4 h-4" />} />
-        <KpiCard label="Dönüşüm" value={`%${conversionRate}`} icon={<UserCheck className="w-4 h-4" />} />
-        <KpiCard label="Tah. Gelir" value={`${estimatedRevenueTL} ₺`} icon={<MapPin className="w-4 h-4" />} />
+        <KpiCard label="Toplam Ziyaret" value={planned} icon={<Activity className="w-4 h-4" />} tone="cyan" />
+        <KpiCard label="Yolda" value={onTheWay} icon={<Timer className="w-4 h-4" />} tone="blue" />
+        <KpiCard label="Tamamlandı" value={done} icon={<CheckCircle className="w-4 h-4" />} tone="green" />
+        <KpiCard label="Bekleyen" value={waiting} icon={<AlertCircle className="w-4 h-4" />} tone="yellow" />
+        <KpiCard label="Dönüşüm" value={`%${conversionRate}`} icon={<UserCheck className="w-4 h-4" />} tone="cyan" />
+        <KpiCard label="Tah. Gelir" value={`${estimatedRevenueTL} ₺`} icon={<MapPin className="w-4 h-4" />} tone="cyan" />
       </div>
 
-      {/* Today’s Visits */}
+      {/* Bugünkü Ziyaretler */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-gray-900 text-lg">Bugünkü Ziyaretler</h2>
@@ -138,18 +168,19 @@ const DashboardScreen: React.FC<Props> = ({
             onClick={() => setCurrentScreen('visitList')}
             className="text-xs text-cyan-600 hover:underline"
             title="Tüm ziyaretleri gör"
+            aria-label="Tüm ziyaretleri listele"
           >
             Tamamını Gör
           </button>
         </div>
 
         {todayList.length === 0 ? (
-          <div className="text-sm text-gray-500 flex items-center gap-2">
+          <div className="text-sm text-gray-500 flex items-center gap-2" role="status" aria-live="polite">
             <AlertCircle className="w-4 h-4 text-yellow-500" />
             Bugün için planlanmış ziyaret bulunmamaktadır 😊
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4" aria-label="Ziyaret listesi">
             {todayList.map((c) => (
               <VisitCard
                 key={c.id}
