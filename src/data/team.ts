@@ -1,66 +1,127 @@
 // src/data/team.ts
-export type TeamRep = {
-  id: string;
-  name: string;
-  phone: string;
-  lat: number;
-  lng: number;
-  completedToday: number;
-  totalToday: number;
-  color: string;
-  fillColor: string;
-};
 
-// YENİ: Yönetici bilgisi eklendi ve export edildi
-export const managerUser = {
+// Tipleri, ProfileScreens dosyasından veya varsa types.ts dosyasından import ediyoruz.
+// Dosya yolunu kendi projenize göre düzenlemeniz gerekebilir.
+import type { SalesUser, ManagerUser } from '../screens/ProfileScreens';
+
+// ===== Yönetici Verisi =====
+export const managerUser: ManagerUser = {
   id: 'manager-1',
+  role: 'manager',
   name: 'Ayşe Demir',
+  email: 'ayse.demir@enerjisa.com',
+  phone: '+90 555 444 55 66',
+  region: 'İstanbul Anadolu',
+  territory: 'Anadolu 1. Bölge',
+  teamName: 'Anadolu Yakası Şampiyonlar',
+  teamSize: 4,
+  autoAssignMethod: 'km_optimized',
+  preventOverlap: true,
+  maxAutoAssignPerRep: 50,
+  slaDailyVisitTarget: 18,
+  coverageGoalPct: 85,
+  exportFormat: 'xlsx',
+  reportTime: '18:30',
+  language: 'tr',
+  theme: 'dark',
+  units: 'metric',
+  notifications: { email: true, sms: false, push: true },
+  shareLiveLocation: true,
 };
 
-export const teamReps: TeamRep[] = [
-  { 
-    id: 'rep-1', 
-    name: 'Serkan Özkan',
-    phone: '05079681648', 
-    lat: 40.9368, 
-    lng: 29.1553, 
-    completedToday: 7, 
-    totalToday: 6,
-    color: '#0ea5e9',
-    fillColor: 'rgba(14,165,233,.18)'
-  },
-  { 
-    id: 'rep-2', 
-    name: 'Zelal Kaya',
-    phone: '0555 000 00 02', 
-    lat: 41.0004, 
-    lng: 29.0498, 
-    completedToday: 5, 
-    totalToday: 7,
-    color: '#22c55e',
-    fillColor: 'rgba(34,197,94,.18)'
-  },
 
-  { 
-    id: 'rep-3', 
-    name: 'Şöhret Demir',
-    phone: '0555 000 00 03', 
-    lat: 41.0255, 
-    lng: 29.0653, 
-    completedToday: 2, 
-    totalToday: 5,
-    color: '#f97316',                  // Turuncu
-    fillColor: 'rgba(249,115,22,.18)'
+// ===== Satış Uzmanı (Temsilci) Verileri =====
+export const teamReps: SalesUser[] = [
+  {
+    id: 'rep-1',
+    role: 'sales',
+    name: 'Mehmet Yılmaz',
+    email: 'mehmet.yilmaz@enerjisa.com',
+    phone: '+90 555 111 22 33',
+    district: 'Kadıköy',
+    region: 'İstanbul Anadolu',
+    dailyVisitTarget: 20,
+    vehicle: 'car',
+    workHours: { start: '09:00', end: '18:00' },
+    workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false },
+    breakTimes: { start: '12:30', end: '13:30' },
+    defaultMapZoom: 14,
+    autoCheckinRadiusMeters: 100,
+    idVerified: true,
+    prefersOptimizedRoutes: true,
+    language: 'tr',
+    theme: 'light',
+    units: 'metric',
+    notifications: { email: true, sms: false, push: true },
+    shareLiveLocation: true,
   },
-  { 
-    id: 'rep-4', 
-    name: 'Mert Yıldırım', 
-    phone: '0555 000 00 04', 
-    lat: 40.9497, 
-    lng: 29.1228, 
-    completedToday: 0, 
-    totalToday: 4,
-    color: '#8b5cf6',                  // Mor (yeni eklendi)
-    fillColor: 'rgba(139,92,246,.18)'
+  {
+    id: 'rep-2',
+    role: 'sales',
+    name: 'Zeynep Kaya',
+    email: 'zeynep.kaya@enerjisa.com',
+    phone: '+90 555 222 33 44',
+    district: 'Üsküdar',
+    region: 'İstanbul Anadolu',
+    dailyVisitTarget: 25,
+    vehicle: 'walking',
+    workHours: { start: '08:30', end: '17:30' },
+    workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: false },
+    breakTimes: { start: '12:00', end: '13:00' },
+    defaultMapZoom: 15,
+    autoCheckinRadiusMeters: 50,
+    idVerified: false,
+    prefersOptimizedRoutes: true,
+    language: 'tr',
+    theme: 'system',
+    units: 'metric',
+    notifications: { email: true, sms: true, push: true },
+    shareLiveLocation: false,
+  },
+  {
+    id: 'rep-3',
+    role: 'sales',
+    name: 'Ali Çetin',
+    email: 'ali.cetin@enerjisa.com',
+    phone: '+90 555 333 44 55',
+    district: 'Ataşehir',
+    region: 'İstanbul Anadolu',
+    dailyVisitTarget: 18,
+    vehicle: 'car',
+    workHours: { start: '09:00', end: '18:00' },
+    workDays: { mon: true, tue: true, wed: false, thu: true, fri: true, sat: false, sun: false },
+    breakTimes: { start: '13:00', end: '14:00' },
+    defaultMapZoom: 13,
+    autoCheckinRadiusMeters: 200,
+    idVerified: true,
+    prefersOptimizedRoutes: false,
+    language: 'tr',
+    theme: 'light',
+    units: 'metric',
+    notifications: { email: false, sms: false, push: true },
+    shareLiveLocation: true,
+  },
+  {
+    id: 'rep-4',
+    role: 'sales',
+    name: 'Fatma Şahin',
+    email: 'fatma.sahin@enerjisa.com',
+    phone: '+90 555 444 55 66',
+    district: 'Maltepe',
+    region: 'İstanbul Anadolu',
+    dailyVisitTarget: 22,
+    vehicle: 'bike',
+    workHours: { start: '10:00', end: '19:00' },
+    workDays: { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false },
+    breakTimes: { start: '14:00', end: '14:45' },
+    defaultMapZoom: 14,
+    autoCheckinRadiusMeters: 75,
+    idVerified: false,
+    prefersOptimizedRoutes: true,
+    language: 'tr',
+    theme: 'dark',
+    units: 'metric',
+    notifications: { email: true, sms: true, push: false },
+    shareLiveLocation: false,
   },
 ];
