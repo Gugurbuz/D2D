@@ -34,7 +34,7 @@ export type Customer = {
   lat: number;
   lng: number;
   phone: string;
-  salesRepId: string; // Müşterinin hangi satış uzmanına ait olduğunu belirtir
+  assignedRepId: string; // Müşterinin hangi satış uzmanına ait olduğunu belirtir
 };
 
 export type SalesRep = {
