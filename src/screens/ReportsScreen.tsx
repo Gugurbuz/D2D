@@ -178,9 +178,8 @@ const ReportsScreen: React.FC<{ customers: Customer[] }> = ({ customers }) => {
         </div>
       </div>
 
-  // ...imports aynı (Route as RouteIcon importu zaten var)
 
-// KPI Kartları – EK (isteğe bağlı açılır)
+
 {showMoreKPIs && (
   <div className="grid gap-4 md:gap-6 mb-6 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
     <SummaryCard title="Teklif" value={String(offersGiven)} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
