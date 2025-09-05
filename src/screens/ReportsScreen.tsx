@@ -178,26 +178,23 @@ const ReportsScreen: React.FC<{ customers: Customer[] }> = ({ customers }) => {
         </div>
       </div>
 
-      {/* KPI Kartları */}
-      <div className="grid gap-4 md:gap-6 mb-4 md:mb-6 grid-cols-2 md:grid-cols-4">
-        <SummaryCard title={`${periodLabel} Toplam Ziyaret`} value={String(inPeriod.length)} icon={<MapPin className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-        <SummaryCard title={`${periodLabel} Ziyaret Edilen`} value={String(visited.length)} icon={<MapPin className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-        <SummaryCard title="Satış" value={String(salesCount)} icon={<CheckCircle className="w-7 h-7 md:w-8 md:h-8 text-[#10B981]" />} />
-        <SummaryCard title="Satış Oranı" value={`%${salesRate}`} icon={<TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-[#F9C800]" />} valueClass="text-[#111827]" />
-      </div>
+  // ...imports aynı (Route as RouteIcon importu zaten var)
 
-      {showMoreKPIs && (
-        <div className="grid gap-4 md:gap-6 mb-6 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-          <SummaryCard title="Teklif" value={String(offersGiven)} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-          <SummaryCard title="Toplam KM" value={`${kmStats.total} km`} icon={<Route as any className="w-7 h-7 md:w-8 md:h-8 text-[#F9C800]" />} />
-          <SummaryCard title="Ort. KM/Geçiş" value={`${kmStats.avg} km`} icon={<RouteIcon className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-          <SummaryCard title="Reddedilme Oranı" value={`%${rejectedRate}`} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-red-500" />} valueClass="text-red-600" />
-          <SummaryCard title="Evde Yok Oranı" value={`%${noAnswerRate}`} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-gray-500" />} valueClass="text-gray-700" />
-          <SummaryCard title="Teklif→Satış" value={`%${offerToSale}`} icon={<TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-          <SummaryCard title="Ziyaret / Saat" value={`${timeStats.visitsPerHour}/s`} icon={<MapPin className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-          <SummaryCard title="Aktif Süre" value={fmtDuration(timeStats.minutes)} icon={<Clock className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
-        </div>
-      )}
+// KPI Kartları – EK (isteğe bağlı açılır)
+{showMoreKPIs && (
+  <div className="grid gap-4 md:gap-6 mb-6 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+    <SummaryCard title="Teklif" value={String(offersGiven)} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
+    {/* 🔧 Fix burada: Route -> RouteIcon */}
+    <SummaryCard title="Toplam KM" value={`${kmStats.total} km`} icon={<RouteIcon className="w-7 h-7 md:w-8 md:h-8 text-[#F9C800]" />} />
+    <SummaryCard title="Ort. KM/Geçiş" value={`${kmStats.avg} km`} icon={<RouteIcon className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
+    <SummaryCard title="Reddedilme Oranı" value={`%${rejectedRate}`} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-red-500" />} valueClass="text-red-600" />
+    <SummaryCard title="Evde Yok Oranı" value={`%${noAnswerRate}`} icon={<AlertCircle className="w-7 h-7 md:w-8 md:h-8 text-gray-500" />} valueClass="text-gray-700" />
+    <SummaryCard title="Teklif→Satış" value={`%${offerToSale}`} icon={<TrendingUp className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
+    <SummaryCard title="Ziyaret / Saat" value={`${timeStats.visitsPerHour}/s`} icon={<MapPin className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
+    <SummaryCard title="Aktif Süre" value={fmtDuration(timeStats.minutes)} icon={<Clock className="w-7 h-7 md:w-8 md:h-8 text-[#0099CB]" />} />
+  </div>
+)}
+
 
       {/* === Modern Grafikler === */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
