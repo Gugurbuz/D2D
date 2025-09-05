@@ -229,6 +229,10 @@ function App() {
     return appContent;
   }
 
+   <main>
+        <ProfileScreens userId={currentUserId} />
+      </main>
+
   // GUIDE açıkken GuideProvider ve HelpFAB ile sarmalar.
   return (
     <GuideProvider role={guideRole} screen={guideScreen} autoStart enableLongPress longPressMs={700}>
