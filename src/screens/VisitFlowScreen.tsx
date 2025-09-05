@@ -5,7 +5,7 @@ import {
   IdCard, Camera, Smartphone, FileText, PenLine, Send,
   ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
   Loader2, ScanLine, Nfc, Maximize2, Hourglass, Sparkles, TrendingUp, ChevronsRight,
-  Home, Building, Factory, MapPin, AlertTriangle // Müşteri tipi ve Check-in için yeni ikonlar
+  Home, Building, Factory, MapPin, AlertTriangle, Info // Müşteri tipi ve Check-in için yeni ikonlar
 } from 'lucide-react';
 
 // --- GEREKLİ TİPLER ---
@@ -166,13 +166,96 @@ const ContractMockPage: React.FC<{ customer: Customer; signatureDataUrl: string 
 const ContractModal: React.FC<{ customer: Customer; signatureDataUrl: string | null; onClose: () => void; }> = ({ customer, signatureDataUrl, onClose }) => { useEffect(() => { const scrollY = window.scrollY; const { style } = document.body; const htmlStyle = document.documentElement.style; const prev = { overflow: style.overflow, position: style.position, top: style.top, width: style.width, overscroll: htmlStyle.overscrollBehaviorY as string | undefined, }; style.overflow = "hidden"; style.position = "fixed"; style.top = `-${scrollY}px`; style.width = "100%"; htmlStyle.overscrollBehaviorY = "contain"; return () => { style.overflow = prev.overflow; style.position = prev.position; style.top = prev.top; style.width = prev.width; htmlStyle.overscrollBehaviorY = prev.overscroll || ""; window.scrollTo(0, scrollY); }; }, []); return ( <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50"> <div className="flex items-center justify-between bg-white px-4 py-3 border-b"><div className="font-semibold text-gray-900">Sözleşme — Önizleme</div><button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button></div> <div className="flex-1 bg-gray-100 overflow-auto"><div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}><ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" /></div></div> </div> ); };
 
 // ==================================================================
+// ==================== SOLAR LEAD MODAL ============================
+// ==================================================================
+
+const SolarLeadModal: React.FC<{ customer: Customer; onClose: () => void; }> = ({ customer, onClose }) => {
+    const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+    const [kvkkAccepted, setKvkkAccepted] = useState(false);
+
+    const handleProductChange = (product: string) => {
+        setSelectedProducts(prev => 
+            prev.includes(product) ? prev.filter(p => p !== product) : [...prev, product]
+        );
+    };
+
+    const handleSubmit = () => {
+        if (!kvkkAccepted || selectedProducts.length === 0) {
+            alert("Lütfen en az bir ürün seçin ve KVKK metnini onaylayın.");
+            return;
+        }
+
+        const leadData = {
+            customerName: customer.name,
+            customerPhone: customer.phone,
+            requestedProducts: selectedProducts,
+            kvkkConsent: kvkkAccepted,
+            timestamp: new Date().toISOString()
+        };
+        
+        console.log("SOLAR LEAD CREATED:", leadData);
+        alert("Güneş enerjisi çözümleri talebiniz ilgili ekibe başarıyla iletilmiştir. Sizinle en kısa sürede iletişime geçilecektir.");
+        onClose();
+    };
+
+    const products = ['Güneş Paneli', 'Depolama Ünitesi', 'Şarj İstasyonu'];
+
+    return (
+        <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10050] bg-black/60 flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <XCircle className="w-6 h-6"/>
+                </button>
+                <h2 className="text-xl font-bold text-gray-800">Güneş Enerjisi Çözümleri Talep Formu</h2>
+                <p className="text-sm text-gray-600 mt-1">Bu form ile ilgili ekibe talep oluşturulacak ve müşteriyle detaylar için iletişime geçilecektir.</p>
+                
+                <div className="mt-6 space-y-4">
+                    <div>
+                        <label className="text-xs font-medium text-gray-500">Müşteri Adı Soyadı</label>
+                        <input type="text" value={customer.name} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" />
+                    </div>
+                     <div>
+                        <label className="text-xs font-medium text-gray-500">Telefon Numarası</label>
+                        <input type="text" value={customer.phone} readOnly className="w-full mt-1 p-2 border rounded-lg bg-gray-100" />
+                    </div>
+                    <div>
+                        <p className="text-xs font-medium text-gray-500 mb-2">Talep Edilen Çözümler</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {products.map(product => (
+                                <label key={product} className={`p-3 border rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${selectedProducts.includes(product) ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-300' : 'hover:bg-gray-50'}`}>
+                                    <input type="checkbox" checked={selectedProducts.includes(product)} onChange={() => handleProductChange(product)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB]" />
+                                    <span className="text-sm font-medium text-gray-700">{product}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                         <label className="flex items-start gap-3 cursor-pointer">
+                            <input type="checkbox" checked={kvkkAccepted} onChange={e => setKvkkAccepted(e.target.checked)} className="h-4 w-4 text-[#0099CB] border-gray-300 focus:ring-[#0099CB] mt-0.5" />
+                            <span className="text-xs text-gray-600">Müşterinin, kişisel verilerinin Güneş Enerjisi Çözümleri hakkında bilgilendirme ve teklif sunulması amacıyla işlenmesine ve kendisiyle bu kanallar üzerinden iletişime geçilmesine onay verdiğini beyan ederim.</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="mt-8 flex justify-end gap-3">
+                    <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200">Vazgeç</button>
+                    <button onClick={handleSubmit} disabled={!kvkkAccepted || selectedProducts.length === 0} className="px-6 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 disabled:bg-gray-300">
+                        Talep Oluştur
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==================================================================
 // ==================== YENİ TEKLİF EKRANI ==========================
 // ==================================================================
 
-type Tariff = { name: string; price: number; };
+type Tariff = { name: string; price: number; isSolar?: boolean };
 
 const enerjisaTariffs: Record<Customer['subscriberType'], Tariff[]> = {
-    'Mesken': [ { name: 'Dinamik tarife', price: 1.99 }, { name: 'Pratik tarife', price: 1.85 }, { name: 'Yeşil Evim', price: 2.15 }, ],
+    'Mesken': [ { name: 'Dinamik tarife', price: 1.99 }, { name: 'Pratik tarife', price: 1.85 }, { name: 'Yeşil Evim', price: 2.15, isSolar: true }, ],
     'Ticarethane': [ { name: 'Esnaf Dostu', price: 2.15 }, { name: 'İş Yeri Pro', price: 2.05 }, { name: 'Sanayi Tipi', price: 1.95 }, ],
     'Sanayi': [ { name: 'Üretim Gücü', price: 1.80 }, { name: 'Ağır Sanayi Plus', price: 1.72 }, ]
 };
@@ -188,6 +271,7 @@ const ProposalScreen: React.FC<{ customer: Customer; onProceed: () => void; onCa
     const [currentConsumption, setCurrentConsumption] = useState(customer.avgMonthlyConsumptionKwh);
     const availableTariffs = enerjisaTariffs[customer.subscriberType];
     const [selectedTariff, setSelectedTariff] = useState<Tariff>(availableTariffs[0]);
+    const [isSolarModalOpen, setSolarModalOpen] = useState(false);
     const formatCurrency = (value: number) => new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(value);
     const currentMonthlyBill = currentPrice * currentConsumption;
     const enerjisaMonthlyBill = selectedTariff.price * currentConsumption;
@@ -195,42 +279,56 @@ const ProposalScreen: React.FC<{ customer: Customer; onProceed: () => void; onCa
     const typeInfo = subscriberTypeInfo[customer.subscriberType];
 
     return (
-        <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
-                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Müşteri Teklifi ve Analiz</h1>
-                 <button onClick={onCancel} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Başa Dön</button>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="pb-4 border-b flex justify-between items-start">
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-800">{customer.name}</h2>
-                        <p className="text-sm text-gray-500">{customer.address}</p>
-                        <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 ${typeInfo.color} rounded-full text-sm font-medium`}>{typeInfo.icon} {customer.subscriberType}</div>
-                    </div>
-                    {customer.isEligible ? ( <div className="flex-shrink-0 ml-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"><CheckCircle className="w-4 h-4" /> Serbest Tüketici</div>) : ( <div className="flex-shrink-0 ml-4 inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"><XCircle className="w-4 h-4" /> Uygun Değil</div>)}
+        <>
+            <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                     <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Müşteri Teklifi ve Analiz</h1>
+                     <button onClick={onCancel} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Başa Dön</button>
                 </div>
-                <div className="grid md:grid-cols-2 gap-x-6 gap-y-8 mt-6">
-                    <div className="border-r pr-6">
-                        <h3 className="font-semibold text-gray-700">Mevcut Durum Analizi</h3>
-                        <div className="mt-4 space-y-4">
-                            <div><label className="text-xs text-gray-500">Mevcut Birim Fiyat (kWh)</label><div className="flex items-center mt-1"><input type="number" step="0.01" value={currentPrice} onChange={e => setCurrentPrice(parseFloat(e.target.value) || 0)} className="w-full p-2 border rounded-lg" /><span className="ml-2 font-semibold text-gray-600">TL</span></div></div>
-                            <div><label className="text-xs text-gray-500">Ort. Aylık Tüketim (kWh)</label><div className="flex items-center mt-1"><input type="number" step="10" value={currentConsumption} onChange={e => setCurrentConsumption(parseFloat(e.target.value) || 0)} className="w-full p-2 border rounded-lg" /><span className="ml-2 font-semibold text-gray-600">kWh</span></div></div>
-                            <div className="pt-2 border-t"><p className="text-xs text-gray-500">Hesaplanan Aylık Fatura</p><p className="font-medium text-lg text-red-600">{formatCurrency(currentMonthlyBill)}</p></div>
+                <div className="bg-white rounded-xl shadow-sm p-6">
+                    <div className="pb-4 border-b flex justify-between items-start">
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-800">{customer.name}</h2>
+                            <p className="text-sm text-gray-500">{customer.address}</p>
+                            <div className={`mt-2 inline-flex items-center gap-2 px-3 py-1 ${typeInfo.color} rounded-full text-sm font-medium`}>{typeInfo.icon} {customer.subscriberType}</div>
+                        </div>
+                        {customer.isEligible ? ( <div className="flex-shrink-0 ml-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"><CheckCircle className="w-4 h-4" /> Serbest Tüketici</div>) : ( <div className="flex-shrink-0 ml-4 inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"><XCircle className="w-4 h-4" /> Uygun Değil</div>)}
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-x-6 gap-y-8 mt-6">
+                        <div className="md:border-r md:pr-6">
+                            <h3 className="font-semibold text-gray-700">Mevcut Durum Analizi</h3>
+                            <div className="mt-4 space-y-4">
+                                <div><label className="text-xs text-gray-500">Mevcut Birim Fiyat (kWh)</label><div className="flex items-center mt-1"><input type="number" step="0.01" value={currentPrice} onChange={e => setCurrentPrice(parseFloat(e.target.value) || 0)} className="w-full p-2 border rounded-lg" /><span className="ml-2 font-semibold text-gray-600">TL</span></div></div>
+                                <div><label className="text-xs text-gray-500">Ort. Aylık Tüketim (kWh)</label><div className="flex items-center mt-1"><input type="number" step="10" value={currentConsumption} onChange={e => setCurrentConsumption(parseFloat(e.target.value) || 0)} className="w-full p-2 border rounded-lg" /><span className="ml-2 font-semibold text-gray-600">kWh</span></div></div>
+                                <div className="pt-2 border-t"><p className="text-xs text-gray-500">Hesaplanan Aylık Fatura</p><p className="font-medium text-lg text-red-600">{formatCurrency(currentMonthlyBill)}</p></div>
+                            </div>
+                        </div>
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                             <h3 className="font-bold text-[#0099CB] flex items-center gap-2"><Sparkles className="w-5 h-5"/> Enerjisa Teklif Simülasyonu</h3>
+                             <div className="mt-4 space-y-2">
+                                <p className="text-xs text-gray-500 mb-1">Uygun Tarife Seçimi</p>
+                                {availableTariffs.map(tariff => (<label key={tariff.name} className={`p-3 border rounded-lg cursor-pointer transition-colors ${selectedTariff.name === tariff.name ? 'bg-white border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100'}`}>
+                                    <div className="flex justify-between items-center"><span className="text-sm font-semibold text-gray-800">{tariff.name}</span><span className="font-bold text-sm text-[#0099CB]">{formatCurrency(tariff.price)}</span></div>
+                                    {tariff.isSolar && (<div className="mt-2 text-xs text-green-700 bg-green-50 p-1.5 rounded flex items-center gap-1"><Info className="w-4 h-4 flex-shrink-0" /><span>Bu tarife ile solar çözümlerde %10 indirim!</span></div>)}
+                                    <input type="radio" name="tariff" checked={selectedTariff.name === tariff.name} onChange={() => setSelectedTariff(tariff)} className="sr-only"/>
+                                </label>))}
+                             </div>
+                             {selectedTariff.isSolar && (
+                                <div className="mt-4 pt-4 border-t border-blue-200 text-center animate-fade-in">
+                                    <p className="text-sm text-gray-700">Müşteriniz güneş enerjisi çözümleriyle ilgileniyor mu?</p>
+                                    <button onClick={() => setSolarModalOpen(true)} className="mt-2 bg-yellow-400 text-yellow-900 px-4 py-1.5 rounded-lg font-semibold hover:bg-yellow-500 transition-colors text-sm">Evet, Teklif İçin Talep Oluştur</button>
+                                </div>
+                             )}
+                             <div className="pt-3 mt-3 border-t"><p className="text-xs text-gray-500">Enerjisa ile Tahmini Aylık Fatura</p><p className="font-bold text-xl text-green-600">{formatCurrency(enerjisaMonthlyBill)}</p></div>
                         </div>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                         <h3 className="font-bold text-[#0099CB] flex items-center gap-2"><Sparkles className="w-5 h-5"/> Enerjisa Teklif Simülasyonu</h3>
-                         <div className="mt-4 space-y-2">
-                            <p className="text-xs text-gray-500 mb-1">Uygun Tarife Seçimi</p>
-                            {availableTariffs.map(tariff => (<label key={tariff.name} className={`p-3 border rounded-lg flex justify-between items-center cursor-pointer transition-colors ${selectedTariff.name === tariff.name ? 'bg-white border-blue-400 ring-2 ring-blue-300' : 'hover:bg-blue-100'}`}><span className="text-sm font-semibold text-gray-800">{tariff.name}</span><span className="font-bold text-sm text-[#0099CB]">{formatCurrency(tariff.price)}</span><input type="radio" name="tariff" checked={selectedTariff.name === tariff.name} onChange={() => setSelectedTariff(tariff)} className="sr-only"/></label>))}
-                         </div>
-                         <div className="pt-3 mt-3 border-t"><p className="text-xs text-gray-500">Enerjisa ile Tahmini Aylık Fatura</p><p className="font-bold text-xl text-green-600">{formatCurrency(enerjisaMonthlyBill)}</p></div>
-                    </div>
+                    {annualSavings > 0 && ( <div className="mt-8 p-4 bg-green-100 border border-green-200 rounded-lg text-center md:col-span-2"> <p className="text-sm font-semibold text-green-800 flex items-center justify-center gap-2"><TrendingUp className="w-5 h-5"/> Tahmini Yıllık Tasarruf</p> <p className="text-3xl font-bold text-green-700">{formatCurrency(annualSavings)}</p> </div> )}
+                     <div className="mt-8 text-center md:col-span-2"><button onClick={onProceed} disabled={!customer.isEligible} className="bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">Müzakere Sonucuna Git <ChevronsRight className="w-5 h-5"/></button></div>
                 </div>
-                {annualSavings > 0 && ( <div className="mt-8 p-4 bg-green-100 border border-green-200 rounded-lg text-center"> <p className="text-sm font-semibold text-green-800 flex items-center justify-center gap-2"><TrendingUp className="w-5 h-5"/> Tahmini Yıllık Tasarruf</p> <p className="text-3xl font-bold text-green-700">{formatCurrency(annualSavings)}</p> </div> )}
-                 <div className="mt-8 text-center"><button onClick={onProceed} disabled={!customer.isEligible} className="bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">Müzakere Sonucuna Git <ChevronsRight className="w-5 h-5"/></button></div>
             </div>
+            {isSolarModalOpen && <SolarLeadModal customer={customer} onClose={() => setSolarModalOpen(false)} />}
         </div>
+    </>
     );
 };
 
@@ -280,7 +378,6 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
                     <h1 className="text-2xl font-bold text-gray-900">Ziyaret Başlatma (Check-in)</h1>
                     <p className="text-gray-600 mt-2">Ziyareti başlatmak için müşteri konumunda olmanız gerekmektedir.</p>
                 </div>
-
                 <div className="mt-6 border-t pt-6 space-y-4">
                     <div> <p className="text-sm font-medium text-gray-500">Müşteri</p> <p className="font-semibold text-gray-800">{customer.name}</p> <p className="text-sm text-gray-600">{customer.address}</p> </div>
                     <div> <p className="text-sm font-medium text-gray-500">Ziyaret Başlangıç Zamanı</p> <p className="font-semibold text-gray-800">{checkInTime.toLocaleDateString('tr-TR')} - {checkInTime.toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})}</p> </div>
@@ -297,14 +394,9 @@ const CheckInScreen: React.FC<{customer: Customer; onCheckInSuccess: () => void;
                         )}
                     </div>
                 </div>
-
                 <div className="mt-8 flex flex-col gap-3">
-                    <button onClick={onCheckInSuccess} disabled={!canProceedForTesting} className="w-full bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center justify-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">
-                       Check-in Yap ve Devam Et
-                    </button>
-                     <button onClick={onCancel} className="w-full bg-gray-100 text-gray-700 px-8 py-2 rounded-lg font-medium hover:bg-gray-200">
-                       İptal
-                    </button>
+                    <button onClick={onCheckInSuccess} disabled={!canProceedForTesting} className="w-full bg-[#0099CB] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#007ca8] transition-colors inline-flex items-center justify-center gap-2 text-lg disabled:bg-gray-300 disabled:cursor-not-allowed">Check-in Yap ve Devam Et</button>
+                    <button onClick={onCancel} className="w-full bg-gray-100 text-gray-700 px-8 py-2 rounded-lg font-medium hover:bg-gray-200">İptal</button>
                 </div>
             </div>
         </div>
