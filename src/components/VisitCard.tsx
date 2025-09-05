@@ -54,8 +54,12 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
         {/* SAĞ TARAF */}
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-900">{customer.plannedTime}</div>
-            <div className="text-xs text-gray-500">{customer.visitDate ?? "-"}</div>
+            {/* Tarih + Saat aynı satırda */}
+            <div className="text-sm font-medium text-gray-900 flex gap-2">
+              <span>{customer.visitDate ?? "-"}</span>
+              <span>{customer.plannedTime}</span>
+            </div>
+            {/* Mesafe */}
             <div className="text-xs text-gray-500">{customer.distance}</div>
           </div>
 
