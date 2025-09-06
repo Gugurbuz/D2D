@@ -1,4 +1,3 @@
-// Diğer importlar aynı kalıyor
 import React, { useMemo, useState, useCallback } from "react";
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
@@ -32,6 +31,28 @@ const VisitListScreen = ({
   const getAssignedName = (customerId: string) => {
     const repId = assignments[customerId];
     return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
+  };
+
+  const getStatusTone = (status: Customer["status"]) =>
+    status === "Tamamlandı" ? "green" : status === "Yolda" ? "blue" : "yellow";
+
+  const buttonClassForStatus = (buttonStatus: Customer["status"] | "Tümü") => {
+    const active = statusFilter === buttonStatus;
+    if (buttonStatus === "Tümü") {
+      return `px-4 py-2 rounded-full border text-sm transition ${
+        active
+          ? "bg-gray-800 text-white"
+          : "bg-white text-gray-800 hover:bg-gray-100"
+      }`;
+    }
+
+    const tone = getStatusTone(buttonStatus as Customer["status"]);
+
+    return `px-4 py-2 rounded-full border text-sm transition ${
+      active
+        ? `bg-${tone}-600 text-white`
+        : "bg-white text-gray-800 hover:bg-gray-100"
+    }`;
   };
 
   const filteredSorted = useMemo(() => {
@@ -108,7 +129,7 @@ const VisitListScreen = ({
 
   return (
     <div className="px-4 md:px-6 py-6 space-y-6">
-      {/* Arama alanı */}
+      {/* Arama */}
       <input
         type="text"
         value={q}
@@ -117,17 +138,17 @@ const VisitListScreen = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* Filtreler 3 sütun görünüm */}
+      {/* 3 sütun filtreler */}
       <div className="flex flex-col md:flex-row gap-6">
         {/* Durum */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
           <div className="flex gap-2 overflow-x-auto">
-            {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
+            {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status as any)}
-                className={buttonClass(statusFilter === status)}
+                className={buttonClassForStatus(status as any)}
               >
                 {status}
               </button>
@@ -179,7 +200,7 @@ const VisitListScreen = ({
         </div>
       </div>
 
-      {/* Sıfırla butonu */}
+      {/* Filtre sıfırla */}
       <div className="text-right">
         <button
           onClick={resetFilters}
