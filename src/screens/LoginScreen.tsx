@@ -3,7 +3,7 @@ import { signIn, signUp, isSupabaseConfigured } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 type Props = { 
-  onLogin: () => void; 
+  onLogin: (isDemoMode?: boolean) => void; 
 };
 
 const LoginScreen: React.FC<Props> = ({ onLogin }) => {
@@ -267,7 +267,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
             
             <button
               type="button"
-              onClick={() => onLogin()}
+              onClick={() => onLogin(true)}
               className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
             >
               Demo Modunda Devam Et

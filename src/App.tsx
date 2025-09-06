@@ -13,6 +13,7 @@ import TeamMapScreen from './screens/TeamMapScreen';
 import MessagesScreen from './screens/MessagesScreen';
 import ProfileScreens from './screens/ProfileScreens';
 import InvoiceOcrPage from './screens/InvoiceOcrPage';
+import RoleSelectScreen from './screens/RoleSelectScreen';
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
 import { teamReps } from './data/team';
@@ -20,17 +21,34 @@ import type { Customer, SalesRep, Screen, Role } from './types';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName] = useState('Ahmet Yılmaz');
-  const [role] = useState<Role>('sales_rep');
+  const [role, setRole] = useState<Role>('sales_rep');
   
   // Data state
   const [customers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
   const [allReps] = useState<SalesRep[]>(mockReps);
 
-  const handleLogin = () => {
+  const handleLogin = (isDemoMode = false) => {
+    if (isDemoMode) {
+      setShowRoleSelect(true);
+    } else {
+      setIsLoggedIn(true);
+    }
+  };
+
+  const handleRoleSelect = (selectedRole: string) => {
+    // Role string'ini Role tipine dönüştür
+    const roleMap: Record<string, Role> = {
+      'rep-1': 'sales_rep',
+      'manager-1': 'manager'
+    };
+    
+    setRole(roleMap[selectedRole] || 'sales_rep');
+    setShowRoleSelect(false);
     setIsLoggedIn(true);
   };
 
@@ -39,6 +57,9 @@ function App() {
   };
 
   if (!isLoggedIn) {
+    if (showRoleSelect) {
+      return <RoleSelectScreen onSelect={handleRoleSelect} />;
+    }
     return <LoginScreen onLogin={handleLogin} />;
   }
 
