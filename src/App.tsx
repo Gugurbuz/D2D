@@ -1,4 +1,5 @@
-// src/App.tsx
+// src/App.tsx (Tam ve Düzeltilmiş Versiyon)
+
 import React, { useState } from 'react';
 import AppLayout from './layouts/AppLayout';
 import MessagesScreen from './screens/MessagesScreen';
@@ -7,7 +8,7 @@ import { Customer } from './RouteMap';
 
 import { mockCustomers } from './data/mockCustomers';
 import { allReps, salesRepForMap } from './data/reps';
-import { generateInvoiceSummary } from "./utils/gptSummary"; 
+import { generateInvoiceSummary } from "./utils/gptSummary";
 
 // Kullanıcı verilerini team.ts dosyasından import ediyoruz
 import { teamReps, managerUser } from './data/team';
@@ -25,11 +26,10 @@ import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
 import ProfileScreens from './screens/ProfileScreens';
-import InvoiceOcrPage from "./screens/InvoiceOcrPage"; 
+import InvoiceOcrPage from "./screens/InvoiceOcrPage";
 
 // Guide sistemi
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
-// NOT: GUIDE_VERSION importunu kaldırdık; kullanılmıyordu ve uyarı çıkarıyordu.
 
 // === Geçici kapatma bayrağı ===
 const GUIDE_ENABLED = false;
@@ -90,6 +90,12 @@ function App() {
   
   const handleLogin = () => {
     setCurrentScreen('roleSelect');
+  };
+
+  // YENİ: Müşteri seçme işlemini merkezi hale getiren fonksiyon.
+  // Bu fonksiyonu VisitListScreen'e `onSelectCustomer` prop'u olarak vereceğiz.
+  const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
   };
 
   const handleStartVisit = (customer: Customer) => {
@@ -179,22 +185,21 @@ function App() {
         />
       )}
 
+      {/* DEĞİŞTİRİLDİ: VisitListScreen'e artık doğru proplar gönderiliyor */}
       {currentScreen === 'visitList' && (
         <VisitListScreen
           customers={visibleCustomers}
+          assignments={assignments}
+          allReps={allReps}
+          setCurrentScreen={setCurrentScreen} 
+          onSelectCustomer={handleSelectCustomer}
+          // Diğer UI propları
           filter={filter}
           setFilter={setFilter}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
           isListening={isListening}
           onMicClick={handleSpeechToText}
-          assignments={assignments}
-          allReps={allReps}
-          onDetail={(c) => {
-            setSelectedCustomer(c);
-            setCurrentScreen('visitDetail');
-          }}
-          onStart={handleStartVisit}
         />
       )}
 
