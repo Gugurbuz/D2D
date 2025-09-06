@@ -1,621 +1,1647 @@
-// VisitFlowFullExample.tsx
-import React, { useReducer, useState, useRef, useEffect, useCallback } from "react";
-import {
-  IdCard, Camera, Smartphone, FileText, PenLine, Send,
-  ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
-  Loader2, ScanLine, Nfc, Maximize2, Hourglass, Sparkles, TrendingUp, ChevronsRight,
-  Home, Building, Factory, MapPin, AlertTriangle, Info
-} from "lucide-react";
+// src/screens/VisitFlowScreen.tsx
 
-/* ===================== Tipler ===================== */
-export interface Customer {
-  id: number;
-  name: string;
-  address: string;
-  district: string;
-  phone: string;
-  status: 'Pending' | 'Completed' | 'Rejected' | 'Postponed' | 'Unreachable' | 'Evaluating';
-  notes?: string;
-  subscriberType: 'Mesken' | 'Ticarethane' | 'Sanayi';
-  isEligible: boolean;
-  currentProvider: string;
-  currentKwhPrice: number;
-  avgMonthlyConsumptionKwh: number;
-  lat: number;
-  lon: number;
-}
+import React, { useReducer, useState, useRef, useEffect } from 'react';
+
+
+
+// İkonları import ediyoruz
+
+import {
+
+  IdCard, Camera, Smartphone, FileText, PenLine, Send,
+
+  ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
+
+Loader2, ScanLine, Nfc, Maximize2,
+
+} from 'lucide-react';
+
+import { Customer } from '../RouteMap';
+
+
+
+// --- TİPLER VE STATE TANIMLAMALARI ---
 
 type VisitStatus =
-  | 'Pending'
-  | 'InProgress'
-  | 'Completed'
-  | 'Rejected'
-  | 'Unreachable'
-  | 'Postponed'
-  | 'Evaluating';
+
+  | 'Pending'
+
+  | 'InProgress'
+
+  | 'Completed'
+
+  | 'Rejected'
+
+  | 'Unreachable'
+
+  | 'Postponed';
+
+
 
 type FlowStep = 1 | 2 | 3 | 4;
 
+
+
 type VerificationStatus = 'idle' | 'scanning' | 'success' | 'error';
 
+
+
 type State = {
-  visitStatus: VisitStatus;
-  currentStep: FlowStep;
-  idPhoto: string | null;
-  ocrStatus: VerificationStatus;
-  nfcStatus: VerificationStatus;
-  contractAccepted: boolean;
-  smsSent: boolean;
-  notes: string;
-  rejectionReason: string | null;
-  rescheduledDate: string | null;
+
+  visitStatus: VisitStatus;
+
+  currentStep: FlowStep;
+
+  idPhoto: string | null;
+
+  ocrStatus: VerificationStatus;
+
+  nfcStatus: VerificationStatus;
+
+  contractAccepted: boolean;
+
+  smsSent: boolean;
+
+  notes: string;
+
 };
+
+
 
 type Action =
-  | { type: 'SET_VISIT_STATUS'; payload: VisitStatus }
-  | { type: 'SET_STEP'; payload: FlowStep }
-  | { type: 'SET_ID_PHOTO'; payload: string | null }
-  | { type: 'SET_OCR_STATUS'; payload: VerificationStatus }
-  | { type: 'SET_NFC_STATUS'; payload: VerificationStatus }
-  | { type: 'SET_CONTRACT_ACCEPTED'; payload: boolean }
-  | { type: 'SET_SMS_SENT'; payload: boolean }
-  | { type: 'SET_NOTES'; payload: string }
-  | { type: 'SET_REJECTION_REASON'; payload: string | null }
-  | { type: 'SET_RESCHEDULED_DATE'; payload: string | null }
-  | { type: 'RESET' };
+
+  | { type: 'SET_VISIT_STATUS'; payload: VisitStatus }
+
+  | { type: 'SET_STEP'; payload: FlowStep }
+
+  | { type: 'SET_ID_PHOTO'; payload: string | null }
+
+  | { type: 'SET_OCR_STATUS'; payload: VerificationStatus }
+
+  | { type: 'SET_NFC_STATUS'; payload: VerificationStatus }
+
+  | { type: 'SET_CONTRACT_ACCEPTED'; payload: boolean }
+
+  | { type: 'SET_SMS_SENT'; payload: boolean }
+
+  | { type: 'SET_NOTES'; payload: string }
+
+  | { type: 'RESET' };
+
+
+
+// --- REDUCER FONKSİYONU ---
 
 const initialState: State = {
-  visitStatus: 'Pending',
-  currentStep: 1,
-  idPhoto: null,
-  ocrStatus: 'idle',
-  nfcStatus: 'idle',
-  contractAccepted: false,
-  smsSent: false,
-  notes: '',
-  rejectionReason: null,
-  rescheduledDate: null,
+
+  visitStatus: 'Pending',
+
+  currentStep: 1,
+
+  idPhoto: null,
+
+  ocrStatus: 'idle',
+
+  nfcStatus: 'idle',
+
+  contractAccepted: false,
+
+  smsSent: false,
+
+  notes: '',
+
 };
+
+
 
 function visitReducer(state: State, action: Action): State {
-  switch (action.type) {
-    case 'SET_VISIT_STATUS':
-      if (action.payload !== 'InProgress') {
-        return { ...initialState, visitStatus: action.payload, notes: state.notes };
-      }
-      return { ...state, visitStatus: action.payload };
-    case 'SET_STEP':
-      return { ...state, currentStep: action.payload };
-    case 'SET_ID_PHOTO': return { ...state, idPhoto: action.payload };
-    case 'SET_OCR_STATUS': return { ...state, ocrStatus: action.payload };
-    case 'SET_NFC_STATUS': return { ...state, nfcStatus: action.payload };
-    case 'SET_CONTRACT_ACCEPTED': return { ...state, contractAccepted: action.payload };
-    case 'SET_SMS_SENT': return { ...state, smsSent: action.payload };
-    case 'SET_NOTES': return { ...state, notes: action.payload };
-    case 'SET_REJECTION_REASON': return { ...state, rejectionReason: action.payload, rescheduledDate: null };
-    case 'SET_RESCHEDULED_DATE': return { ...state, rescheduledDate: action.payload, rejectionReason: null };
-    case 'RESET': return initialState;
-    default:
-      return state;
-  }
+
+  switch (action.type) {
+
+    case 'SET_VISIT_STATUS':
+
+      return { ...initialState, visitStatus: action.payload, notes: state.notes };
+
+    case 'SET_STEP':
+
+      return { ...state, currentStep: action.payload };
+
+    case 'SET_ID_PHOTO':
+
+      return { ...state, idPhoto: action.payload };
+
+    case 'SET_OCR_STATUS':
+
+      return { ...state, ocrStatus: action.payload };
+
+    case 'SET_NFC_STATUS':
+
+      return { ...state, nfcStatus: action.payload };
+
+    case 'SET_CONTRACT_ACCEPTED':
+
+      return { ...state, contractAccepted: action.payload };
+
+    case 'SET_SMS_SENT':
+
+      return { ...state, smsSent: action.payload };
+
+    case 'SET_NOTES':
+
+      return { ...state, notes: action.payload };
+
+    case 'RESET':
+
+      return initialState;
+
+    default:
+
+      return state;
+
+  }
+
 }
 
-/* ===================== VisitFlowScreen ===================== */
-type VisitFlowProps = {
-  customer?: Customer | null; // null-guard
-  onCloseToList: () => void;
-  onCompleteVisit: (updated: Customer, status: VisitStatus, notes: string) => void;
+
+
+// --- PROPS ---
+
+type Props = {
+
+  customer: Customer;
+
+  onCloseToList: () => void;
+
+  onCompleteVisit: (updated: Customer, status: VisitStatus, notes: string) => void;
+
 };
 
-const VisitFlowScreen: React.FC<VisitFlowProps> = ({ customer, onCloseToList, onCompleteVisit }) => {
-  // null-guard: ilk frame’de customer yoksa skeleton
-  if (!customer) {
-    return (
-      <div className="p-4 sm:p-6 max-w-4xl mx-auto">
-        <div className="animate-pulse space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-1/3" />
-          <div className="h-32 bg-gray-100 rounded" />
-        </div>
-      </div>
-    );
-  }
 
-  const [state, dispatch] = useReducer(visitReducer, initialState);
 
-  const handleStatusSelect = (status: VisitStatus) => {
-    dispatch({ type: 'SET_VISIT_STATUS', payload: status });
-  };
+// --- ANA BİLEŞEN ---
 
-  const handleFinalizeVisit = () => {
-    let finalNotes = state.notes;
-    if (state.rejectionReason) {
-      finalNotes = `Sebep: ${state.rejectionReason}\n\nNotlar:\n${state.notes}`;
-    } else if (state.rescheduledDate) {
-      const formattedDate = new Date(state.rescheduledDate).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
-      finalNotes = `Yeni Randevu Tarihi: ${formattedDate}\n\nNotlar:\n${state.notes}`;
-    }
-    const finalStatus: VisitStatus = state.visitStatus === 'Pending' ? 'Completed' : state.visitStatus;
-    onCompleteVisit(customer, finalStatus, finalNotes);
-    onCloseToList();
-  };
+const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteVisit }) => {
 
-  const StepIndicator = () => (
-    <div className="flex items-center gap-2 mb-4">
-      {[1, 2, 3, 4].map(n => (
-        <div key={n} className={`h-2 rounded-full transition-colors ${state.currentStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{ width: 56 }} />
-      ))}
-    </div>
-  );
+  const [state, dispatch] = useReducer(visitReducer, initialState);
 
-  const isFinalizing = ['Rejected', 'Unreachable', 'Postponed', 'Evaluating'].includes(state.visitStatus);
 
-  return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ziyaret: {customer.name}</h1>
-        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium text-sm sm:text-base">← Başa Dön</button>
-      </div>
 
-      {state.visitStatus === 'Pending' && <VisitStatusSelection onSelect={handleStatusSelect} />}
+  const handleSaveVisitResult = (status: VisitStatus) => {
 
-      {state.visitStatus === 'InProgress' && (
-        <>
-          <StepIndicator />
-          {state.currentStep === 1 && <CustomerInfoStep customer={customer} dispatch={dispatch} notes={state.notes} />}
-          {state.currentStep === 2 && <IdVerificationStep state={state} dispatch={dispatch} />}
-          {state.currentStep === 3 && <ContractStep state={state} dispatch={dispatch} customer={customer} />}
-          {state.currentStep === 4 && (
-            <CompletionStep
-              customer={customer}
-              dispatch={dispatch}
-              onComplete={() => { onCompleteVisit(customer, 'Completed', state.notes); onCloseToList(); }}
-            />
-          )}
-        </>
-      )}
+    dispatch({ type: 'SET_VISIT_STATUS', payload: status });
 
-      {isFinalizing && (
-        <FinalizeVisitScreen
-          state={state}
-          dispatch={dispatch}
-          onFinalize={handleFinalizeVisit}
-          onBack={() => dispatch({ type: 'SET_VISIT_STATUS', payload: 'Pending' })}
-        />
-      )}
-    </div>
-  );
+    if (status !== 'InProgress') {
+
+      onCompleteVisit(customer, status, state.notes);
+
+      onCloseToList();
+
+    }
+
+  };
+
+
+
+  const StepIndicator = () => (
+
+    <div className="flex items-center gap-2 mb-4">
+
+      {[1, 2, 3, 4].map(n => (
+
+        <div key={n} className={`h-2 rounded-full transition-colors ${state.currentStep >= n ? 'bg-[#0099CB]' : 'bg-gray-200'}`} style={{ width: 56 }} />
+
+      ))}
+
+    </div>
+
+  );
+
+
+
+  return (
+
+    <div className="p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
+
+      <div className="flex items-center justify-between mb-4">
+
+        <h1 className="text-2xl font-bold text-gray-900">Ziyaret: {customer.name}</h1>
+
+        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium">← Listeye Dön</button>
+
+      </div>
+
+
+
+      {state.visitStatus === 'Pending' && (
+
+        <VisitStatusSelection onSave={handleSaveVisitResult} notes={state.notes} setNotes={(notes) => dispatch({ type: 'SET_NOTES', payload: notes })} />
+
+      )}
+
+
+
+      {state.visitStatus === 'InProgress' && (
+
+        <>
+
+          <StepIndicator />
+
+          {state.currentStep === 1 && <CustomerInfoStep customer={customer} dispatch={dispatch} />}
+
+          {state.currentStep === 2 && <IdVerificationStep state={state} dispatch={dispatch} />}
+
+          {state.currentStep === 3 && <ContractStep state={state} dispatch={dispatch} customer={customer} />}
+
+          {state.currentStep === 4 && <CompletionStep customer={customer} dispatch={dispatch} onComplete={() => handleSaveVisitResult('Completed')} />}
+
+        </>
+
+      )}
+
+    </div>
+
+  );
+
 };
 
-/* ===================== Yardımcı Bileşenler ===================== */
 
-// --- Ziyaret Durumu Seçimi ---
-const VisitStatusSelection: React.FC<{ onSelect: (s: VisitStatus) => void; }> = ({ onSelect }) => {
-  const CardBtn: React.FC<{
-    onClick: () => void; tone: 'green' | 'red' | 'yellow' | 'blue' | 'gray';
-    title: string; desc: string; Icon: React.ComponentType<any>;
-  }> = ({ onClick, tone, title, desc, Icon }) => {
-    const tones: Record<string, string> = {
-      green: 'hover:bg-green-50 hover:border-green-400',
-      red: 'hover:bg-red-50 hover:border-red-400',
-      yellow: 'hover:bg-yellow-50 hover:border-yellow-400',
-      blue: 'hover:bg-blue-50 hover:border-blue-400',
-      gray: 'hover:bg-gray-50 hover:border-gray-400',
-    };
-    const iconColor: Record<string, string> = {
-      green: 'text-green-500', red: 'text-red-500', yellow: 'text-yellow-500', blue: 'text-blue-500', gray: 'text-gray-500'
-    };
-    return (
-      <button onClick={onClick} className={`p-4 border rounded-lg text-left transition-colors flex items-center gap-4 ${tones[tone]}`}>
-        <Icon className={`w-8 h-8 ${iconColor[tone]}`} />
-        <div>
-          <p className="font-semibold">{title}</p>
-          <p className="text-sm text-gray-600">{desc}</p>
-        </div>
-      </button>
-    );
-  };
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sonucunu Belirtin</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CardBtn onClick={() => onSelect('InProgress')} tone="green" title="Sözleşme Başlat"
-                 desc="Müşteri teklifi kabul etti, sürece başla." Icon={CheckCircle} />
-        <CardBtn onClick={() => onSelect('Rejected')} tone="red" title="Teklifi Reddetti"
-                 desc="Müşteri teklifi istemedi." Icon={XCircle} />
-        <CardBtn onClick={() => onSelect('Unreachable')} tone="yellow" title="Ulaşılamadı"
-                 desc="Müşteri adreste bulunamadı." Icon={UserX} />
-        <CardBtn onClick={() => onSelect('Postponed')} tone="blue" title="Ertelendi"
-                 desc="Müşteri daha sonra görüşmek istedi." Icon={Clock} />
-        <CardBtn onClick={() => onSelect('Evaluating')} tone="gray" title="Değerlendiriyor"
-                 desc="Müşteri düşünecek, dönüş yapacak." Icon={Hourglass} />
-      </div>
-    </div>
-  );
-};
+// ==================================================================
 
-// --- Finalize Ekranı (Reddetme/Ertleme/Değerlendirme) ---
-const FinalizeVisitScreen: React.FC<{
-  state: State;
-  dispatch: React.Dispatch<Action>;
-  onFinalize: () => void;
-  onBack: () => void;
-}> = ({ state, dispatch, onFinalize, onBack }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Notları</h3>
+// ==================== YARDIMCI BİLEŞENLER =========================
 
-      {state.visitStatus === 'Rejected' && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Reddetme Sebebi</label>
-          <select
-            value={state.rejectionReason ?? ''}
-            onChange={(e) => dispatch({ type: 'SET_REJECTION_REASON', payload: e.target.value || null })}
-            className="w-full p-2 border rounded-lg"
-          >
-            <option value="">Seçiniz…</option>
-            <option value="Fiyat yüksek">Fiyat yüksek</option>
-            <option value="Mevcut sağlayıcıdan memnun">Mevcut sağlayıcıdan memnun</option>
-            <option value="Yetkili değil">Görüşülen kişi yetkili değil</option>
-          </select>
-        </div>
-      )}
+// ==================================================================
 
-      {state.visitStatus === 'Postponed' && (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Randevu</label>
-          <input
-            type="date"
-            value={state.rescheduledDate ?? ''}
-            onChange={(e) => dispatch({ type: 'SET_RESCHEDULED_DATE', payload: e.target.value || null })}
-            className="w-full p-2 border rounded-lg"
-          />
-        </div>
-      )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notlar</label>
-        <textarea
-          rows={4}
-          value={state.notes}
-          onChange={(e) => dispatch({ type: 'SET_NOTES', payload: e.target.value })}
-          className="w-full p-2 border rounded-lg"
-          placeholder="Ziyaretle ilgili kısa notlar…"
-        />
-      </div>
 
-      <div className="flex justify-between">
-        <button onClick={onBack} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
-        <button onClick={onFinalize} className="px-6 py-2 rounded-lg bg-[#0099CB] text-white">Kaydet ve Bitir</button>
-      </div>
-    </div>
-  );
-};
+// --- ZİYARET DURUM SEÇİM EKRANI ---
 
-// --- Adım 1: Müşteri Bilgileri ---
-const CustomerInfoStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; notes: string }> = ({ customer, dispatch, notes }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-    <div className="flex items-center gap-3 mb-4">
-      <IdCard className="w-5 h-5 text-[#0099CB]" />
-      <h3 className="text-lg font-semibold">1. Müşteri Bilgileri Kontrolü</h3>
-    </div>
+const VisitStatusSelection: React.FC<{ onSave: (status: VisitStatus) => void; notes: string; setNotes: (notes: string) => void; }> = ({ onSave, notes, setNotes }) => (
 
-    <div className="grid md:grid-cols-2 gap-4">
-      <div><label className="text-sm text-gray-600">Ad Soyad</label><input defaultValue={customer.name} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
-      <div><label className="text-sm text-gray-600">Telefon</label><input defaultValue={customer.phone} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
-      <div className="md:col-span-2"><label className="text-sm text-gray-600">Adres</label><input defaultValue={`${customer.address}, ${customer.district}`} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
-    </div>
+  <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
 
-    <div className="mt-4">
-      <label className="block text-sm text-gray-600 mb-1">Ziyaret Notu (opsiyonel)</label>
-      <textarea
-        rows={3}
-        defaultValue={notes}
-        onChange={(e) => dispatch({ type: 'SET_NOTES', payload: e.target.value })}
-        className="w-full p-2 border rounded-lg"
-        placeholder="Örn: müşteri karar vericinin öğleden sonra geleceğini söyledi."
-      />
-    </div>
+    <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sonucunu Belirtin</h3>
 
-    <div className="mt-6 text-right">
-      <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
-        Bilgiler Doğru, Devam Et <ChevronRight className="w-4 h-4" />
-      </button>
-    </div>
-  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <button onClick={() => onSave('InProgress')} className="p-4 border rounded-lg text-left hover:bg-green-50 hover:border-green-400 transition-colors flex items-center gap-4">
+
+        <CheckCircle className="w-8 h-8 text-green-500" />
+
+        <div>
+
+          <p className="font-semibold text-green-800">Sözleşme Başlat</p>
+
+          <p className="text-sm text-gray-600">Müşteri teklifi kabul etti, sürece başla.</p>
+
+        </div>
+
+      </button>
+
+      <button onClick={() => onSave('Rejected')} className="p-4 border rounded-lg text-left hover:bg-red-50 hover:border-red-400 transition-colors flex items-center gap-4">
+
+        <XCircle className="w-8 h-8 text-red-500" />
+
+        <div>
+
+          <p className="font-semibold text-red-800">Teklifi Reddetti</p>
+
+          <p className="text-sm text-gray-600">Müşteri teklifi istemedi.</p>
+
+        </div>
+
+      </button>
+
+      <button onClick={() => onSave('Unreachable')} className="p-4 border rounded-lg text-left hover:bg-yellow-50 hover:border-yellow-400 transition-colors flex items-center gap-4">
+
+        <UserX className="w-8 h-8 text-yellow-500" />
+
+        <div>
+
+          <p className="font-semibold text-yellow-800">Ulaşılamadı</p>
+
+          <p className="text-sm text-gray-600">Müşteri adreste bulunamadı.</p>
+
+        </div>
+
+      </button>
+
+      <button onClick={() => onSave('Postponed')} className="p-4 border rounded-lg text-left hover:bg-blue-50 hover:border-blue-400 transition-colors flex items-center gap-4">
+
+        <Clock className="w-8 h-8 text-blue-500" />
+
+        <div>
+
+          <p className="font-semibold text-blue-800">Ertelendi</p>
+
+          <p className="text-sm text-gray-600">Müşteri daha sonra görüşmek istedi.</p>
+
+        </div>
+
+      </button>
+
+    </div>
+
+    <div className="mt-6">
+
+        <label htmlFor="visitNotes" className="block text-sm font-medium text-gray-700 mb-1">Ziyaret Notları (Reddetme/Erteleme Sebebi vb.)</label>
+
+        <textarea
+
+            id="visitNotes"
+
+            value={notes}
+
+            onChange={(e) => setNotes(e.target.value)}
+
+            rows={3}
+
+            className="w-full p-2 border rounded-lg"
+
+            placeholder="Örn: Müşteri mevcut sağlayıcısından memnun olduğunu belirtti."
+
+        />
+
+    </div>
+
+  </div>
+
 );
 
-// --- Adım 2: Kimlik Doğrulama (mock OCR + NFC) ---
+
+
+// --- ADIM 1: Müşteri Bilgileri ---
+
+const CustomerInfoStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action> }> = ({ customer, dispatch }) => (
+
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+
+      <div className="flex items-center gap-3 mb-4">
+
+        <IdCard className="w-5 h-5 text-[#0099CB]" />
+
+        <h3 className="text-lg font-semibold">1. Müşteri Bilgileri Kontrolü</h3>
+
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+
+        <div><label className="text-sm text-gray-600">Ad Soyad</label><input defaultValue={customer.name} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+
+        <div><label className="text-sm text-gray-600">Telefon</label><input defaultValue={customer.phone} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+
+        <div className="md:col-span-2"><label className="text-sm text-gray-600">Adres</label><input defaultValue={`${customer.address}, ${customer.district}`} className="w-full mt-1 p-2 border rounded-lg bg-gray-100" readOnly /></div>
+
+      </div>
+
+      <div className="mt-6 text-right">
+
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
+
+          Bilgiler Doğru, Devam Et <ChevronRight className="w-4 h-4" />
+
+        </button>
+
+      </div>
+
+    </div>
+
+);
+
+
+
+// --- ADIM 2: Kimlik Doğrulama ---
+
 const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Action> }> = ({ state, dispatch }) => {
-  const [isBypassChecked, setIsBypassChecked] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const startCamera = async () => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    setCameraError(null);
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      setStream(s);
-    } catch (err: any) {
-      setCameraError(`Kamera başlatılamadı: ${err.message}`);
-    }
-  };
+  const [isBypassChecked, setIsBypassChecked] = useState(false);
 
-  const stopCamera = () => {
-    if (stream) { stream.getTracks().forEach(t => t.stop()); setStream(null); }
-  };
+  
 
-  useEffect(() => {
-    const v = videoRef.current;
-    if (v && stream) {
-      v.srcObject = stream;
-      const p = v.play();
-      p?.catch(() => setCameraError("Kamera başlatıldı ancak video oynatılamadı."));
-    }
-    return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
-  }, [stream]);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const handleCaptureAndOcr = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    const photoDataUrl = canvas.toDataURL('image/jpeg');
-    dispatch({ type: 'SET_ID_PHOTO', payload: photoDataUrl });
-    dispatch({ type: 'SET_OCR_STATUS', payload: 'scanning' });
-    stopCamera();
-    setTimeout(() => {
-      if (Math.random() < 0.85) {
-        dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
-      } else {
-        dispatch({ type: 'SET_OCR_STATUS', payload: 'error' });
-        dispatch({ type: 'SET_ID_PHOTO', payload: null });
-      }
-    }, 2000);
-  };
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const handleNfcRead = () => {
-    dispatch({ type: 'SET_NFC_STATUS', payload: 'scanning' });
-    setTimeout(() => dispatch({ type: 'SET_NFC_STATUS', payload: 'success' }), 1500);
-  };
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const handleBypassToggle = (checked: boolean) => {
-    setIsBypassChecked(checked);
-    if (checked) {
-      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
-      dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
-      stopCamera();
-    } else {
-      dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' });
-      dispatch({ type: 'SET_NFC_STATUS', payload: 'idle' });
-    }
-  };
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
-  const isVerified = state.ocrStatus === 'success' && state.nfcStatus === 'success';
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <ScanLine className="w-5 h-5 text-[#0099CB]" />
-          <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
-        </div>
-        <label className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
-          <input type="checkbox" checked={isBypassChecked} onChange={(e) => handleBypassToggle(e.target.checked)} className="h-4 w-4" />
-          <span className="text-sm font-medium text-yellow-800">Test Modu</span>
-        </label>
-      </div>
 
-      {!isBypassChecked && (
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* OCR Section */}
-          <div className="border rounded-lg p-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2">
-              <Camera className="w-4 h-4" />
-              Kimlik Fotoğrafı
-            </h4>
-            
-            {state.ocrStatus === 'idle' && !state.idPhoto && (
-              <div className="space-y-3">
-                {!stream && (
-                  <button onClick={startCamera} className="w-full p-3 border-2 border-dashed rounded-lg text-center hover:bg-gray-50">
-                    <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm text-gray-600">Kamerayı Başlat</p>
-                  </button>
-                )}
-                {cameraError && <p className="text-red-600 text-sm">{cameraError}</p>}
-              </div>
-            )}
+  const startCamera = async () => {
 
-            {stream && (
-              <div className="space-y-3">
-                <div className="relative">
-                  <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg" />
-                  <button onClick={handleCaptureAndOcr} className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-[#0099CB] text-white p-3 rounded-full">
-                    <Camera className="w-6 h-6" />
-                  </button>
-                </div>
-                <button onClick={stopCamera} className="w-full p-2 text-gray-600 border rounded-lg">Kamerayı Kapat</button>
-              </div>
-            )}
+    if (stream) {
 
-            {state.ocrStatus === 'scanning' && (
-              <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#0099CB]" />
-                <p className="text-sm text-gray-600">Kimlik okunuyor...</p>
-              </div>
-            )}
+        stream.getTracks().forEach(track => track.stop());
 
-            {state.ocrStatus === 'success' && (
-              <div className="text-center py-4">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                <p className="text-sm text-green-600">Kimlik başarıyla okundu</p>
-              </div>
-            )}
+    }
 
-            {state.ocrStatus === 'error' && (
-              <div className="text-center py-4">
-                <XCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
-                <p className="text-sm text-red-600">Kimlik okunamadı, tekrar deneyin</p>
-                <button onClick={() => dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' })} className="mt-2 text-[#0099CB] text-sm">Tekrar Dene</button>
-              </div>
-            )}
-          </div>
+    setCameraError(null);
 
-          {/* NFC Section */}
-          <div className="border rounded-lg p-4">
-            <h4 className="font-medium mb-3 flex items-center gap-2">
-              <Nfc className="w-4 h-4" />
-              NFC Okuma
-            </h4>
-            
-            {state.nfcStatus === 'idle' && (
-              <button onClick={handleNfcRead} className="w-full p-6 border-2 border-dashed rounded-lg text-center hover:bg-gray-50">
-                <Nfc className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm text-gray-600">Kimliği NFC ile okut</p>
-              </button>
-            )}
+    try {
 
-            {state.nfcStatus === 'scanning' && (
-              <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#0099CB]" />
-                <p className="text-sm text-gray-600">NFC okunuyor...</p>
-              </div>
-            )}
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
 
-            {state.nfcStatus === 'success' && (
-              <div className="text-center py-4">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
-                <p className="text-sm text-green-600">NFC başarıyla okundu</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      setStream(s);
 
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    } catch (err: any) {
 
-      <div className="mt-6 flex justify-between">
-        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 border rounded-lg">Geri</button>
-        <button 
-          onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} 
-          disabled={!isVerified}
-          className={`px-6 py-2 rounded-lg ${isVerified ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-        >
-          Devam Et
-        </button>
-      </div>
-    </div>
-  );
+      setCameraError(`Kamera başlatılamadı: ${err.message}`);
+
+    }
+
+  };
+
+  
+
+  const stopCamera = () => {
+
+    if (stream) {
+
+        stream.getTracks().forEach(track => track.stop());
+
+        setStream(null);
+
+    }
+
+  };
+
+
+
+  useEffect(() => {
+
+    const videoElement = videoRef.current;
+
+    if (videoElement && stream) {
+
+      videoElement.srcObject = stream;
+
+      const playPromise = videoElement.play();
+
+      if (playPromise !== undefined) {
+
+        playPromise.catch(error => {
+
+          console.error("Video oynatma hatası:", error);
+
+          setCameraError("Kamera başlatıldı ancak video otomatik oynatılamadı.");
+
+        });
+
+      }
+
+    }
+
+    return () => {
+
+      if (stream) {
+
+        stream.getTracks().forEach(track => track.stop());
+
+      }
+
+    };
+
+  }, [stream]);
+
+
+
+  const handleCaptureAndOcr = () => {
+
+    const video = videoRef.current;
+
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) return;
+
+    canvas.width = video.videoWidth;
+
+    canvas.height = video.videoHeight;
+
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+
+    const photoDataUrl = canvas.toDataURL('image/jpeg');
+
+    dispatch({ type: 'SET_ID_PHOTO', payload: photoDataUrl });
+
+    dispatch({ type: 'SET_OCR_STATUS', payload: 'scanning' });
+
+    stopCamera(); 
+
+    setTimeout(() => {
+
+      if (Math.random() < 0.8) {
+
+        dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+
+      } else {
+
+        dispatch({ type: 'SET_OCR_STATUS', payload: 'error' });
+
+        dispatch({ type: 'SET_ID_PHOTO', payload: null });
+
+      }
+
+    }, 2500);
+
+  };
+
+
+
+  const handleNfcRead = () => {
+
+    dispatch({ type: 'SET_NFC_STATUS', payload: 'scanning' });
+
+    setTimeout(() => {
+
+        dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
+
+    }, 2000);
+
+  };
+
+  
+
+  const handleBypassToggle = (isChecked: boolean) => {
+
+    setIsBypassChecked(isChecked);
+
+    if (isChecked) {
+
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+
+      dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
+
+      stopCamera();
+
+    } else {
+
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' });
+
+      dispatch({ type: 'SET_NFC_STATUS', payload: 'idle' });
+
+    }
+
+  };
+
+
+
+  const isVerified = state.ocrStatus === 'success' && state.nfcStatus === 'success';
+
+
+
+  return (
+
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+
+        <div className="flex items-center justify-between gap-3 mb-4">
+
+            <div className="flex items-center gap-3">
+
+              <ScanLine className="w-5 h-5 text-[#0099CB]" />
+
+              <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
+
+            </div>
+
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
+
+                <input
+
+                    type="checkbox"
+
+                    id="bypass-verification"
+
+                    checked={isBypassChecked}
+
+                    onChange={(e) => handleBypassToggle(e.target.checked)}
+
+                    className="h-4 w-4 rounded text-[#0099CB] focus:ring-[#0099CB]"
+
+                />
+
+                <label htmlFor="bypass-verification" className="text-sm font-medium text-yellow-800">[TEST] Doğrulamayı Atla</label>
+
+            </div>
+
+        </div>
+
+        
+
+        <fieldset disabled={isBypassChecked}>
+
+          <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity ${isBypassChecked ? 'opacity-40' : 'opacity-100'}`}>
+
+              <div>
+
+                  <p className="text-sm font-medium text-gray-700 mb-2">Kimlik Fotoğrafı</p>
+
+                  <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+
+                      <video 
+
+                          ref={videoRef} 
+
+                          className={`w-full h-full object-cover ${!stream ? 'hidden' : ''}`} 
+
+                          autoPlay 
+
+                          muted 
+
+                          playsInline 
+
+                      />
+
+                      {stream && <div className="absolute inset-0 border-[3px] border-dashed border-white/70 m-4 rounded-xl pointer-events-none" />}
+
+                      {!stream && state.idPhoto && <img src={state.idPhoto} alt="Çekilen Kimlik" className="w-full h-full object-contain" />}
+
+                      {!stream && !state.idPhoto && <div className="text-gray-400 p-4 text-center">Kamera kapalı veya izin bekleniyor.</div>}
+
+                      <canvas ref={canvasRef} className="hidden" />
+
+                  </div>
+
+                  {cameraError && <p className="text-red-600 text-sm mt-2">{cameraError}</p>}
+
+                  
+
+                  <div className="mt-4">
+
+                      {state.ocrStatus === 'idle' && (
+
+                          <button onClick={stream ? handleCaptureAndOcr : startCamera} className="w-full bg-[#0099CB] text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2">
+
+                              <Camera className="w-4 h-4" /> {stream ? 'Fotoğraf Çek ve Doğrula' : 'Kamerayı Başlat'}
+
+                          </button>
+
+                      )}
+
+                      {state.ocrStatus === 'scanning' && <div className="text-center p-2"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#0099CB]" /> <p>Kimlik okunuyor...</p></div>}
+
+                      {state.ocrStatus === 'success' && <div className="text-center p-2 text-green-600 font-semibold flex items-center justify-center gap-2"><CheckCircle className="w-5 h-5"/> Kimlik başarıyla okundu.</div>}
+
+                      {state.ocrStatus === 'error' && (
+
+                          <div className="text-center p-2 text-red-600">
+
+                              <p className="font-semibold">Kimlik okunamadı!</p>
+
+                              <p className="text-sm">Lütfen daha aydınlık bir ortamda, yansıma olmadan tekrar deneyin.</p>
+
+                              <button onClick={() => dispatch({type: 'SET_OCR_STATUS', payload: 'idle'})} className="mt-2 text-sm bg-gray-200 px-3 py-1 rounded">Tekrar Dene</button>
+
+                          </div>
+
+                      )}
+
+                  </div>
+
+              </div>
+
+              <div className={`transition-opacity duration-500 ${state.ocrStatus === 'success' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+
+                   <p className="text-sm font-medium text-gray-700 mb-2">Çipli Kimlik (NFC) Onayı</p>
+
+                   <div className="p-4 border rounded-lg h-full flex flex-col justify-center items-center">
+
+                      {state.nfcStatus === 'idle' && <button onClick={handleNfcRead} className="bg-[#F9C800] text-gray-900 px-4 py-2 rounded-lg flex items-center gap-2"><Nfc className="w-5 h-5" /> NFC ile Oku</button>}
+
+                      {state.nfcStatus === 'scanning' && <div className="text-center p-2"><Loader2 className="w-6 h-6 animate-spin mx-auto text-[#F9C800]" /> <p>Telefonu kimliğe yaklaştırın...</p></div>}
+
+                      {state.nfcStatus === 'success' && <div className="text-center p-2 text-green-600 font-semibold flex items-center justify-center gap-2"><ShieldCheck className="w-5 h-5"/> NFC onayı başarılı.</div>}
+
+                      {state.nfcStatus === 'error' && <p className="text-red-600">NFC okunamadı.</p>}
+
+                      <p className="text-xs text-gray-500 mt-2 text-center">Bu adım, kimlikteki çipten bilgileri alarak güvenliği artırır.</p>
+
+                   </div>
+
+              </div>
+
+          </div>
+
+        </fieldset>
+
+        <div className="mt-6 flex justify-between">
+
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} disabled={!isVerified} className={`px-6 py-3 rounded-lg text-white ${isVerified ? 'bg-[#0099CB]' : 'bg-gray-300'}`}>
+
+              Devam Et
+
+            </button>
+
+        </div>
+
+    </div>
+
+  );
+
 };
 
-// --- Adım 3: Sözleşme ---
-const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-    <div className="flex items-center gap-3 mb-4">
-      <FileText className="w-5 h-5 text-[#0099CB]" />
-      <h3 className="text-lg font-semibold">3. Sözleşme İmzalama</h3>
-    </div>
 
-    <div className="bg-gray-50 p-4 rounded-lg mb-4">
-      <h4 className="font-medium mb-2">Sözleşme Özeti</h4>
-      <div className="text-sm text-gray-600 space-y-1">
-        <p>Müşteri: {customer.name}</p>
-        <p>Abone Tipi: {customer.subscriberType}</p>
-        <p>Aylık Ortalama Tüketim: {customer.avgMonthlyConsumptionKwh} kWh</p>
-        <p>Mevcut Birim Fiyat: {customer.currentKwhPrice} TL/kWh</p>
-      </div>
-    </div>
 
-    <div className="border rounded-lg p-4 mb-4">
-      <label className="flex items-start gap-3">
-        <input 
-          type="checkbox" 
-          checked={state.contractAccepted}
-          onChange={(e) => dispatch({ type: 'SET_CONTRACT_ACCEPTED', payload: e.target.checked })}
-          className="mt-1 h-4 w-4"
-        />
-        <div className="text-sm">
-          <p className="font-medium">Sözleşme Onayı</p>
-          <p className="text-gray-600">Müşteri sözleşme şartlarını okudu ve kabul etti.</p>
-        </div>
-      </label>
-    </div>
+// --- ADIM 3: Sözleşme ve İmza ---
 
-    <div className="mt-6 flex justify-between">
-      <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 border rounded-lg">Geri</button>
-      <button 
-        onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })} 
-        disabled={!state.contractAccepted}
-        className={`px-6 py-2 rounded-lg ${state.contractAccepted ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-      >
-        Devam Et
-      </button>
-    </div>
-  </div>
+const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
+
+ const [flowSmsPhone, setFlowSmsPhone] = useState(() => customer?.phone ?? "");
+
+  const [sigOpen, setSigOpen] = useState(false);
+
+  const [contractOpen, setContractOpen] = useState(false);
+
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null); // ⬅️ imza
+
+
+
+  const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl;
+
+
+
+  return (
+
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+
+      <div className="flex items-center gap-3 mb-4">
+
+        <FileText className="w-5 h-5 text-[#0099CB]" />
+
+        <h3 className="text-lg font-semibold">3. Sözleşme Onayı</h3>
+
+      </div>
+
+
+
+      <div className="grid md:grid-cols-2 gap-6">
+
+        {/* Sol: sözleşme önizleme */}
+
+        <div>
+
+          <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
+
+
+
+          <button
+
+            type="button"
+
+            onClick={() => setContractOpen(true)}
+
+            className="w-full h-64 border rounded-lg bg-white overflow-hidden relative text-left"
+
+            aria-label="Sözleşmeyi görüntüle"
+
+          >
+
+            <ContractMockPage
+
+              customer={customer}
+
+              signatureDataUrl={signatureDataUrl}  // ⬅️ imza slotuna geçer
+
+              scale="preview"
+
+            />
+
+            <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
+
+  <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
+
+  <div className="h-8 w-8 rounded-full bg-[#F9C800] text-gray-900 shadow ring-1 ring-black/10 flex items-center justify-center">
+
+    <Maximize2 className="h-4 w-4" />
+
+  </div>
+
+  <div className="mt-1 text-[10px] px-1.5 py-0.5 bg-[#F9C800] text-gray-900 rounded shadow ring-1 ring-black/10">
+
+
+
+  </div>
+
+</div>
+
+
+
+</div>
+
+          </button>
+
+
+
+          <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
+
+            <input
+
+              type="checkbox"
+
+              checked={state.contractAccepted}
+
+              onChange={(e) => dispatch({ type: "SET_CONTRACT_ACCEPTED", payload: e.target.checked })}
+
+            />
+
+            Sözleşme koşullarını okudum ve onaylıyorum.
+
+          </label>
+
+        </div>
+
+
+
+        {/* Sağ: imza + SMS */}
+
+        <div>
+
+          <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
+
+
+
+          <div className="border rounded-lg p-2 bg-gray-50">
+
+            {signatureDataUrl ? (
+
+              <div className="flex items-center gap-3">
+
+                <img src={signatureDataUrl} alt="İmza" className="h-[120px] w-auto bg-white rounded border" />
+
+                <div className="flex flex-col gap-2">
+
+                  <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg border bg-white text-sm">İmzayı Düzenle</button>
+
+                  <button onClick={() => setSignatureDataUrl(null)} className="px-3 py-2 rounded-lg border bg-white text-sm">Temizle</button>
+
+                </div>
+
+              </div>
+
+            ) : (
+
+              <div className="flex items-center justify-between gap-3">
+
+                <div className="text-sm text-gray-500">Henüz imza yok.</div>
+
+                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm"> İmza Al    </button>
+
+              </div>
+
+            )}
+
+          </div>
+
+
+
+          <div className="mt-4">
+
+            <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
+
+            <div className="flex gap-2">
+
+              <input
+
+                value={flowSmsPhone}
+
+                onChange={(e) => setFlowSmsPhone(e.target.value)}
+
+                className="flex-1 p-2 border rounded-lg"
+
+                placeholder="5XX XXX XX XX"
+
+              />
+
+              <button onClick={() => dispatch({ type: "SET_SMS_SENT", payload: true })} className="px-4 py-2 bg-[#F9C800] rounded-lg">
+
+                SMS Gönder
+
+              </button>
+
+            </div>
+
+            {state.smsSent && (
+
+              <div className="mt-2 flex items-center gap-2 text-green-700 text-sm">
+
+                <ShieldCheck className="w-4 h-4" /> Onay SMS'i gönderildi.
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <div className="mt-6 flex justify-between">
+
+        <button onClick={() => dispatch({ type: "SET_STEP", payload: 2 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+
+        <button
+
+          onClick={() => dispatch({ type: "SET_STEP", payload: 4 })}
+
+          disabled={!canContinue}
+
+          className={`px-6 py-3 rounded-lg text-white ${canContinue ? "bg-[#0099CB]" : "bg-gray-300"}`}
+
+        >
+
+          Sözleşmeyi Onayla ve Bitir
+
+        </button>
+
+      </div>
+
+
+
+      {/* Modallar */}
+
+      {sigOpen && (
+
+        <SignaturePadModal
+
+          onClose={() => setSigOpen(false)}
+
+          onSave={(dataUrl) => { setSignatureDataUrl(dataUrl); setSigOpen(false); }} // ⬅️ sözleşme slotu dolar
+
+        />
+
+      )}
+
+      {contractOpen && (
+
+        <ContractModal
+
+          customer={customer}
+
+          signatureDataUrl={signatureDataUrl}
+
+          onClose={() => setContractOpen(false)}
+
+        />
+
+      )}
+
+    </div>
+
+  );
+
+};
+
+
+
+
+
+// --- ADIM 4: Tamamlama ---
+
+const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void; }> = ({ customer, dispatch, onComplete }) => (
+
+    <div className="bg-white rounded-xl shadow-sm p-6 text-center animate-fade-in">
+
+        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+
+        <h3 className="text-2xl font-semibold">Sözleşme Tamamlandı!</h3>
+
+        <p className="text-gray-600 mt-2">Müşteri {customer.name} için elektrik satış sözleşmesi başarıyla oluşturulmuştur.</p>
+
+        <div className="mt-6 flex justify-center gap-4">
+
+            <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 rounded-lg bg-white border">Geri</button>
+
+            <button onClick={onComplete} className="px-8 py-3 rounded-lg bg-green-600 text-white font-semibold">
+
+              Ziyareti Kaydet
+
+            </button>
+
+        </div>
+
+    </div>
+
 );
 
-// --- Adım 4: Tamamlama ---
-const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void }> = ({ customer, dispatch, onComplete }) => {
-  const [isSending, setIsSending] = useState(false);
+// ---- Tam ekran imza modalı (scroll lock + pointer events) ----
 
-  const handleSendSms = async () => {
-    setIsSending(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    dispatch({ type: 'SET_SMS_SENT', payload: true });
-    setIsSending(false);
-  };
+const SignaturePadModal: React.FC<{
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-4">
-        <Sparkles className="w-5 h-5 text-[#0099CB]" />
-        <h3 className="text-lg font-semibold">4. Ziyaret Tamamlama</h3>
-      </div>
+  onClose: () => void;
 
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-        <div className="flex items-center gap-2 mb-2">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <h4 className="font-medium text-green-800">Sözleşme Başarıyla Tamamlandı!</h4>
-        </div>
-        <p className="text-sm text-green-700">
-          {customer.name} için sözleşme süreci başarıyla tamamlandı. 
-          Müşteriye onay SMS'i gönderebilirsiniz.
-        </p>
-      </div>
+  onSave: (dataUrl: string) => void;
 
-      <div className="border rounded-lg p-4 mb-4">
-        <h4 className="font-medium mb-2 flex items-center gap-2">
-          <Smartphone className="w-4 h-4" />
-          SMS Gönderimi
-        </h4>
-        <p className="text-sm text-gray-600 mb-3">
-          Müşteriye sözleşme onay SMS'i gönderilsin mi?
-        </p>
-        <button 
-          onClick={handleSendSms}
-          disabled={isSending}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
-        >
-          {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-          {isSending ? 'Gönderiliyor...' : 'SMS Gönder'}
-        </button>
-      </div>
+}> = ({ onClose, onSave }) => {
 
-      <div className="mt-6 flex justify-between">
-        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 border rounded-lg">Geri</button>
-        <button onClick={onComplete} className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
-          Ziyareti Tamamla
-        </button>
-      </div>
-    </div>
-  );
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+
+
+  // Body scroll kilitle
+
+  useEffect(() => {
+
+    const scrollY = window.scrollY;
+
+    const { style } = document.body;
+
+    const htmlStyle = document.documentElement.style;
+
+    const prev = {
+
+      overflow: style.overflow,
+
+      position: style.position,
+
+      top: style.top,
+
+      width: style.width,
+
+      overscroll: htmlStyle.overscrollBehaviorY,
+
+    };
+
+
+
+    style.overflow = "hidden";
+
+    style.position = "fixed";
+
+    style.top = `-${scrollY}px`;
+
+    style.width = "100%";
+
+    htmlStyle.overscrollBehaviorY = "contain"; // rubber-band engelle
+
+
+
+    return () => {
+
+      style.overflow = prev.overflow;
+
+      style.position = prev.position;
+
+      style.top = prev.top;
+
+      style.width = prev.width;
+
+      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
+
+      window.scrollTo(0, scrollY);
+
+    };
+
+  }, []);
+
+
+
+  // Canvas boyutlandırma (retina netliği)
+
+  const fitCanvas = () => {
+
+    const canvas = canvasRef.current;
+
+    if (!canvas) return;
+
+    const dpr = Math.max(window.devicePixelRatio || 1, 1);
+
+    const rect = canvas.getBoundingClientRect();
+
+    canvas.width = Math.floor(rect.width * dpr);
+
+    canvas.height = Math.floor(rect.height * dpr);
+
+    const ctx = canvas.getContext("2d");
+
+    if (ctx) {
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // beyaz arkaplan
+
+      ctx.fillStyle = "#fff";
+
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+    }
+
+  };
+
+
+
+  useEffect(() => {
+
+    fitCanvas();
+
+    const onResize = () => fitCanvas();
+
+    window.addEventListener("resize", onResize);
+
+    return () => window.removeEventListener("resize", onResize);
+
+  }, []);
+
+
+
+  // Çizim (Pointer Events + touch-action none)
+
+  useEffect(() => {
+
+    const canvas = canvasRef.current;
+
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) return;
+
+
+
+    canvas.style.touchAction = "none"; // kritik: sayfa scroll'unu kapatır (modaldaki canvas için)
+
+
+
+    let drawing = false;
+
+
+
+    const getPos = (e: PointerEvent) => {
+
+      const rect = canvas.getBoundingClientRect();
+
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+    };
+
+
+
+    const down = (e: PointerEvent) => {
+
+      drawing = true;
+
+      canvas.setPointerCapture(e.pointerId);
+
+      const { x, y } = getPos(e);
+
+      ctx.beginPath();
+
+      ctx.moveTo(x, y);
+
+    };
+
+
+
+    const move = (e: PointerEvent) => {
+
+      if (!drawing) return;
+
+      const { x, y } = getPos(e);
+
+      ctx.lineTo(x, y);
+
+      ctx.strokeStyle = "#111";
+
+      ctx.lineWidth = 2;
+
+      ctx.lineCap = "round";
+
+      ctx.stroke();
+
+    };
+
+
+
+    const up = (e: PointerEvent) => {
+
+      drawing = false;
+
+      try { canvas.releasePointerCapture(e.pointerId); } catch {}
+
+    };
+
+
+
+    canvas.addEventListener("pointerdown", down);
+
+    canvas.addEventListener("pointermove", move);
+
+    window.addEventListener("pointerup", up);
+
+
+
+    return () => {
+
+      canvas.removeEventListener("pointerdown", down);
+
+      canvas.removeEventListener("pointermove", move);
+
+      window.removeEventListener("pointerup", up);
+
+    };
+
+  }, []);
+
+
+
+  const handleClear = () => {
+
+    const canvas = canvasRef.current;
+
+    const ctx = canvas?.getContext("2d");
+
+    if (!canvas || !ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+
+    ctx.clearRect(0, 0, rect.width, rect.height);
+
+    // beyaz arkaplanı koru
+
+    ctx.fillStyle = "#fff";
+
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+  };
+
+
+
+  const handleSave = () => {
+
+    const canvas = canvasRef.current;
+
+    if (!canvas) return;
+
+    onSave(canvas.toDataURL("image/png")); // backend'e PNG veri URL’i hazır
+
+  };
+
+
+
+  return (
+
+    <div
+
+      role="dialog"
+
+      aria-modal="true"
+
+      className="fixed inset-0 z-[10050] flex flex-col bg-black/50"
+
+    >
+
+      {/* Üst çubuk */}
+
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
+
+        <div className="font-semibold text-gray-900">İmza</div>
+
+        <div className="flex gap-2">
+
+          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm">Temizle</button>
+
+          <button onClick={handleSave} className="px-3 py-1.5 rounded bg-[#0099CB] text-white text-sm">Kaydet</button>
+
+          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button>
+
+        </div>
+
+      </div>
+
+
+
+      {/* Canvas alanı */}
+
+      <div className="flex-1 bg-white">
+
+        <div className="h-full w-full">
+
+          <canvas ref={canvasRef} className="h-[calc(100vh-56px)] w-full block" />
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
 };
+
+
+
+// ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
+
+// ---- Tek sayfa mock sözleşme sayfası (imza slotlu) ----
+
+const ContractMockPage: React.FC<{
+
+  customer: Customer;
+
+  signatureDataUrl: string | null;
+
+  scale: "preview" | "full";
+
+}> = ({ customer, signatureDataUrl, scale }) => {
+
+  // Tipografi ölçekleri
+
+  const base =
+
+    scale === "full"
+
+      ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
+
+      : { pad: "p-3", title: "text-base", body: "text-[10.5px]", small: "text-[9.5px]" };
+
+
+
+  // Boyutlar: preview daha küçük
+
+  const sigH = scale === "full" ? 100 : 44; // imza kutusu yüksekliği (px)
+
+  const imgMaxH = Math.floor(sigH * 0.8);  // imza görseli max yükseklik
+
+
+
+  // Null-güvenli alanlar
+
+  const cName     = customer?.name     ?? "—";
+
+  const cAddress  = customer?.address  ?? "—";
+
+  const cDistrict = customer?.district ?? "—";
+
+  const cPhone    = customer?.phone    ?? "—";
+
+
+
+  return (
+
+    <div className={`relative h-full w-full ${base.pad} bg-white`}>
+
+      {/* Başlık */}
+
+      <div className="text-center mb-2">
+
+        <div className={`font-semibold ${base.title} text-gray-900`}>ELEKTRİK SATIŞ SÖZLEŞMESİ</div>
+
+        <div className={`${base.small} text-gray-500`}>Mock • Tek Sayfa</div>
+
+      </div>
+
+
+
+      {/* İçerik */}
+
+      <div className={`space-y-2 ${base.body} text-gray-800`}>
+
+        <p>
+
+          İşbu sözleşme; <strong>{cName}</strong> ({cAddress}, {cDistrict}) ile
+
+          Enerjisa Satış A.Ş. arasında, elektrik tedariki kapsamındaki hak ve yükümlülükleri belirlemek üzere{" "}
+
+          {new Date().toLocaleDateString()} tarihinde akdedilmiştir.
+
+        </p>
+
+        <ol className="list-decimal ml-5 space-y-1">
+
+          <li>Teslim noktasında ölçüm değerleri esas alınır.</li>
+
+          <li>Faturalandırma aylık dönemler itibarıyla yapılır.</li>
+
+          <li>Ödeme süresi fatura tebliğinden itibaren 10 gündür.</li>
+
+          <li>Cayma süresi imzadan itibaren 14 gündür.</li>
+
+          <li>Kişisel veriler 6698 sayılı KVKK kapsamında işlenir.</li>
+
+        </ol>
+
+
+
+        <div className="grid grid-cols-2 gap-4 mt-3">
+
+          <div className="border rounded p-2">
+
+            <div className="font-medium mb-1">Müşteri</div>
+
+            <div className={base.small}>Ad Soyad / Ünvan: {cName}</div>
+
+            <div className={base.small}>Adres: {cAddress}, {cDistrict}</div>
+
+            <div className={base.small}>Telefon: {cPhone}</div>
+
+          </div>
+
+          <div className="border rounded p-2">
+
+            <div className="font-medium mb-1">Tedarikçi</div>
+
+            <div className={base.small}>Enerjisa Satış A.Ş.</div>
+
+            <div className={base.small}>Mersis: 000000000000000</div>
+
+            <div className={base.small}>Adres: İstanbul, TR</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      {/* İmzalar — AKIŞ İÇİ (absolute DEĞİL) */}
+
+      <div className="mt-6 pt-4 border-t">
+
+        <div className="grid grid-cols-2 gap-4">
+
+          {/* Müşteri imzası */}
+
+          <div className="flex flex-col">
+
+            <div
+
+              className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center"
+
+              style={{ height: sigH }}
+
+            >
+
+              {signatureDataUrl ? (
+
+                <img
+
+                  src={signatureDataUrl}
+
+                  alt="Müşteri İmzası"
+
+                  style={{ maxHeight: imgMaxH, maxWidth: "90%" }}
+
+                  className="object-contain"
+
+                />
+
+              ) : (
+
+                <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
+
+              )}
+
+            </div>
+
+            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Müşteri İmzası</div>
+
+          </div>
+
+
+
+          {/* Tedarikçi imzası */}
+
+          <div className="flex flex-col">
+
+            <div
+
+              className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center"
+
+              style={{ height: sigH }}
+
+            >
+
+              <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
+
+            </div>
+
+            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Tedarikçi İmzası</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+};
+
+
+
+// ---- Tam ekran sözleşme modalı ----
+
+const ContractModal: React.FC<{
+
+  customer: Customer;
+
+  signatureDataUrl: string | null;
+
+  onClose: () => void;
+
+}> = ({ customer, signatureDataUrl, onClose }) => {
+
+  // Modal açıkken body scroll kilidi
+
+  useEffect(() => {
+
+    const scrollY = window.scrollY;
+
+    const { style } = document.body;
+
+    const htmlStyle = document.documentElement.style;
+
+    const prev = {
+
+      overflow: style.overflow,
+
+      position: style.position,
+
+      top: style.top,
+
+      width: style.width,
+
+      overscroll: htmlStyle.overscrollBehaviorY as string | undefined,
+
+    };
+
+    style.overflow = "hidden";
+
+    style.position = "fixed";
+
+    style.top = `-${scrollY}px`;
+
+    style.width = "100%";
+
+    htmlStyle.overscrollBehaviorY = "contain";
+
+    return () => {
+
+      style.overflow = prev.overflow;
+
+      style.position = prev.position;
+
+      style.top = prev.top;
+
+      style.width = prev.width;
+
+      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
+
+      window.scrollTo(0, scrollY);
+
+    };
+
+  }, []);
+
+
+
+  return (
+
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
+
+      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
+
+        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
+
+        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
+
+          Kapat
+
+        </button>
+
+      </div>
+
+
+
+      {/* A4 oranına yakın gövde */}
+
+      <div className="flex-1 bg-gray-100 overflow-auto">
+
+        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
+
+          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
+
+        </div>
+
+      </div>
+
+    </div>
+
+  );
+
+};
+
+
+
+
+
+
 
 export default VisitFlowScreen;
