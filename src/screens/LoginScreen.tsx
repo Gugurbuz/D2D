@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { signIn, signUp, isSupabaseConfigured } from '../lib/supabase';
+import React, { useState } from 'react';
+import { signIn, isSupabaseConfigured } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-type Props = { 
-  onLogin: (isDemoMode?: boolean) => void; 
+type Props = {
+  onLogin: (isDemoMode?: boolean) => void;
 };
 
 const LoginScreen: React.FC<Props> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'sales_rep' | 'manager'>('sales_rep');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -23,41 +19,26 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
-    // Timeout protection - if signIn takes too long, reset loading state
+
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
-    }, 10000); // 10 saniye timeout
-    
+    }, 10000);
+
     try {
       const { error } = await signIn('test@enerjisa.com', 'test123');
-      clearTimeout(timeoutId); // Clear timeout if request completes
-      
+      clearTimeout(timeoutId);
+
       if (error) {
-        // If user doesn't exist, try to create it
-        if (error.message.includes('Invalid login credentials')) {
-          setError('Test kullanıcısı bulunamadı. Kayıt ol sekmesinden test kullanıcısını oluşturun.');
-          // Auto switch to signup mode
-          setIsLogin(false);
-          setName('Test Kullanıcısı');
-          setPhone('0555 123 45 67');
-          setRole('sales_rep');
-        } else {
-          setError(`Giriş hatası: ${error.message}`);
-        }
+        setError(`Giriş hatası: ${error.message}`);
         return;
       }
+
       setSuccess('Giriş başarılı!');
       setTimeout(() => onLogin(), 500);
     } catch (err: any) {
-      clearTimeout(timeoutId); // Clear timeout on error
+      clearTimeout(timeoutId);
       setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
-      // If Supabase is not configured, still allow demo access
-      if (!isSupabaseConfigured) {
-        setTimeout(() => onLogin(), 1000);
-      }
-      // If Supabase is not configured, still allow demo access
       if (!isSupabaseConfigured) {
         setTimeout(() => onLogin(), 1000);
       }
@@ -69,11 +50,6 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isSupabaseConfigured) {
-      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
-      return;
-    }
 
     if (!isSupabaseConfigured) {
       setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
@@ -83,46 +59,26 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
-    // Timeout protection for form submission too
+
     const timeoutId = setTimeout(() => {
       setLoading(false);
       setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
     }, 10000);
 
     try {
-      if (isLogin) {
-        const { error } = await signIn(email, password);
-        clearTimeout(timeoutId);
-        
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
-          } else {
-            setError(error.message);
-          }
-          return;
-        }
-        setSuccess('Giriş başarılı!');
-      } else {
-        const { error } = await signUp(email, password, { name, phone, role });
-        clearTimeout(timeoutId);
-        
-        if (error) {
-          if (error.message.includes('User already registered')) {
-            setError('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
-            setIsLogin(true); // Auto switch to login mode
-            return;
-          }
-          if (error.message.includes('Password should be at least')) {
-            setError('Şifre en az 6 karakter olmalıdır.');
-            return;
-          }
+      const { error } = await signIn(email, password);
+      clearTimeout(timeoutId);
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+        } else {
           setError(error.message);
-          return;
         }
-        setSuccess('Kayıt başarılı! Giriş yapılıyor...');
+        return;
       }
+
+      setSuccess('Giriş başarılı!');
       setTimeout(() => onLogin(), 1000);
     } catch (err: any) {
       clearTimeout(timeoutId);
@@ -137,9 +93,9 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
-            <img 
-              src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp" 
-              alt="Enerjisa Logo" 
+            <img
+              src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp"
+              alt="Enerjisa Logo"
               className="max-w-full max-h-full object-contain"
             />
           </div>
@@ -147,67 +103,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           <p className="text-gray-600">D2D Satış Uygulaması</p>
         </div>
 
-        <div className="mb-6">
-          <div className="flex rounded-lg border border-gray-300 p-1">
-            <button
-              type="button"
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                isLogin ? 'bg-[#0099CB] text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Giriş Yap
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                !isLogin ? 'bg-[#0099CB] text-white' : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Kayıt Ol
-            </button>
-          </div>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ad Soyad</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
-                  placeholder="Adınızı ve soyadınızı girin"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
-                  placeholder="Telefon numaranızı girin"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as 'sales_rep' | 'manager')}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
-                >
-                  <option value="sales_rep">Satış Temsilcisi</option>
-                  <option value="manager">Saha Yöneticisi</option>
-                </select>
-              </div>
-            </>
-          )}
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
             <input
@@ -219,7 +115,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               required
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
             <input
@@ -251,7 +147,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
             className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+            {loading ? 'İşleniyor...' : 'Giriş Yap'}
           </button>
 
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -264,7 +160,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Hızlı Test Girişi
             </button>
-            
+
             <button
               type="button"
               onClick={() => onLogin(true)}
