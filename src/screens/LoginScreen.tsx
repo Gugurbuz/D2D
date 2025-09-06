@@ -24,8 +24,16 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     setError(null);
     setSuccess(null);
     
+    // Timeout protection - if signIn takes too long, reset loading state
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000); // 10 saniye timeout
+    
     try {
       const { error } = await signIn('test@enerjisa.com', 'test123');
+      clearTimeout(timeoutId); // Clear timeout if request completes
+      
       if (error) {
         setError(`Giriş hatası: ${error.message}`);
         return;
@@ -33,6 +41,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       setSuccess('Giriş başarılı!');
       setTimeout(() => onLogin(), 500);
     } catch (err: any) {
+      clearTimeout(timeoutId); // Clear timeout on error
       setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
       // If Supabase is not configured, still allow demo access
       if (!isSupabaseConfigured) {
@@ -54,10 +63,19 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    
+    // Timeout protection for form submission too
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
 
     try {
       if (isLogin) {
         const { error } = await signIn(email, password);
+        clearTimeout(timeoutId);
+        
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
             throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
@@ -66,6 +84,8 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         }
       } else {
         const { error } = await signUp(email, password, { name, phone, role });
+        clearTimeout(timeoutId);
+        
         if (error) {
           if (error.message.includes('User already registered')) {
             setError('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
@@ -81,6 +101,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       }
       onLogin();
     } catch (err: any) {
+      clearTimeout(timeoutId);
       setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
