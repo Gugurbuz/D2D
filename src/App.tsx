@@ -1,243 +1,287 @@
-// src/App.tsx (Tam ve Düzeltilmiş Versiyon)
-
-
-
 import React, { useState, useEffect } from 'react';
-import AppLayout from './layouts/AppLayout';
-import MessagesScreen from './screens/MessagesScreen';
-import { Screen, Customer } from './types';
-import { AuthProvider, useAuthContext } from './components/AuthProvider';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import { customerService } from './services/customerService';
-import { visitService } from './services/visitService';
-import { assignmentService } from './services/assignmentService';
-import { mockCustomers } from './data';
+import { signIn, signUp, isSupabaseConfigured } from '../lib/supabase';
+import { Loader2 } from 'lucide-react';
 
-// Screens
-import LoginScreen from './screens/LoginScreen';
-import AssignmentScreen from './screens/AssignmentScreen';
-import AssignmentMapScreen from './screens/AssignmentMapScreen';
-import DashboardScreen from './screens/DashboardScreen';
-import VisitListScreen from './screens/VisitListScreen';
-import VisitDetailScreen from './screens/VisitDetailScreen';
-import VisitFlowScreen from './screens/VisitFlowScreen';
-import ReportsScreen from './screens/ReportsScreen';
-import RouteMapScreen from './screens/RouteMapScreen';
-import TeamMapScreen from './screens/TeamMapScreen';
-import ProfileScreens from './screens/ProfileScreens';
-import InvoiceOcrPage from './screens/InvoiceOcrPage';
+type Props = { 
+  onLogin: () => void; 
+};
 
-function AppContent() {
-  const { salesRep, isManager } = useAuthContext();
-  const [currentScreen, setCurrentScreen] = useState<Screen>('login');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [filter, setFilter] = useState('Bugün');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
-  const [loading, setLoading] = useState(true);
+const LoginScreen: React.FC<Props> = ({ onLogin }) => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<'sales_rep' | 'manager'>('sales_rep');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Load initial data
-  useEffect(() => {
-    if (salesRep) {
-      // loadData(); // Temporarily disabled for demo
-      setCurrentScreen('dashboard');
+  const handleQuickLogin = async () => {
+    setEmail('test@enerjisa.com');
+    setPassword('test123');
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    // Timeout protection - if signIn takes too long, reset loading state
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000); // 10 saniye timeout
+    
+    try {
+      const { error } = await signIn('test@enerjisa.com', 'test123');
+      clearTimeout(timeoutId); // Clear timeout if request completes
+      
+      if (error) {
+        // If user doesn't exist, try to create it
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Test kullanıcısı bulunamadı. Kayıt ol sekmesinden test kullanıcısını oluşturun.');
+          // Auto switch to signup mode
+          setIsLogin(false);
+          setName('Test Kullanıcısı');
+          setPhone('0555 123 45 67');
+          setRole('sales_rep');
+        } else {
+          setError(`Giriş hatası: ${error.message}`);
+        }
+        return;
+      }
+      setSuccess('Giriş başarılı!');
+      setTimeout(() => onLogin(), 500);
+    } catch (err: any) {
+      clearTimeout(timeoutId); // Clear timeout on error
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+      // If Supabase is not configured, still allow demo access
+      if (!isSupabaseConfigured) {
+        setTimeout(() => onLogin(), 1000);
+      }
+      // If Supabase is not configured, still allow demo access
+      if (!isSupabaseConfigured) {
+        setTimeout(() => onLogin(), 1000);
+      }
+      onLogin();
+    } finally {
       setLoading(false);
     }
-  }, [salesRep]);
-
-  // const loadData = async () => {
-  //   setLoading(true);
-  //   try {
-  //     // Load customers
-  //     const { data: customersData } = await customerService.getCustomers();
-  //     if (customersData) {
-  //       setCustomers(customersData);
-  //     }
-
-  //     // Load assignments
-  //     const { data: assignmentsData } = await assignmentService.getAssignments();
-  //     if (assignmentsData) {
-  //       const assignmentMap: Record<string, string> = {};
-  //       assignmentsData.forEach(assignment => {
-  //         assignmentMap[assignment.customer_id] = assignment.sales_rep_id;
-  //       });
-  //       setAssignments(assignmentMap);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error loading data:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const handleSelectCustomer = (customer: any) => {
-    setSelectedCustomer(customer);
   };
 
-  const handleStartVisit = async (customer: any) => {
-    // Create a new visit record
-    const { data: visit } = await visitService.createVisit({
-      customer_id: customer.id,
-      sales_rep_id: salesRep!.id,
-      visit_date: new Date().toISOString().split('T')[0],
-      status: 'in_progress'
-    });
-
-    if (visit) {
-      setSelectedCustomer({ ...customer, currentVisit: visit });
-    }
-    setCurrentScreen('visitFlow');
-  };
-
-  const handleCompleteVisit = async (customer: any, status: string, notes: string) => {
-    if (customer.currentVisit) {
-      await visitService.completeVisit(
-        customer.currentVisit.id,
-        status,
-        notes,
-        status === 'completed'
-      );
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    // Refresh data
-    // loadData(); // Temporarily disabled
+    if (!isSupabaseConfigured) {
+      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    // Timeout protection for form submission too
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
+
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+          } else {
+            setError(error.message);
+          }
+          return;
+        }
+        setSuccess('Giriş başarılı!');
+      } else {
+        const { error } = await signUp(email, password, { name, phone, role });
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            setError('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+            setIsLogin(true); // Auto switch to login mode
+            return;
+          }
+          if (error.message.includes('Password should be at least')) {
+            setError('Şifre en az 6 karakter olmalıdır.');
+            return;
+          }
+          setError(error.message);
+          return;
+        }
+        setSuccess('Kayıt başarılı! Giriş yapılıyor...');
+      }
+      setTimeout(() => onLogin(), 1000);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSpeechToText = () => { /* Implement speech to text */ };
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
+            <img 
+              src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp" 
+              alt="Enerjisa Logo" 
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">EnerjiSaHa</h1>
+          <p className="text-gray-600">D2D Satış Uygulaması</p>
+        </div>
 
-  // Show login screen if no sales rep
-  if (!salesRep) {
-    return <LoginScreen onLogin={() => {}} />;
-  }
+        <div className="mb-6">
+          <div className="flex rounded-lg border border-gray-300 p-1">
+            <button
+              type="button"
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                isLogin ? 'bg-[#0099CB] text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Giriş Yap
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                !isLogin ? 'bg-[#0099CB] text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Kayıt Ol
+            </button>
+          </div>
+        </div>
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#0099CB]"></div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {!isLogin && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ad Soyad</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+                  placeholder="Adınızı ve soyadınızı girin"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Telefon</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+                  placeholder="Telefon numaranızı girin"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rol</label>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as 'sales_rep' | 'manager')}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+                >
+                  <option value="sales_rep">Satış Temsilcisi</option>
+                  <option value="manager">Saha Yöneticisi</option>
+                </select>
+              </div>
+            </>
+          )}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+              placeholder="E-posta adresinizi girin"
+              required
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
+              placeholder="Şifrenizi girin"
+              required
+              minLength={6}
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+              <p className="text-sm text-green-600">{success}</p>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
+          </button>
+
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleQuickLogin}
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-3"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Hızlı Test Girişi
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => onLogin()}
+              className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+            >
+              Demo Modunda Devam Et
+            </button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              <strong>Test Bilgileri:</strong><br />
+              E-posta: test@enerjisa.com<br />
+              Şifre: test123
+            </p>
+          </div>
+        </form>
       </div>
-    );
-  }
-
-  return (
-    <AppLayout
-      agentName={salesRep?.name || 'User'}
-      role={isManager ? 'manager' : 'sales'}
-      currentScreen={currentScreen}
-      setCurrentScreen={setCurrentScreen}
-    >
-      {currentScreen === 'profile' && (
-        <ProfileScreens role={isManager ? 'manager' : 'sales'} />
-      )}
-
-      {currentScreen === 'assignmentMap' && isManager && (
-        <ProtectedRoute requireManager>
-          <AssignmentMapScreen
-            customers={customers}
-            assignments={assignments}
-            setAssignments={setAssignments}
-            allReps={[
-              { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
-              { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
-              { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
-            ]}
-            onBack={() => setCurrentScreen('assignment')}
-          />
-        </ProtectedRoute>
-      )}
-
-      {currentScreen === 'assignment' && isManager && (
-        <ProtectedRoute requireManager>
-          <AssignmentScreen
-            customers={customers}
-            assignments={assignments}
-            setAssignments={setAssignments}
-            allReps={[
-              { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
-              { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
-              { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
-            ]}
-            setCurrentScreen={setCurrentScreen}
-          />
-        </ProtectedRoute>
-      )}
-
-      {currentScreen === 'teamMap' && isManager && (
-        <ProtectedRoute requireManager>
-          <TeamMapScreen />
-        </ProtectedRoute>
-      )}
-      
-      {currentScreen === 'messages' && <MessagesScreen />}
-
-      {currentScreen === 'dashboard' && (
-        <DashboardScreen
-          customers={customers}
-          assignments={assignments}
-          allReps={[
-            { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
-            { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
-            { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
-          ]}
-          setCurrentScreen={setCurrentScreen}
-          setSelectedCustomer={setSelectedCustomer}
-        />
-      )}
-
-      {currentScreen === 'visitList' && (
-        <VisitListScreen
-          customers={customers}
-          assignments={assignments}
-          allReps={[
-            { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
-            { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
-            { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
-          ]}
-          setCurrentScreen={setCurrentScreen} 
-          onSelectCustomer={handleSelectCustomer}
-          filter={filter}
-          setFilter={setFilter}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isListening={isListening}
-          onMicClick={handleSpeechToText}
-        />
-      )}
-
-      {currentScreen === 'visitDetail' && selectedCustomer && (
-        <VisitDetailScreen
-          customer={selectedCustomer}
-          onBack={() => setCurrentScreen('visitList')}
-          onStartVisit={handleStartVisit}
-        />
-      )}
-
-      {currentScreen === 'visitFlow' && selectedCustomer && (
-        <VisitFlowScreen
-          customer={selectedCustomer}
-          onCloseToList={() => setCurrentScreen('visitList')}
-          onCompleteVisit={handleCompleteVisit}
-        />
-      )}
-
-      {currentScreen === 'reports' && <ReportsScreen customers={customers} />}
-
-      {currentScreen === 'routeMap' && (
-        <RouteMapScreen customers={customers} salesRep={{ name: salesRep.name, lat: 40.9360, lng: 29.1500 }} />
-      )}
-
-      {currentScreen === 'invoiceOcr' && <InvoiceOcrPage />}
-    </AppLayout>
+    </div>
   );
-}
+};
 
-function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
-}
-
-export default App;
+export default LoginScreen;
