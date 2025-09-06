@@ -34,24 +34,27 @@ const VisitListScreen = ({
   };
 
   const getStatusTone = (status: Customer["status"]) =>
-    status === "Tamamlandı" ? "green" : status === "Yolda" ? "blue" : "yellow";
+    status === "Tamamlandı"
+      ? "green"
+      : status === "Yolda"
+      ? "blue"
+      : status === "İptal"
+      ? "red"
+      : "yellow"; // Planlandı, Bekliyor
 
   const buttonClassForStatus = (buttonStatus: Customer["status"] | "Tümü") => {
     const active = statusFilter === buttonStatus;
+
     if (buttonStatus === "Tümü") {
       return `px-4 py-2 rounded-full border text-sm transition ${
-        active
-          ? "bg-gray-800 text-white"
-          : "bg-white text-gray-800 hover:bg-gray-100"
+        active ? "bg-gray-800 text-white" : "bg-white text-gray-800 hover:bg-gray-100"
       }`;
     }
 
     const tone = getStatusTone(buttonStatus as Customer["status"]);
 
     return `px-4 py-2 rounded-full border text-sm transition ${
-      active
-        ? `bg-${tone}-600 text-white`
-        : "bg-white text-gray-800 hover:bg-gray-100"
+      active ? `bg-${tone}-100 text-${tone}-800` : "bg-white text-gray-800 hover:bg-gray-100"
     }`;
   };
 
@@ -209,17 +212,6 @@ const VisitListScreen = ({
           Filtreleri Sıfırla
         </button>
       </div>
-
-      {/* Toplu işlem çubuğu */}
-      {selectedIds.length > 0 && (
-        <div className="bg-yellow-100 border px-4 py-2 flex justify-between items-center text-sm">
-          <span>{selectedIds.length} ziyaret seçildi</span>
-          <div className="flex gap-4">
-            <button className="text-blue-600 hover:underline">İptal Et</button>
-            <button className="text-blue-600 hover:underline">Ata</button>
-          </div>
-        </div>
-      )}
 
       {/* Liste */}
       {visibleItems.length === 0 ? (
