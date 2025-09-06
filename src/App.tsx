@@ -51,6 +51,7 @@ function App() {
             assignments={assignments}
             allReps={allReps}
             setCurrentScreen={setCurrentScreen}
+            onSelectCustomer={handleSelectCustomer}
           />
         );
       case 'route':
