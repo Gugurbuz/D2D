@@ -139,11 +139,11 @@ const VisitListScreen = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* Filtreler */}
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Durum */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+      {/* 🔲 FİLTRE KUTUSU */}
+      <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-6 shadow-sm">
+        {/* DURUM */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Durum</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => (
               <button
@@ -157,9 +157,9 @@ const VisitListScreen = ({
           </div>
         </div>
 
-        {/* Tarih */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+        {/* TARİH */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Tarih</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
               <button
@@ -173,38 +173,77 @@ const VisitListScreen = ({
           </div>
         </div>
 
-    {/* Sıralama */}
-<div className="flex-1">
-  <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
-  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-    {[
-      { key: "plannedTime", label: "Tarihe Göre" },
-      { key: "priority", label: "Önceliğe Göre" },
-    ].map((item) => {
-      const isActive = sortBy === item.key;
-      return (
-        <button
-          key={item.key}
-          onClick={() => {
-            if (sortBy === item.key) setAsc(!asc);
-            else {
-              setSortBy(item.key as any);
-              setAsc(true);
-            }
-          }}
-          className={buttonClass(isActive, "purple")}
-        >
-          <div className="flex items-center justify-center gap-1">
-            {item.label}
-            {isActive &&
-              (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+        {/* SIRALAMA */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Sıralama</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            {[
+              { key: "plannedTime", label: "Tarihe Göre" },
+              { key: "priority", label: "Önceliğe Göre" },
+            ].map((item) => {
+              const isActive = sortBy === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    if (sortBy === item.key) setAsc(!asc);
+                    else {
+                      setSortBy(item.key as any);
+                      setAsc(true);
+                    }
+                  }}
+                  className={buttonClass(isActive, "purple")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    {item.label}
+                    {isActive &&
+                      (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </button>
-      );
-    })}
-  </div>
+        </div>
 
+        {/* 🔁 Filtre Sıfırla Butonu */}
+        <div className="text-right">
+          <button
+            onClick={resetFilters}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Filtreleri Sıfırla
+          </button>
+        </div>
+      </div>
 
+      {/* Liste */}
+      {visibleItems.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          Hiç ziyaret bulunamadı.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {visibleItems.map((c) => (
+            <VisitCard
+              key={c.id}
+              customer={c}
+              assignedName={getAssignedName(c.id)}
+              onDetail={() => selectAndGo(c, "visitDetail")}
+              onStart={() => selectAndGo(c, "visitFlow")}
+            />
+          ))}
+
+          {filteredSorted.length > visibleItems.length && (
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              className="mt-4 mx-auto block bg-gray-100 px-4 py-2 rounded hover:bg-gray-200 text-sm"
+            >
+              Daha Fazla Yükle
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 
