@@ -120,6 +120,7 @@ const VisitListScreen = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => {
               const active = statusFilter === status;
+
               const tone =
                 status === "Tamamlandı"
                   ? "green"
@@ -127,10 +128,12 @@ const VisitListScreen = ({
                   ? "blue"
                   : status === "İptal"
                   ? "red"
+                  : status === "Tümü"
+                  ? "green"
                   : "yellow";
 
               const activeClass = active
-                ? `bg-${tone}-100 text-${tone}-800 border-${tone}-200`
+                ? `bg-${tone}-600 text-white border-${tone}-600`
                 : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50";
 
               return (
