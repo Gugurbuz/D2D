@@ -15,6 +15,42 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const createTestUser = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const testEmail = 'test@enerjisa.com';
+      const testPassword = 'test123';
+      const testName = 'Test Kullanıcısı';
+      const testPhone = '0555 123 45 67';
+      
+      const { error } = await signUp(testEmail, testPassword, {
+        name: testName,
+        phone: testPhone,
+        role: 'sales_rep'
+      });
+      
+      if (error) {
+        if (error.message.includes('User already registered')) {
+          // Test user already exists, try to login
+          const { error: loginError } = await signIn(testEmail, testPassword);
+          if (loginError) {
+            setError('Test kullanıcısı mevcut ama giriş yapılamadı. Manuel olarak deneyin.');
+            return;
+          }
+        } else {
+          setError(error.message);
+          return;
+        }
+      }
+      
+      onLogin();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -164,6 +200,20 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           >
             {loading ? 'İşleniyor...' : (isLogin ? 'Giriş Yap' : 'Kayıt Ol')}
           </button>
+
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={createTestUser}
+              disabled={loading}
+              className="w-full bg-[#F9C800] text-gray-900 py-3 px-4 rounded-lg font-medium hover:bg-[#E6B400] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Test Kullanıcısı Oluşturuluyor...' : 'Test Kullanıcısı Oluştur'}
+            </button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              E-posta: test@enerjisa.com | Şifre: test123
+            </p>
+          </div>
         </form>
       </div>
     </div>
