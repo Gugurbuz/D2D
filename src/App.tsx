@@ -5,12 +5,13 @@
 import React, { useState, useEffect } from 'react';
 import AppLayout from './layouts/AppLayout';
 import MessagesScreen from './screens/MessagesScreen';
-import { Screen } from './types';
+import { Screen, Customer } from './types';
 import { AuthProvider, useAuthContext } from './components/AuthProvider';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { customerService } from './services/customerService';
 import { visitService } from './services/visitService';
 import { assignmentService } from './services/assignmentService';
+import { mockCustomers } from './data';
 
 // Screens
 import LoginScreen from './screens/LoginScreen';
@@ -24,51 +25,52 @@ import ReportsScreen from './screens/ReportsScreen';
 import RouteMapScreen from './screens/RouteMapScreen';
 import TeamMapScreen from './screens/TeamMapScreen';
 import ProfileScreens from './screens/ProfileScreens';
-import InvoiceOcrPage from "./screens/InvoiceOcrPage";
+import InvoiceOcrPage from './screens/InvoiceOcrPage';
 
 function AppContent() {
   const { salesRep, isManager } = useAuthContext();
   const [currentScreen, setCurrentScreen] = useState<Screen>('login');
-  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [filter, setFilter] = useState('Bugün');
   const [searchQuery, setSearchQuery] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [customers, setCustomers] = useState<any[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
   const [loading, setLoading] = useState(true);
 
   // Load initial data
   useEffect(() => {
     if (salesRep) {
-      loadData();
+      // loadData(); // Temporarily disabled for demo
       setCurrentScreen('dashboard');
+      setLoading(false);
     }
   }, [salesRep]);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      // Load customers
-      const { data: customersData } = await customerService.getCustomers();
-      if (customersData) {
-        setCustomers(customersData);
-      }
+  // const loadData = async () => {
+  //   setLoading(true);
+  //   try {
+  //     // Load customers
+  //     const { data: customersData } = await customerService.getCustomers();
+  //     if (customersData) {
+  //       setCustomers(customersData);
+  //     }
 
-      // Load assignments
-      const { data: assignmentsData } = await assignmentService.getAssignments();
-      if (assignmentsData) {
-        const assignmentMap: Record<string, string> = {};
-        assignmentsData.forEach(assignment => {
-          assignmentMap[assignment.customer_id] = assignment.sales_rep_id;
-        });
-        setAssignments(assignmentMap);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     // Load assignments
+  //     const { data: assignmentsData } = await assignmentService.getAssignments();
+  //     if (assignmentsData) {
+  //       const assignmentMap: Record<string, string> = {};
+  //       assignmentsData.forEach(assignment => {
+  //         assignmentMap[assignment.customer_id] = assignment.sales_rep_id;
+  //       });
+  //       setAssignments(assignmentMap);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error loading data:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleSelectCustomer = (customer: any) => {
     setSelectedCustomer(customer);
@@ -100,10 +102,15 @@ function AppContent() {
     }
     
     // Refresh data
-    loadData();
+    // loadData(); // Temporarily disabled
   };
 
   const handleSpeechToText = () => { /* Implement speech to text */ };
+
+  // Show login screen if no sales rep
+  if (!salesRep) {
+    return <LoginScreen onLogin={() => {}} />;
+  }
 
   if (loading) {
     return (
@@ -130,7 +137,11 @@ function AppContent() {
             customers={customers}
             assignments={assignments}
             setAssignments={setAssignments}
-            allReps={[]} // Will be loaded from Supabase
+            allReps={[
+              { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
+              { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
+              { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
+            ]}
             onBack={() => setCurrentScreen('assignment')}
           />
         </ProtectedRoute>
@@ -142,7 +153,11 @@ function AppContent() {
             customers={customers}
             assignments={assignments}
             setAssignments={setAssignments}
-            allReps={[]} // Will be loaded from Supabase
+            allReps={[
+              { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
+              { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
+              { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
+            ]}
             setCurrentScreen={setCurrentScreen}
           />
         </ProtectedRoute>
@@ -160,7 +175,11 @@ function AppContent() {
         <DashboardScreen
           customers={customers}
           assignments={assignments}
-          allReps={[]} // Will be loaded from Supabase
+          allReps={[
+            { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
+            { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
+            { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
+          ]}
           setCurrentScreen={setCurrentScreen}
           setSelectedCustomer={setSelectedCustomer}
         />
@@ -170,7 +189,11 @@ function AppContent() {
         <VisitListScreen
           customers={customers}
           assignments={assignments}
-          allReps={[]} // Will be loaded from Supabase
+          allReps={[
+            { id: 'rep1', name: 'Serkan Özkan', lat: 40.9360, lng: 29.1500, phone: '0555 111 22 01' },
+            { id: 'rep2', name: 'Ayşe Yılmaz', lat: 41.0165, lng: 29.1248, phone: '0555 111 22 02' },
+            { id: 'rep3', name: 'Mehmet Ali Vural', lat: 40.9923, lng: 29.1274, phone: '0555 111 22 03' }
+          ]}
           setCurrentScreen={setCurrentScreen} 
           onSelectCustomer={handleSelectCustomer}
           filter={filter}
@@ -201,7 +224,7 @@ function AppContent() {
       {currentScreen === 'reports' && <ReportsScreen customers={customers} />}
 
       {currentScreen === 'routeMap' && (
-        <RouteMapScreen customers={customers} salesRep={null} />
+        <RouteMapScreen customers={customers} salesRep={{ name: salesRep.name, lat: 40.9360, lng: 29.1500 }} />
       )}
 
       {currentScreen === 'invoiceOcr' && <InvoiceOcrPage />}
@@ -212,9 +235,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <ProtectedRoute>
-        <AppContent />
-      </ProtectedRoute>
+      <AppContent />
     </AuthProvider>
   );
 }

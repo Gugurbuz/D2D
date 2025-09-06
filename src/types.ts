@@ -31,26 +31,23 @@ export type VisitResult = 'Satış Yapıldı' | 'Teklif Verildi' | 'Reddedildi' 
 export type Role = 'rep' | 'manager';
 export type Screen =
   | 'login'
-  | 'roleSelect'
   | 'dashboard'
   | 'visitList'
   | 'visitDetail'
   | 'visitFlow'
-  | 'visitResult'
   | 'reports'
   | 'routeMap'
   | 'assignment'
   | 'profile'
-   | 'invoiceOcr'
+  | 'invoiceOcr'
   | 'assignmentMap'
-| "invoiceOcr"; 
+  | 'teamMap'
+  | 'messages';
 
-// src/types.ts
 export type Rep = {
   id: string;
   name: string;
-  lat: number;   // eklendi
-  lng: number;   // eklendi
+  lat: number;
+  lng: number;
   phone?: string;
 };
-
