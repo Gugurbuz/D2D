@@ -113,8 +113,8 @@ const Navigation: React.FC<Props> = ({
         <div className="relative flex-1 flex items-center justify-end">
           <div className="flex flex-nowrap items-center gap-1 sm:gap-2 overflow-x-auto max-w-full no-scrollbar">
             <Btn onClick={() => setCurrentScreen("dashboard")} active={currentScreen === "dashboard"} label="Dashboard"><Home className="w-5 h-5" /></Btn>
-            <Btn onClick={() => setCurrentScreen("routeMap")} active={currentScreen === "routeMap"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
-            <Btn onClick={() => setCurrentScreen("visitList")} active={currentScreen === "visitList"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
+            <Btn onClick={() => setCurrentScreen("route")} active={currentScreen === "route"} label="Rota Haritası"><Route className="w-5 h-5" /></Btn>
+            <Btn onClick={() => setCurrentScreen("visits")} active={currentScreen === "visits"} label="Ziyaret Listesi"><List className="w-5 h-5" /></Btn>
 
             {/* YENİ: Fatura OCR sekmesi */}
             <Btn onClick={() => setCurrentScreen("invoiceOcr")} active={currentScreen === "invoiceOcr"} label="Fatura OCR">

@@ -15,6 +15,7 @@ type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
   allReps: SalesRep[];
+  setCurrentScreen: (screen: string) => void;
 };
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps }) => {
@@ -159,21 +160,21 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps }) =
             title="Rota Haritası"
             subtitle="Bugünkü rotanı gör"
             icon={<MapPin className="w-5 h-5" />}
-            onClick={() => {}} // setCurrentScreen('route') olacak
+            onClick={() => setCurrentScreen('route')}
           />
           
           <ActionButton
             title="Ziyaret Listesi"
             subtitle="Tüm ziyaretleri listele"
             icon={<Users className="w-5 h-5" />}
-            onClick={() => {}} // setCurrentScreen('visits') olacak
+            onClick={() => setCurrentScreen('visits')}
           />
           
           <ActionButton
             title="Raporlar"
             subtitle="Performans analizi"
             icon={<TrendingUp className="w-5 h-5" />}
-            onClick={() => {}} // setCurrentScreen('reports') olacak
+            onClick={() => setCurrentScreen('reports')}
           />
         </div>
       </div>

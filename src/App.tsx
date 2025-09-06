@@ -50,6 +50,7 @@ function App() {
             customers={customers}
             assignments={assignments}
             allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
           />
         );
       case 'route':
