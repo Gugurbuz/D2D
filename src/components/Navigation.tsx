@@ -232,7 +232,7 @@ const Navigation: React.FC<Props> = ({
                 <Btn
                   onClick={() => setCurrentScreen("invoiceOcr")}
                   active={currentScreen === "invoiceOcr"}
-                  label="Fatura OCR"
+                  label="Bölgedışı Ziyaret"
                 >
                   <ScanLine className="w-5 h-5" />
                 </Btn>
