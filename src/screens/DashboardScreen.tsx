@@ -196,7 +196,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   );
 };
 
-const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => (
+const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => 
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
       <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
