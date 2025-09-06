@@ -19,6 +19,11 @@ import { mockReps } from './data/reps';
 import { teamReps } from './data/team';
 import type { Customer, SalesRep, Screen, Role } from './types';
 import { supabase } from './lib/supabase'; // Supabase bağlantısı burada
+import UserManagementScreen from './screens/UserManagementScreen';
+import SystemSettingsScreen from './screens/SystemSettingsScreen';
+import TariffsScreen from './screens/TariffsScreen';
+import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
+
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
