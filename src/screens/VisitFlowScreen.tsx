@@ -1,1049 +1,151 @@
-import React, { useReducer, useState, useRef, useEffect, useMemo } from "react";
-import {
-  IdCard, Camera, Smartphone, FileText, PenLine, Send, ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
-  Loader2, ScanLine, Nfc, Maximize2, Home, Building2, Factory, AlertTriangle
-} from "lucide-react";
-import { Customer } from "../RouteMap";
+// --- YENİ BİLEŞEN: Teklif ve Müzakere Ekranı (HATALARI DÜZELTİLMİŞ HALİ) ---
+const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void; }> = ({ customer, onContinue }) => {
+    // State'ler
+    const [currentUnitPrice, setCurrentUnitPrice] = useState(2.20); 
+    const [currentConsumption, setCurrentConsumption] = useState(150);
+    const availableTariffs = useMemo(() => ALL_TARIFFS.filter(t => t.type.includes(customer.customerType)), [customer.customerType]);
+    
+    // --- DÜZELTME 1: GÜVENLİ STATE BAŞLANGICI ---
+    // Eğer availableTariffs boş ise, başlangıç değeri null olacak.
+    // Bu sayede `availableTariffs[0]` undefined olduğunda uygulama çökmez.
+    const [selectedTariff, setSelectedTariff] = useState<Tariff | null>(availableTariffs[0] || null);
 
-/* ===================== TİPLER ===================== */
-type VisitStatus = "Pending" | "InProgress" | "Completed" | "Rejected" | "Unreachable" | "Postponed";
-type FlowStep = 1 | 2 | 3 | 4 | 5; // 1 Check-in, 2 Proposal, 3 Decision, 4 Contract, 5 Completion
-type VerificationStatus = "idle" | "scanning" | "success" | "error";
+    const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
-type State = {
-  visitStatus: VisitStatus;
-  currentStep: FlowStep;
-  idPhoto: string | null;
-  ocrStatus: VerificationStatus;
-  nfcStatus: VerificationStatus;
-  contractAccepted: boolean;
-  smsSent: boolean;
-  notes: string;
-  // Proposal state
-  currentUnitPrice: number;        // TL/kWh
-  currentMonthlyConsumption: number; // kWh
-  selectedTariffKey: string;
-  createdSolarLead: boolean;
-};
+    // --- DÜZELTME 2: HESAPLAMALARIN GÜVENLİ HALE GETİRİLMESİ ---
+    // selectedTariff null olabileceğinden, hesaplamadan önce varlığını kontrol ediyoruz.
+    const currentMonthlyBill = currentUnitPrice * currentConsumption;
+    const enerjisaMonthlyBill = selectedTariff ? selectedTariff.unitPrice * currentConsumption : 0;
+    const annualSavings = selectedTariff ? (currentMonthlyBill - enerjisaMonthlyBill) * 12 : 0;
 
-type Action =
-  | { type: "SET_VISIT_STATUS"; payload: VisitStatus }
-  | { type: "SET_STEP"; payload: FlowStep }
-  | { type: "SET_ID_PHOTO"; payload: string | null }
-  | { type: "SET_OCR_STATUS"; payload: VerificationStatus }
-  | { type: "SET_NFC_STATUS"; payload: VerificationStatus }
-  | { type: "SET_CONTRACT_ACCEPTED"; payload: boolean }
-  | { type: "SET_SMS_SENT"; payload: boolean }
-  | { type: "SET_NOTES"; payload: string }
-  | { type: "SET_UNIT_PRICE"; payload: number }
-  | { type: "SET_MONTHLY_CONS"; payload: number }
-  | { type: "SET_TARIFF"; payload: string }
-  | { type: "SET_SOLAR_LEAD"; payload: boolean }
-  | { type: "RESET" };
 
-/* ===================== YARDIMCI ===================== */
-function toNumberSafe(v: any, fallback = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const R = 6371e3;
-  const φ1 = (lat1 * Math.PI) / 180;
-  const φ2 = (lat2 * Math.PI) / 180;
-  const dφ = ((lat2 - lat1) * Math.PI) / 180;
-  const dλ = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dφ / 2) * Math.sin(dφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(dλ / 2) * Math.sin(dλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
+    const CustomerTypeIcon = {
+        Mesken: <Home className="w-6 h-6 text-gray-700" />,
+        Ticarethane: <Building className="w-6 h-6 text-gray-700" />,
+        Sanayi: <Factory className="w-6 h-6 text-gray-700" />,
+    };
 
-/* ===================== BAŞLANGIÇ STATE ===================== */
-const initialState: State = {
-  visitStatus: "InProgress", // akış Check-in ile başlasın
-  currentStep: 1,
-  idPhoto: null,
-  ocrStatus: "idle",
-  nfcStatus: "idle",
-  contractAccepted: false,
-  smsSent: false,
-  notes: "",
-  currentUnitPrice: 3.00, // TL/kWh (demo)
-  currentMonthlyConsumption: 350, // kWh (demo)
-  selectedTariffKey: "standart",
-  createdSolarLead: false,
-};
-
-/* ===================== REDUCER ===================== */
-function visitReducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "SET_VISIT_STATUS":
-      return { ...state, visitStatus: action.payload };
-    case "SET_STEP":
-      return { ...state, currentStep: action.payload };
-    case "SET_ID_PHOTO":
-      return { ...state, idPhoto: action.payload };
-    case "SET_OCR_STATUS":
-      return { ...state, ocrStatus: action.payload };
-    case "SET_NFC_STATUS":
-      return { ...state, nfcStatus: action.payload };
-    case "SET_CONTRACT_ACCEPTED":
-      return { ...state, contractAccepted: action.payload };
-    case "SET_SMS_SENT":
-      return { ...state, smsSent: action.payload };
-    case "SET_NOTES":
-      return { ...state, notes: action.payload };
-    case "SET_UNIT_PRICE":
-      return { ...state, currentUnitPrice: action.payload };
-    case "SET_MONTHLY_CONS":
-      return { ...state, currentMonthlyConsumption: action.payload };
-    case "SET_TARIFF":
-      return { ...state, selectedTariffKey: action.payload };
-    case "SET_SOLAR_LEAD":
-      return { ...state, createdSolarLead: action.payload };
-    case "RESET":
-      return initialState;
-    default:
-      return state;
-  }
-}
-
-/* ===================== PROPS ===================== */
-type Props = {
-  customer: Customer;
-  onCloseToList: () => void;
-  onCompleteVisit: (updated: Customer, status: VisitStatus, notes: string) => void;
-};
-
-/* ===================== ANA BİLEŞEN ===================== */
-const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteVisit }) => {
-  const [state, dispatch] = useReducer(visitReducer, {
-    ...initialState,
-    // Müşteriden tahmini başlangıç değerleri al (varsa)
-    currentUnitPrice: toNumberSafe((customer as any)?.currentUnitPrice, initialState.currentUnitPrice),
-    currentMonthlyConsumption: toNumberSafe(
-      (customer as any)?.monthlyConsumption,
-      initialState.currentMonthlyConsumption
-    ),
-  });
-
-  const StepIndicator = () => (
-    <div className="flex items-center gap-2 mb-4" aria-label="Adım Göstergesi">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <div
-          key={n}
-          className={`h-2 rounded-full transition-colors ${state.currentStep >= n ? "bg-[#0099CB]" : "bg-gray-200"}`}
-          style={{ width: 48 }}
-        />
-      ))}
-    </div>
-  );
-
-  const goComplete = (status: VisitStatus) => {
-    dispatch({ type: "SET_VISIT_STATUS", payload: status });
-    if (status !== "InProgress") {
-      onCompleteVisit(customer, status, state.notes);
-      onCloseToList();
+    // --- DÜZELTME 3: UYGUN TARİFE YOKSA UYARI GÖSTER ---
+    // Eğer en başta uygun tarife bulunamadıysa, hesaplama ekranını hiç gösterme.
+    if (!selectedTariff) {
+        return (
+            <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in text-center">
+                <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold">Uygun Tarife Bulunamadı</h3>
+                <p className="text-gray-600 mt-2">
+                    Bu müşteri tipi ({customer.customerType}) için sistemde kayıtlı uygun bir tarife bulunamadı.
+                </p>
+            </div>
+        )
     }
-  };
 
-  return (
-    <div className="p-6 max-w-5xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Ziyaret: {customer?.name ?? "—"}</h1>
-        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium">
-          ← Listeye Dön
-        </button>
-      </div>
-
-      {state.visitStatus === "InProgress" && (
+    return (
         <>
-          <StepIndicator />
-          {state.currentStep === 1 && (
-            <CheckInStep
-              customer={customer}
-              onProceed={() => dispatch({ type: "SET_STEP", payload: 2 })}
-            />
-          )}
-          {state.currentStep === 2 && (
-            <ProposalStep
-              customer={customer}
-              state={state}
-              dispatch={dispatch}
-              onProceed={() => dispatch({ type: "SET_STEP", payload: 3 })}
-            />
-          )}
-          {state.currentStep === 3 && (
-            <NegotiationDecisionStep
-              notes={state.notes}
-              setNotes={(v) => dispatch({ type: "SET_NOTES", payload: v })}
-              onStartContract={() => dispatch({ type: "SET_STEP", payload: 4 })}
-              onRejected={() => goComplete("Rejected")}
-              onPostponed={() => goComplete("Postponed")}
-              onUnreachable={() => goComplete("Unreachable")}
-            />
-          )}
-          {state.currentStep === 4 && (
-            <ContractStep
-              state={state}
-              dispatch={dispatch}
-              customer={customer}
-              // Sözleşme bittiğinde tamamla adımına
-              onNext={() => dispatch({ type: "SET_STEP", payload: 5 })}
-            />
-          )}
-          {state.currentStep === 5 && (
-            <CompletionStep
-              customer={customer}
-              dispatch={dispatch}
-              onComplete={() => goComplete("Completed")}
-            />
-          )}
-        </>
-      )}
-    </div>
-  );
-};
-
-/* ===================== ADIM 1: CHECK-IN ===================== */
-const CheckInStep: React.FC<{ customer: Customer; onProceed: () => void }> = ({
-  customer,
-  onProceed,
-}) => {
-  const [status, setStatus] = useState<"idle" | "getting" | "ok" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [distanceM, setDistanceM] = useState<number | null>(null);
-
-  const custLat = toNumberSafe((customer as any)?.lat);
-  const custLng = toNumberSafe((customer as any)?.lng);
-  const hasCustCoords = Number.isFinite(custLat) && Number.isFinite(custLng);
-
-  const getLocation = async () => {
-    setStatus("getting");
-    setErrorMsg(null);
-    if (!("geolocation" in navigator)) {
-      setStatus("error");
-      setErrorMsg("Tarayıcınız konum bilgisini desteklemiyor.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        if (hasCustCoords) {
-          const d = haversineMeters(latitude, longitude, custLat, custLng);
-          setDistanceM(d);
-        } else {
-          setDistanceM(null);
-        }
-        setStatus("ok");
-      },
-      (err) => {
-        setStatus("error");
-        setErrorMsg(`Konum alınamadı: ${err.message}`);
-      },
-      { enableHighAccuracy: true, timeout: 10_000 }
-    );
-  };
-
-  useEffect(() => {
-    // ekran açılır açılmaz konum almayı dene
-    getLocation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const far = (distanceM ?? Infinity) > 200;
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <Smartphone className="w-5 h-5 text-[#0099CB]" />
-          <h3 className="text-lg font-semibold">1. Check-in (Konum Doğrulama)</h3>
-        </div>
-        <button
-          onClick={getLocation}
-          className="px-3 py-1.5 rounded border text-sm bg-white"
-        >
-          Yenile
-        </button>
-      </div>
-
-      <div className="space-y-2 text-sm">
-        <div><span className="text-gray-600">Müşteri:</span> <span className="font-medium">{customer?.name ?? "—"}</span></div>
-        <div><span className="text-gray-600">Adres:</span> <span className="font-medium">{customer?.address ?? "—"}, {customer?.district ?? "—"}</span></div>
-        <div className="text-gray-600">Durum:{" "}
-          {status === "getting" && <span className="inline-flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin"/> Konum alınıyor…</span>}
-          {status === "ok" && <span className="text-green-700 font-medium">Konum alındı</span>}
-          {status === "idle" && <span>Hazır</span>}
-          {status === "error" && <span className="text-red-600 font-medium">Hata</span>}
-        </div>
-        {hasCustCoords && status === "ok" && (
-          <div className="text-gray-600">
-            Müşteri adresine uzaklık:{" "}
-            <span className={`font-semibold ${far ? "text-orange-600" : "text-green-700"}`}>
-              {distanceM ? `${distanceM.toFixed(0)} m` : "—"}
-            </span>{" "}
-            (eşik: 200 m)
-          </div>
-        )}
-        {!hasCustCoords && (
-          <div className="text-gray-500">Müşteri koordinatı kayıtlı değil (lat/lng). Mesafe hesaplanamadı.</div>
-        )}
-        {errorMsg && <div className="text-red-600">{errorMsg}</div>}
-        {far && (
-          <div className="mt-2 flex items-start gap-2 text-orange-700 bg-orange-50 border border-orange-200 p-2 rounded">
-            <AlertTriangle className="w-4 h-4 mt-0.5" />
-            <div>Konumunuz müşteri adresinden uzakta görünüyor. Buton yine de aktiftir (test kolaylığı için esnetildi).</div>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-6 text-right">
-        <button
-          onClick={onProceed}
-          className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
-        >
-          Check-in Yap ve Devam Et <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/* ===================== ADIM 2: TEKLİF (PROPOSAL) ===================== */
-type ProposalProps = {
-  customer: Customer;
-  state: State;
-  dispatch: React.Dispatch<Action>;
-  onProceed: () => void;
-};
-
-const ProposalStep: React.FC<ProposalProps> = ({ customer, state, dispatch, onProceed }) => {
-  // Müşteri tipi & ikon
-  const customerType: "Mesken" | "Ticarethane" | "Sanayi" =
-    (String((customer as any)?.customerType || (customer as any)?.type || "Mesken") as any);
-
-  const TypeIcon = customerType === "Mesken" ? Home : customerType === "Sanayi" ? Factory : Building2;
-
-  // Tarife setleri (demo değerler)
-  const tariffs = useMemo(() => {
-    const base: Record<string, { name: string; unitPrice: number; desc?: string; isGreen?: boolean }> = {
-      standart: { name: "Standart", unitPrice: 2.95 },
-      avantaj12: { name: "Avantajlı 12 Ay", unitPrice: 2.75, desc: "12 ay sabit fiyat" },
-      yesilEvim: { name: "Yeşil Evim", unitPrice: 3.05, desc: "Yenilenebilir destekli", isGreen: true },
-    };
-    // Tip bazında küçük farklar
-    if (customerType === "Ticarethane") {
-      base.standart.unitPrice = 3.10;
-      base.avantaj12.unitPrice = 2.90;
-      base.yesilEvim.unitPrice = 3.15;
-    } else if (customerType === "Sanayi") {
-      base.standart.unitPrice = 3.40;
-      base.avantaj12.unitPrice = 3.20;
-      base.yesilEvim.unitPrice = 3.55;
-    }
-    return base;
-  }, [customerType]);
-
-  const selectedTariff = tariffs[state.selectedTariffKey] ?? tariffs.standart;
-
-  // Kullanıcı girişleri
-  const unitPrice = state.currentUnitPrice; // mevcut sağlayıcı (TL/kWh)
-  const monthlyCons = state.currentMonthlyConsumption; // kWh
-
-  // Hesaplamalar
-  const currentMonthlyBill = unitPrice * monthlyCons;
-  const enerUnit = selectedTariff.unitPrice;
-  const enerMonthlyBill = enerUnit * monthlyCons;
-  const yearlySaving = (currentMonthlyBill - enerMonthlyBill) * 12;
-
-  // Serbest Tüketici uygunluğu (demo kuralı)
-  const freeConsumerEligible = monthlyCons * 12 >= 1100; // yıllık ≥1100 kWh ise uygun (örnek)
-
-  // Solar lead modal
-  const [leadOpen, setLeadOpen] = useState(false);
-
-  const providerName = (customer as any)?.currentProvider || "Mevcut Sağlayıcı";
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      {/* Üst şerit: müşteri tipi + uygunluk */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <TypeIcon className="w-5 h-5 text-[#0099CB]" />
-          <div className="text-lg font-semibold">2. Yeni Teklif Ekranı</div>
-          <div className="px-2 py-0.5 text-xs rounded bg-gray-100 ml-2">{customerType}</div>
-        </div>
-        <div
-          className={`px-2.5 py-1 rounded text-sm font-medium ${
-            freeConsumerEligible ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-          }`}
-          title="Serbest Tüketici uygunluğu demo kuralına göre hesaplanmıştır."
-        >
-          Serbest Tüketici: {freeConsumerEligible ? "Uygun" : "Uygun değil"}
-        </div>
-      </div>
-
-      {/* Editlenebilir mevcut durum */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <div>
-          <label className="text-sm text-gray-600">Mevcut Birim Fiyat (TL/kWh)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={unitPrice}
-            onChange={(e) => dispatch({ type: "SET_UNIT_PRICE", payload: toNumberSafe(e.target.value, unitPrice) })}
-            className="w-full mt-1 p-2 border rounded-lg"
-          />
-        </div>
-        <div>
-          <label className="text-sm text-gray-600">Aylık Tüketim (kWh)</label>
-          <input
-            type="number"
-            step="1"
-            value={monthlyCons}
-            onChange={(e) =>
-              dispatch({ type: "SET_MONTHLY_CONS", payload: Math.max(0, Math.floor(toNumberSafe(e.target.value, monthlyCons))) })
-            }
-            className="w-full mt-1 p-2 border rounded-lg"
-          />
-        </div>
-        <div className="flex items-end">
-          <div className="w-full p-3 bg-gray-50 border rounded-lg">
-            <div className="text-xs text-gray-500">Mevcut Tahmini Aylık Fatura</div>
-            <div className="text-lg font-semibold">{currentMonthlyBill.toFixed(2)} TL</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Yan yana karşılaştırma */}
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
-        {/* Mevcut sağlayıcı */}
-        <div className="border rounded-xl p-4">
-          <div className="text-sm text-gray-500 mb-1">Mevcut</div>
-          <div className="text-lg font-semibold mb-2">{providerName}</div>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between"><span>Birim Fiyat</span><span className="font-medium">{unitPrice.toFixed(2)} TL/kWh</span></div>
-            <div className="flex justify-between"><span>Aylık Tüketim</span><span className="font-medium">{monthlyCons} kWh</span></div>
-            <div className="flex justify-between"><span>Tahmini Aylık Fatura</span><span className="font-medium">{currentMonthlyBill.toFixed(2)} TL</span></div>
-          </div>
-        </div>
-
-        {/* Enerjisa teklif */}
-        <div className="border rounded-xl p-4">
-          <div className="text-sm text-gray-500 mb-1">Yeni Teklif</div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-lg font-semibold">Enerjisa</div>
-            <select
-              className="text-sm border rounded px-2 py-1"
-              value={state.selectedTariffKey}
-              onChange={(e) => dispatch({ type: "SET_TARIFF", payload: e.target.value })}
-            >
-              {Object.entries(tariffs).map(([key, t]) => (
-                <option key={key} value={key}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {selectedTariff?.isGreen && (
-            <div className="text-xs mb-2 p-2 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-              “Yeşil Evim” seçimi, solar çözümlerde <strong>%10 indirim</strong> sağlar.
-            </div>
-          )}
-
-          {!!selectedTariff?.desc && (
-            <div className="text-xs mb-2 p-2 rounded bg-gray-50 text-gray-700 border">{selectedTariff.desc}</div>
-          )}
-
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between"><span>Birim Fiyat</span><span className="font-medium">{enerUnit.toFixed(2)} TL/kWh</span></div>
-            <div className="flex justify-between"><span>Aylık Tüketim</span><span className="font-medium">{monthlyCons} kWh</span></div>
-            <div className="flex justify-between"><span>Tahmini Aylık Fatura</span><span className="font-medium">{enerMonthlyBill.toFixed(2)} TL</span></div>
-            <div className="flex justify-between">
-              <span>Yıllık Tahmini Tasarruf</span>
-              <span className={`font-semibold ${yearlySaving >= 0 ? "text-green-700" : "text-red-700"}`}>
-                {yearlySaving.toFixed(2)} TL
-              </span>
-            </div>
-          </div>
-
-          {/* Yeşil Evim lead butonu */}
-          {selectedTariff?.isGreen && (
-            <div className="mt-3">
-              <button
-                onClick={() => setLeadOpen(true)}
-                className="px-3 py-2 rounded bg-emerald-600 text-white text-sm"
-              >
-                Güneş Enerjisi: Teklif İçin Talep Oluştur
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div className="text-xs text-gray-500">
-          Değerleri değiştirdikçe tüm hesaplamalar otomatik güncellenir.
-        </div>
-        <button onClick={onProceed} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
-          Müzakere Sonucuna Git <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      {leadOpen && (
-        <SolarLeadModal
-          customer={customer}
-          onClose={() => setLeadOpen(false)}
-          onSubmit={() => {
-            setLeadOpen(false);
-            dispatch({ type: "SET_SOLAR_LEAD", payload: true });
-            alert("Talep oluşturuldu. İlgili ekip kısa sürede arayacaktır.");
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-/* ===================== SOLAR LEAD MODAL ===================== */
-const SolarLeadModal: React.FC<{
-  customer: Customer;
-  onClose: () => void;
-  onSubmit: () => void;
-}> = ({ customer, onClose, onSubmit }) => {
-  const [phone, setPhone] = useState((customer as any)?.phone ?? "");
-  const [name, setName] = useState(customer?.name ?? "");
-  const [options, setOptions] = useState<{ panel: boolean; storage: boolean; charger: boolean }>({
-    panel: true,
-    storage: false,
-    charger: false,
-  });
-  const [kvkk, setKvkk] = useState(false);
-
-  const disabled = !kvkk || (!options.panel && !options.storage && !options.charger);
-
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10060] bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-5">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold text-gray-900">Güneş Enerjisi Talebi</div>
-          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button>
-        </div>
-
-        <div className="grid gap-3">
-          <div>
-            <label className="text-sm text-gray-600">Ad Soyad</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="w-full mt-1 p-2 border rounded-lg" />
-          </div>
-          <div>
-            <label className="text-sm text-gray-600">Telefon</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full mt-1 p-2 border rounded-lg" placeholder="5XX XXX XX XX" />
-          </div>
-          <div>
-            <div className="text-sm text-gray-600 mb-1">Çözümler</div>
-            <div className="flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={options.panel} onChange={(e) => setOptions((s) => ({ ...s, panel: e.target.checked }))} /> Güneş Paneli
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={options.storage} onChange={(e) => setOptions((s) => ({ ...s, storage: e.target.checked }))} /> Depolama
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={options.charger} onChange={(e) => setOptions((s) => ({ ...s, charger: e.target.checked }))} /> Şarj İstasyonu
-              </label>
-            </div>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={kvkk} onChange={(e) => setKvkk(e.target.checked)} /> KVKK bilgilendirmesini okudum ve onaylıyorum.
-          </label>
-        </div>
-
-        <div className="mt-4 text-right">
-          <button disabled={disabled} onClick={onSubmit} className={`px-4 py-2 rounded ${disabled ? "bg-gray-300 text-white" : "bg-emerald-600 text-white"}`}>
-            Talep Oluştur
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ===================== ADIM 3: MÜZAKERE SONUCU ===================== */
-const NegotiationDecisionStep: React.FC<{
-  notes: string;
-  setNotes: (v: string) => void;
-  onStartContract: () => void;
-  onRejected: () => void;
-  onPostponed: () => void;
-  onUnreachable: () => void;
-}> = ({ notes, setNotes, onStartContract, onRejected, onPostponed, onUnreachable }) => {
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">3. Müzakere Sonucu</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button onClick={onStartContract} className="p-4 border rounded-lg text-left hover:bg-green-50 hover:border-green-400 transition-colors flex items-center gap-4">
-          <CheckCircle className="w-8 h-8 text-green-500" />
-          <div>
-            <p className="font-semibold text-green-800">Sözleşme Başlat</p>
-            <p className="text-sm text-gray-600">Müşteri teklifi kabul etti.</p>
-          </div>
-        </button>
-        <button onClick={onRejected} className="p-4 border rounded-lg text-left hover:bg-red-50 hover:border-red-400 transition-colors flex items-center gap-4">
-          <XCircle className="w-8 h-8 text-red-500" />
-          <div>
-            <p className="font-semibold text-red-800">Teklifi Reddetti</p>
-            <p className="text-sm text-gray-600">Müşteri teklifi istemedi.</p>
-          </div>
-        </button>
-        <button onClick={onUnreachable} className="p-4 border rounded-lg text-left hover:bg-yellow-50 hover:border-yellow-400 transition-colors flex items-center gap-4">
-          <UserX className="w-8 h-8 text-yellow-500" />
-          <div>
-            <p className="font-semibold text-yellow-800">Ulaşılamadı</p>
-            <p className="text-sm text-gray-600">Müşteri adreste bulunamadı.</p>
-          </div>
-        </button>
-        <button onClick={onPostponed} className="p-4 border rounded-lg text-left hover:bg-blue-50 hover:border-blue-400 transition-colors flex items-center gap-4">
-          <Clock className="w-8 h-8 text-blue-500" />
-          <div>
-            <p className="font-semibold text-blue-800">Ertelendi</p>
-            <p className="text-sm text-gray-600">Daha sonra görüşülecek.</p>
-          </div>
-        </button>
-      </div>
-
-      <div className="mt-6">
-        <label htmlFor="visitNotes" className="block text-sm font-medium text-gray-700 mb-1">
-          Ziyaret Notları (Reddetme/Erteleme Sebebi vb.)
-        </label>
-        <textarea
-          id="visitNotes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          className="w-full p-2 border rounded-lg"
-          placeholder="Örn: Mevcut sağlayıcıyla taahhütlü, 2 ay sonra tekrar arayın."
-        />
-      </div>
-    </div>
-  );
-};
-
-/* ===================== ADIM 4: SÖZLEŞME & İMZA (MEVCUT) ===================== */
-const ContractStep: React.FC<{
-  state: State;
-  dispatch: React.Dispatch<Action>;
-  customer: Customer;
-  onNext: () => void;
-}> = ({ state, dispatch, customer, onNext }) => {
-  const [flowSmsPhone, setFlowSmsPhone] = useState(() => (customer as any)?.phone ?? "");
-  const [sigOpen, setSigOpen] = useState(false);
-  const [contractOpen, setContractOpen] = useState(false);
-  const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
-
-  const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl;
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
-      <div className="flex items-center gap-3 mb-4">
-        <FileText className="w-5 h-5 text-[#0099CB]" />
-        <h3 className="text-lg font-semibold">4. Sözleşme Onayı</h3>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <p className="text-sm text-gray-600 mb-2">Sözleşme Önizleme</p>
-          <button
-            type="button"
-            onClick={() => setContractOpen(true)}
-            className="w-full h-64 border rounded-lg bg-white overflow-hidden relative text-left"
-            aria-label="Sözleşmeyi görüntüle"
-          >
-            <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="preview" />
-            <div className="absolute bottom-2 right-2 flex flex-col items-center pointer-events-none">
-              <div className="h-8 w-8 rounded-full bg-[#F9C800] text-gray-900 shadow ring-1 ring-black/10 flex items-center justify-center">
-                <Maximize2 className="h-4 w-4" />
-              </div>
-            </div>
-          </button>
-
-          <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              checked={state.contractAccepted}
-              onChange={(e) => dispatch({ type: "SET_CONTRACT_ACCEPTED", payload: e.target.checked })}
-            />
-            Sözleşme koşullarını okudum ve onaylıyorum.
-          </label>
-        </div>
-
-        <div>
-          <p className="text-sm text-gray-600 mb-2">Dijital İmza</p>
-          <div className="border rounded-lg p-2 bg-gray-50">
-            {signatureDataUrl ? (
-              <div className="flex items-center gap-3">
-                <img src={signatureDataUrl} alt="İmza" className="h-[120px] w-auto bg-white rounded border" />
-                <div className="flex flex-col gap-2">
-                  <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg border bg-white text-sm">
-                    İmzayı Düzenle
-                  </button>
-                  <button onClick={() => setSignatureDataUrl(null)} className="px-3 py-2 rounded-lg border bg-white text-sm">
-                    Temizle
-                  </button>
+            <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+                {/* Başlık ve Müşteri Tipi */}
+                <div className="flex justify-between items-center border-b pb-4 mb-4">
+                    <h3 className="text-xl font-semibold">Teklif ve Tasarruf Simülasyonu</h3>
+                    <div className="flex items-center gap-2 p-2 bg-gray-100 rounded-lg">
+                        {CustomerTypeIcon[customer.customerType]}
+                        <span className="font-medium">{customer.customerType}</span>
+                    </div>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-sm text-gray-500">Henüz imza yok.</div>
-                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg bg-[#0099CB] text-white text-sm">
-                  İmza Al
-                </button>
-              </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                    {/* Mevcut Durum Alanı (İnteraktif) */}
+                    <div className="p-4 border rounded-lg bg-gray-50">
+                        <h4 className="font-semibold text-lg mb-3">Mevcut Durum</h4>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-sm font-medium">Birim Fiyat (TL/kWh)</label>
+                                <input
+                                    type="number"
+                                    value={currentUnitPrice}
+                                    onChange={e => setCurrentUnitPrice(parseFloat(e.target.value) || 0)}
+                                    className="w-full mt-1 p-2 border rounded-lg"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium">Aylık Tüketim (kWh)</label>
+                                <input
+                                    type="number"
+                                    value={currentConsumption}
+                                    onChange={e => setCurrentConsumption(parseInt(e.target.value) || 0)}
+                                    className="w-full mt-1 p-2 border rounded-lg"
+                                />
+                            </div>
+                            <div className="pt-2">
+                                <p className="text-sm text-gray-600">Tahmini Aylık Fatura</p>
+                                <p className="text-2xl font-bold text-gray-800">{currentMonthlyBill.toFixed(2)} TL</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Enerjisa Teklifi Alanı (Dinamik) */}
+                    <div className="p-4 border-2 border-[#0099CB] rounded-lg bg-white">
+                        <h4 className="font-semibold text-lg mb-3 text-[#007ca8]">Enerjisa Teklifi</h4>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="text-sm font-medium">Tarife Seçimi</label>
+                                <select
+                                    value={selectedTariff.id}
+                                    onChange={e => setSelectedTariff(ALL_TARIFFS.find(t => t.id === e.target.value)!)}
+                                    className="w-full mt-1 p-2 border rounded-lg"
+                                >
+                                    {availableTariffs.map(tariff => (
+                                        <option key={tariff.id} value={tariff.id}>{tariff.name}</option>
+                                    ))}
+                                </select>
+                                {selectedTariff.id === 'yesil_evim' && (
+                                     <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3"/> Solar çözümlerde %10 indirim sağlar.
+                                     </p>
+                                )}
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Birim Fiyat (TL/kWh)</p>
+                                <p className="text-xl font-semibold">{selectedTariff.unitPrice.toFixed(2)} TL</p>
+                            </div>
+                            <div className="pt-2">
+                                <p className="text-sm text-gray-600">Enerjisa ile Tahmini Aylık Fatura</p>
+                                <p className="text-2xl font-bold text-[#007ca8]">{enerjisaMonthlyBill.toFixed(2)} TL</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* Tasarruf ve Sonraki Adım */}
+                <div className="mt-6 p-4 rounded-lg bg-green-50 border border-green-200 text-center">
+                    <p className="text-lg font-medium text-green-800">Yıllık Tahmini Tasarruf</p>
+                    <p className="text-4xl font-bold text-green-700 my-2">{annualSavings > 0 ? `${annualSavings.toFixed(2)} TL` : "Daha Avantajlı"}</p>
+                </div>
+                
+                {/* Yeşil Evim Lead Oluşturma */}
+                {selectedTariff.id === 'yesil_evim' && (
+                    <div className="mt-4 p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-center animate-fade-in">
+                        <p className="font-medium text-yellow-800 mb-2">Güneş enerjisi çözümleriyle ilgileniyor musunuz?</p>
+                        <button 
+                            onClick={() => setIsLeadModalOpen(true)}
+                            className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-yellow-500"
+                        >
+                            Evet, Teklif İçin Talep Oluştur
+                        </button>
+                    </div>
+                )}
+
+
+                <div className="mt-8 text-right">
+                    <button onClick={onContinue} className="bg-[#0099CB] text-white px-6 py-3 rounded-lg inline-flex items-center gap-2">
+                        Müzakere Sonucuna Git <ChevronRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+            {isLeadModalOpen && (
+                <LeadGenerationModal 
+                    customer={customer}
+                    onClose={() => setIsLeadModalOpen(false)}
+                />
             )}
-          </div>
-
-          <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-2">SMS ile Onay</p>
-            <div className="flex gap-2">
-              <input
-                value={flowSmsPhone}
-                onChange={(e) => setFlowSmsPhone(e.target.value)}
-                className="flex-1 p-2 border rounded-lg"
-                placeholder="5XX XXX XX XX"
-              />
-              <button onClick={() => dispatch({ type: "SET_SMS_SENT", payload: true })} className="px-4 py-2 bg-[#F9C800] rounded-lg">
-                SMS Gönder
-              </button>
-            </div>
-            {state.smsSent && (
-              <div className="mt-2 flex items-center gap-2 text-green-700 text-sm">
-                <ShieldCheck className="w-4 h-4" /> Onay SMS'i gönderildi.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 flex justify-between">
-        <button onClick={() => { /* geri: müzakere sonucu */ }} className="px-4 py-2 rounded-lg bg-white border" onClickCapture={() => history.back?.()}>
-          Geri
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!canContinue}
-          className={`px-6 py-3 rounded-lg text-white ${canContinue ? "bg-[#0099CB]" : "bg-gray-300"}`}
-        >
-          Sözleşmeyi Onayla ve Bitir
-        </button>
-      </div>
-
-      {/* Modallar */}
-      {contractOpen && (
-        <ContractModal customer={customer} signatureDataUrl={signatureDataUrl} onClose={() => setContractOpen(false)} />
-      )}
-      {sigOpen && (
-        <SignaturePadModal
-          onClose={() => setSigOpen(false)}
-          onSave={(dataUrl) => {
-            setSignatureDataUrl(dataUrl);
-            setSigOpen(false);
-          }}
-        />
-      )}
-    </div>
-  );
+        </>
+    );
 };
-
-/* ===================== ADIM 5: TAMAMLAMA ===================== */
-const CompletionStep: React.FC<{
-  customer: Customer;
-  dispatch: React.Dispatch<Action>;
-  onComplete: () => void;
-}> = ({ customer, dispatch, onComplete }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6 text-center animate-fade-in">
-    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-    <h3 className="text-2xl font-semibold">Sözleşme Tamamlandı!</h3>
-    <p className="text-gray-600 mt-2">
-      Müşteri {customer?.name ?? "—"} için elektrik satış sözleşmesi başarıyla oluşturulmuştur.
-    </p>
-    <div className="mt-6 flex justify-center gap-4">
-      <button onClick={() => dispatch({ type: "SET_STEP", payload: 4 })} className="px-4 py-2 rounded-lg bg-white border">
-        Geri
-      </button>
-      <button onClick={onComplete} className="px-8 py-3 rounded-lg bg-green-600 text-white font-semibold">
-        Ziyareti Kaydet
-      </button>
-    </div>
-  </div>
-);
-
-/* ===================== İMZA MODALI ===================== */
-const SignaturePadModal: React.FC<{ onClose: () => void; onSave: (dataUrl: string) => void }> = ({
-  onClose,
-  onSave,
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    const htmlStyle = document.documentElement.style;
-    const prev = {
-      overflow: style.overflow,
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      overscroll: htmlStyle.overscrollBehaviorY,
-    } as any;
-    style.overflow = "hidden";
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.width = "100%";
-    htmlStyle.overscrollBehaviorY = "contain";
-    return () => {
-      style.overflow = prev.overflow;
-      style.position = prev.position;
-      style.top = prev.top;
-      style.width = prev.width;
-      htmlStyle.overscrollBehaviorY = (prev.overscroll as string) || "";
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-
-  const fitCanvas = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const dpr = Math.max(window.devicePixelRatio || 1, 1);
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.floor(rect.width * dpr);
-    canvas.height = Math.floor(rect.height * dpr);
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, rect.width, rect.height);
-    }
-  };
-
-  useEffect(() => {
-    fitCanvas();
-    const onResize = () => fitCanvas();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.style.touchAction = "none";
-    let drawing = false;
-
-    const getPos = (e: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    };
-    const down = (e: PointerEvent) => {
-      drawing = true;
-      canvas.setPointerCapture(e.pointerId);
-      const { x, y } = getPos(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-    };
-    const move = (e: PointerEvent) => {
-      if (!drawing) return;
-      const { x, y } = getPos(e);
-      ctx.lineTo(x, y);
-      ctx.strokeStyle = "#111";
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.stroke();
-    };
-    const up = (e: PointerEvent) => {
-      drawing = false;
-      try {
-        canvas.releasePointerCapture(e.pointerId);
-      } catch {}
-    };
-
-    canvas.addEventListener("pointerdown", down);
-    canvas.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-    return () => {
-      canvas.removeEventListener("pointerdown", down);
-      canvas.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-    };
-  }, []);
-
-  const handleClear = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-  };
-  const handleSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    onSave(canvas.toDataURL("image/png"));
-  };
-
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10050] flex flex-col bg-black/50">
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
-        <div className="font-semibold text-gray-900">İmza</div>
-        <div className="flex gap-2">
-          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm">
-            Temizle
-          </button>
-          <button onClick={handleSave} className="px-3 py-1.5 rounded bg-[#0099CB] text-white text-sm">
-            Kaydet
-          </button>
-          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
-            Kapat
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 bg-white">
-        <div className="h-full w-full">
-          <canvas ref={canvasRef} className="h-[calc(100vh-56px)] w-full block" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ===================== SÖZLEŞME SAYFASI (Mock) ===================== */
-const ContractMockPage: React.FC<{ customer: Customer; signatureDataUrl: string | null; scale: "preview" | "full" }> = ({
-  customer,
-  signatureDataUrl,
-  scale,
-}) => {
-  const base =
-    scale === "full"
-      ? { pad: "p-8", title: "text-2xl", body: "text-sm", small: "text-xs" }
-      : { pad: "p-3", title: "text-base", body: "text-[10.5px]", small: "text-[9.5px]" };
-  const sigH = scale === "full" ? 100 : 44;
-  const imgMaxH = Math.floor(sigH * 0.8);
-  const cName = customer?.name ?? "—";
-  const cAddress = customer?.address ?? "—";
-  const cDistrict = customer?.district ?? "—";
-  const cPhone = (customer as any)?.phone ?? "—";
-
-  return (
-    <div className={`relative h-full w-full ${base.pad} bg-white`}>
-      <div className="text-center mb-2">
-        <div className={`font-semibold ${base.title} text-gray-900`}>ELEKTRİK SATIŞ SÖZLEŞMESİ</div>
-        <div className={`${base.small} text-gray-500`}>Mock • Tek Sayfa</div>
-      </div>
-      <div className={`space-y-2 ${base.body} text-gray-800`}>
-        <p>
-          İşbu sözleşme; <strong>{cName}</strong> ({cAddress}, {cDistrict}) ile Enerjisa Satış A.Ş. arasında{" "}
-          {new Date().toLocaleDateString()} tarihinde akdedilmiştir.
-        </p>
-        <ol className="list-decimal ml-5 space-y-1">
-          <li>Teslim noktasında ölçüm değerleri esas alınır.</li>
-          <li>Faturalandırma aylık dönemler itibarıyla yapılır.</li>
-          <li>Ödeme süresi fatura tebliğinden itibaren 10 gündür.</li>
-          <li>Cayma süresi imzadan itibaren 14 gündür.</li>
-          <li>Kişisel veriler 6698 sayılı KVKK kapsamında işlenir.</li>
-        </ol>
-
-        <div className="grid grid-cols-2 gap-4 mt-3">
-          <div className="border rounded p-2">
-            <div className="font-medium mb-1">Müşteri</div>
-            <div className={base.small}>Ad Soyad / Ünvan: {cName}</div>
-            <div className={base.small}>
-              Adres: {cAddress}, {cDistrict}
-            </div>
-            <div className={base.small}>Telefon: {cPhone}</div>
-          </div>
-          <div className="border rounded p-2">
-            <div className="font-medium mb-1">Tedarikçi</div>
-            <div className={base.small}>Enerjisa Satış A.Ş.</div>
-            <div className={base.small}>Mersis: 000000000000000</div>
-            <div className={base.small}>Adres: İstanbul, TR</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-6 pt-4 border-t">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex flex-col">
-            <div className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center" style={{ height: sigH }}>
-              {signatureDataUrl ? (
-                <img src={signatureDataUrl} alt="Müşteri İmzası" style={{ maxHeight: imgMaxH, maxWidth: "90%" }} className="object-contain" />
-              ) : (
-                <span className={`${base.small} text-gray-400`}>Müşteri İmzası</span>
-              )}
-            </div>
-            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Müşteri İmzası</div>
-          </div>
-          <div className="flex flex-col">
-            <div className="border-2 border-dashed border-gray-300 rounded bg-white flex items-center justify-center" style={{ height: sigH }}>
-              <span className={`${base.small} text-gray-400`}>Tedarikçi İmzası</span>
-            </div>
-            <div className={`${base.small} mt-1 text-gray-500 text-center`}>Tedarikçi İmzası</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ===================== SÖZLEŞME MODALI ===================== */
-const ContractModal: React.FC<{ customer: Customer; signatureDataUrl: string | null; onClose: () => void }> = ({
-  customer,
-  signatureDataUrl,
-  onClose,
-}) => {
-  useEffect(() => {
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    const htmlStyle = document.documentElement.style;
-    const prev = {
-      overflow: style.overflow,
-      position: style.position,
-      top: style.top,
-      width: style.width,
-      overscroll: htmlStyle.overscrollBehaviorY as string | undefined,
-    };
-    style.overflow = "hidden";
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.width = "100%";
-    htmlStyle.overscrollBehaviorY = "contain";
-    return () => {
-      style.overflow = prev.overflow!;
-      style.position = prev.position!;
-      style.top = prev.top!;
-      style.width = prev.width!;
-      htmlStyle.overscrollBehaviorY = prev.overscroll || "";
-      window.scrollTo(0, scrollY);
-    };
-  }, []);
-
-  return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
-      <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
-        <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
-        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
-          Kapat
-        </button>
-      </div>
-      <div className="flex-1 bg-gray-100 overflow-auto">
-        <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
-          <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="full" />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default VisitFlowScreen;
