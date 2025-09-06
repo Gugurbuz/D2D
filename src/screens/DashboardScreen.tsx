@@ -23,7 +23,7 @@ type Props = {
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
   const today = new Date().toISOString().split('T')[0];
-  
+
   // Saat & Tarih
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -63,7 +63,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
   const weeklyStats = useMemo(() => {
     const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); 
     weekStart.setHours(0, 0, 0, 0);
     
     const weeklyVisits = customers.filter(c => {
@@ -82,7 +82,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
   return (
     <div className="space-y-6">
-      {/* Hoş geldin mesajı + Saat & Tarih */}
+      {/* Hoş geldin + Saat + Tarih + Duyurular */}
       <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
@@ -90,7 +90,8 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
             Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
           </p>
         </div>
-        <div className="text-right w-52">
+
+        <div className="text-right w-56">
           <div className="text-3xl sm:text-4xl font-bold">
             {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
@@ -98,22 +99,20 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
             {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
 
-      {/* Duyurular */}
-<div
-  className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
-  onClick={() => setShowAnnouncements(true)}
->
-  {/* İkon en solda sabit */}
-  <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-
-  {/* Kayan yazı */}
-  <div className="overflow-hidden whitespace-nowrap flex-1">
-    <div className="inline-block text-sm text-blue-100 py-2 animate-marquee">
-      {announcements.join("   •   ")}
-    </div>
-  
-
-
+          {/* Duyurular */}
+          <div
+            className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+            onClick={() => setShowAnnouncements(true)}
+          >
+            <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
+            <div className="overflow-hidden whitespace-nowrap flex-1">
+              <div className="inline-block text-sm text-blue-100 py-2 animate-marquee">
+                {announcements.join("   •   ")}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -146,6 +145,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
                 onStart={() => handleStartVisit(customer)}
               />
             ))}
+            
             {todaysVisits.length > 5 && (
               <div className="text-center pt-4">
                 <button
