@@ -88,6 +88,14 @@ const VisitListScreen: React.FC<Props> = ({
     [onSelectCustomer, setCurrentScreen]
   );
 
+  // Buton stilleri
+  const buttonClass = (active: boolean, color = "blue") =>
+    `px-4 py-2 rounded-full border whitespace-nowrap text-sm transition ${
+      active
+        ? `bg-${color}-600 text-white`
+        : "bg-white text-gray-800 hover:bg-gray-100"
+    }`;
+
   return (
     <div className="px-4 md:px-6 py-6 space-y-6" role="main" aria-label="Ziyaret Listesi ekranı">
       {/* 🔍 Arama */}
@@ -100,80 +108,76 @@ const VisitListScreen: React.FC<Props> = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* ✅ Statü filtre butonları */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status as any)}
-            className={`px-4 py-2 rounded-full border whitespace-nowrap transition ${
-              statusFilter === status
-                ? "bg-blue-600 text-white"
-                : "bg-white text-gray-800 hover:bg-gray-100"
-            }`}
-            aria-pressed={statusFilter === status}
-          >
-            {status}
-          </button>
-        ))}
+      {/* 📂 Statü Filtresi */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+        <div className="flex gap-2 overflow-x-auto">
+          {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status as any)}
+              className={buttonClass(statusFilter === status)}
+              aria-pressed={statusFilter === status}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 📅 Tarih filtre butonları */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
-          <button
-            key={label}
-            onClick={() => setDateFilter(label as any)}
-            className={`px-4 py-2 rounded-full border whitespace-nowrap transition ${
-              dateFilter === label
-                ? "bg-green-600 text-white"
-                : "bg-white text-gray-800 hover:bg-gray-100"
-            }`}
-            aria-pressed={dateFilter === label}
-          >
-            {label}
-          </button>
-        ))}
+      {/* 📅 Tarih Filtresi */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+        <div className="flex gap-2 overflow-x-auto">
+          {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
+            <button
+              key={label}
+              onClick={() => setDateFilter(label as any)}
+              className={buttonClass(dateFilter === label, "green")}
+              aria-pressed={dateFilter === label}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* 🔃 Sıralama buton grubu (yeni) */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {[
-          { key: "plannedTime", label: "Tarihe Göre" },
-          { key: "priority", label: "Önceliğe Göre" },
-        ].map((item) => (
-          <button
-            key={item.key}
-            onClick={() => {
-              if (sortBy === item.key) {
-                setAsc(!asc);
-              } else {
-                setSortBy(item.key as any);
-                setAsc(true);
-              }
-            }}
-            className={`px-4 py-2 rounded-full border flex items-center gap-1 whitespace-nowrap transition ${
-              sortBy === item.key
-                ? "bg-purple-600 text-white"
-                : "bg-white text-gray-800 hover:bg-gray-100"
-            }`}
-            aria-pressed={sortBy === item.key}
-          >
-            <span>{item.label}</span>
-            {sortBy === item.key && (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
-          </button>
-        ))}
+      {/* ↕️ Sıralama Filtresi */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
+        <div className="flex gap-2 overflow-x-auto items-center">
+          {[
+            { key: "plannedTime", label: "Tarihe Göre" },
+            { key: "priority", label: "Önceliğe Göre" },
+          ].map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {
+                if (sortBy === item.key) {
+                  setAsc(!asc);
+                } else {
+                  setSortBy(item.key as any);
+                  setAsc(true);
+                }
+              }}
+              className={buttonClass(sortBy === item.key, "purple")}
+              aria-pressed={sortBy === item.key}
+            >
+              <span>{item.label}</span>
+              {sortBy === item.key && (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+            </button>
+          ))}
 
-        <button
-          onClick={resetFilters}
-          className="px-4 py-2 rounded-full border text-sm hover:bg-gray-100 whitespace-nowrap"
-        >
-          <RefreshCcw size={16} className="inline-block mr-1" />
-          Sıfırla
-        </button>
+          <button
+            onClick={resetFilters}
+            className="px-4 py-2 rounded-full border text-sm hover:bg-gray-100 whitespace-nowrap flex items-center gap-1"
+          >
+            <RefreshCcw size={16} /> Sıfırla
+          </button>
+        </div>
       </div>
 
-      {/* 📊 Sonuç sayısı */}
+      {/* 🔢 Sonuç Sayısı */}
       <div className="text-sm text-gray-600">
         {filteredSorted.length > 0 ? `${filteredSorted.length} ziyaret bulundu.` : "Ziyaret bulunamadı."}
       </div>
