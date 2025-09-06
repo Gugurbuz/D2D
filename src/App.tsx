@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoginScreen from './screens/LoginScreen';
 import AppLayout from './layouts/AppLayout';
 import DashboardScreen from './screens/DashboardScreen';
@@ -25,23 +25,28 @@ import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
 import { teamReps } from './data/team';
 import type { Customer, SalesRep, Screen, Role } from './types';
+// import { supabase } from './lib/supabase'; // Gerçek data için
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false); // ✅ Demo / gerçek ayrımı
   const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [agentName] = useState('Ahmet Yılmaz');
+  const [agentName, setAgentName] = useState('Ahmet Yılmaz');
   const [role, setRole] = useState<Role>('sales_rep');
 
-  const [customers] = useState<Customer[]>(mockCustomers);
+  // Data state
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
-  const [allReps] = useState<SalesRep[]>(mockReps);
+  const [allReps, setAllReps] = useState<SalesRep[]>([]);
 
-  const handleLogin = (isDemoMode = false) => {
-    if (isDemoMode) {
+  const handleLogin = (isDemo = false) => {
+    if (isDemo) {
+      setIsDemoMode(true);
       setShowRoleSelect(true);
     } else {
+      setIsDemoMode(false);
       setIsLoggedIn(true);
     }
   };
@@ -62,6 +67,30 @@ function App() {
     setSelectedCustomer(customer);
   };
 
+  // ✅ Demo / Gerçek veri yükleme
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    if (isDemoMode) {
+      setCustomers(mockCustomers);
+      setAllReps(mockReps);
+    } else {
+      setCustomers([]); // Başlangıçta boş
+      setAllReps([]);
+
+      // TODO: Gerçek Supabase verisini buradan çek
+      /*
+      supabase.from('customers').select('*').then(({ data }) => {
+        if (data) setCustomers(data);
+      });
+
+      supabase.from('sales_reps').select('*').then(({ data }) => {
+        if (data) setAllReps(data);
+      });
+      */
+    }
+  }, [isLoggedIn, isDemoMode]);
+
   if (!isLoggedIn) {
     if (showRoleSelect) {
       return <RoleSelectScreen onSelect={handleRoleSelect} />;
@@ -73,7 +102,7 @@ function App() {
     switch (currentScreen) {
       case 'dashboard':
         return (
-          <DashboardScreen 
+          <DashboardScreen
             customers={customers}
             assignments={assignments}
             allReps={allReps}
@@ -83,7 +112,7 @@ function App() {
         );
       case 'route':
         return (
-          <RouteMapScreen 
+          <RouteMapScreen
             customers={customers}
             salesRep={{ name: agentName, lat: 40.9368, lng: 29.1553 }}
           />
@@ -145,9 +174,8 @@ function App() {
         return <TeamMapScreen reps={teamReps} />;
       case 'messages':
         return <MessagesScreen />;
-     
       case 'profile':
-        return <ProfileScreens role="sales" />;
+        return <ProfileScreens role={role} />;
       case 'invoiceOcr':
         return <InvoiceOcrPage />;
       case 'userManagement':
@@ -160,7 +188,7 @@ function App() {
         return <FieldOpsMapScreen />;
       default:
         return (
-          <DashboardScreen 
+          <DashboardScreen
             customers={customers}
             assignments={assignments}
             allReps={allReps}
