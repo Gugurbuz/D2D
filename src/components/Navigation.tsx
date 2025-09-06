@@ -266,6 +266,39 @@ const Navigation: React.FC<Props> = ({
                 >
                   <Settings className="w-5 h-5" />
                 </Btn>
+                {role === "admin" && (
+  <>
+    <Btn
+      onClick={() => setCurrentScreen("reports")}
+      active={currentScreen === "reports"}
+      label="Raporlar"
+    >
+      <BarChart3 className="w-5 h-5" />
+    </Btn>
+    <Btn
+      onClick={() => setCurrentScreen("systemReports")}
+      active={currentScreen === "systemReports"}
+      label="Sistem Raporları"
+    >
+      <BarChart3 className="w-5 h-5" />
+    </Btn>
+    <Btn
+      onClick={() => setCurrentScreen("userManagement")}
+      active={currentScreen === "userManagement"}
+      label="Kullanıcı Yönetimi"
+    >
+      <Shield className="w-5 h-5" />
+    </Btn>
+    <Btn
+      onClick={() => setCurrentScreen("systemSettings")}
+      active={currentScreen === "systemSettings"}
+      label="Sistem Ayarları"
+    >
+      <Settings className="w-5 h-5" />
+    </Btn>
+  </>
+)}
+
               </>
             )}
 
