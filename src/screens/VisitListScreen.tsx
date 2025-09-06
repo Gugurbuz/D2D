@@ -39,7 +39,7 @@ const VisitListScreen = ({
       ? "blue"
       : status === "İptal"
       ? "red"
-      : "yellow"; // Planlandı, Bekliyor
+      : "yellow";
 
   const filteredSorted = useMemo(() => {
     let list = [...customers];
@@ -112,12 +112,12 @@ const VisitListScreen = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* 🔲 FİLTRE KUTUSU */}
-      <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-6 shadow-sm">
+      {/* 🔲 Filtreler: 3 Sütun, 3 Kutu */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* DURUM */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Durum</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-4 shadow-sm">
+          <label className="block text-sm font-medium text-gray-700">Durum</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => {
               const active = statusFilter === status;
               const tone =
@@ -147,9 +147,9 @@ const VisitListScreen = ({
         </div>
 
         {/* TARİH */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Tarih</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-4 shadow-sm">
+          <label className="block text-sm font-medium text-gray-700">Tarih</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => {
               const isActive = dateFilter === label;
               const activeClass = isActive
@@ -170,16 +170,16 @@ const VisitListScreen = ({
         </div>
 
         {/* SIRALAMA */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Sıralama</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+        <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-4 shadow-sm">
+          <label className="block text-sm font-medium text-gray-700">Sıralama</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
               { key: "plannedTime", label: "Tarihe Göre" },
               { key: "priority", label: "Önceliğe Göre" },
             ].map((item) => {
               const isActive = sortBy === item.key;
               const activeClass = isActive
-                ? "bg-purple-600 text-white border-purple-600"
+                ? "bg-gray-200 text-gray-900 border-gray-400"
                 : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50";
 
               return (
@@ -201,23 +201,21 @@ const VisitListScreen = ({
             })}
           </div>
         </div>
-
-        {/* 🔁 Filtre Sıfırla Butonu */}
-        <div className="text-right">
-          <button
-            onClick={resetFilters}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Filtreleri Sıfırla
-          </button>
-        </div>
       </div>
 
-      {/* Liste */}
+      {/* 🔁 Sıfırla */}
+      <div className="text-right pt-2">
+        <button
+          onClick={resetFilters}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Filtreleri Sıfırla
+        </button>
+      </div>
+
+      {/* Ziyaret Listesi */}
       {visibleItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          Hiç ziyaret bulunamadı.
-        </div>
+        <div className="text-center py-12 text-gray-500">Hiç ziyaret bulunamadı.</div>
       ) : (
         <div className="space-y-4">
           {visibleItems.map((c) => (
