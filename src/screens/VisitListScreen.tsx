@@ -1,12 +1,9 @@
+// Diğer importlar aynı kalıyor
 import React, { useMemo, useState, useCallback } from "react";
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
-import {
-  SortAsc,
-  SortDesc,
-  RefreshCcw,
-} from "lucide-react";
+import { SortAsc, SortDesc } from "lucide-react";
 import { isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
 const pageSize = 20;
@@ -110,7 +107,7 @@ const VisitListScreen = ({
     }`;
 
   return (
-    <div className="px-4 md:px-6 py-6 space-y-4">
+    <div className="px-4 md:px-6 py-6 space-y-6">
       {/* Arama alanı */}
       <input
         type="text"
@@ -120,78 +117,65 @@ const VisitListScreen = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* Aktif filtre etiketleri */}
-      <div className="flex flex-wrap gap-2">
-        {statusFilter !== "Tümü" && (
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm">
-            Durum: {statusFilter}{" "}
-            <button onClick={() => setStatusFilter("Tümü")}>×</button>
-          </span>
-        )}
-        {dateFilter !== "Tümü" && (
-          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
-            Tarih: {dateFilter}{" "}
-            <button onClick={() => setDateFilter("Tümü")}>×</button>
-          </span>
-        )}
-      </div>
-
-      {/* Durum filtreleri */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
-        <div className="flex gap-2 overflow-x-auto">
-          {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status as any)}
-              className={buttonClass(statusFilter === status)}
-            >
-              {status}
-            </button>
-          ))}
+      {/* Filtreler 3 sütun görünüm */}
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Durum */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
+          <div className="flex gap-2 overflow-x-auto">
+            {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status as any)}
+                className={buttonClass(statusFilter === status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Tarih filtreleri */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
-        <div className="flex gap-2 overflow-x-auto">
-          {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
-            <button
-              key={label}
-              onClick={() => setDateFilter(label as any)}
-              className={buttonClass(dateFilter === label, "green")}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Tarih */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
+          <div className="flex gap-2 overflow-x-auto">
+            {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
+              <button
+                key={label}
+                onClick={() => setDateFilter(label as any)}
+                className={buttonClass(dateFilter === label, "green")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Sıralama filtreleri */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
-        <div className="flex gap-2 overflow-x-auto">
-          {[
-            { key: "plannedTime", label: "Tarihe Göre" },
-            { key: "priority", label: "Önceliğe Göre" },
-          ].map((item) => (
-            <button
-              key={item.key}
-              onClick={() => {
-                if (sortBy === item.key) setAsc(!asc);
-                else {
-                  setSortBy(item.key as any);
-                  setAsc(true);
-                }
-              }}
-              className={buttonClass(sortBy === item.key, "purple")}
-            >
-              {item.label}{" "}
-              {sortBy === item.key &&
-                (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
-            </button>
-          ))}
+        {/* Sıralama */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
+          <div className="flex gap-2 overflow-x-auto">
+            {[
+              { key: "plannedTime", label: "Tarihe Göre" },
+              { key: "priority", label: "Önceliğe Göre" },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => {
+                  if (sortBy === item.key) setAsc(!asc);
+                  else {
+                    setSortBy(item.key as any);
+                    setAsc(true);
+                  }
+                }}
+                className={buttonClass(sortBy === item.key, "purple")}
+              >
+                {item.label}{" "}
+                {sortBy === item.key &&
+                  (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -216,7 +200,7 @@ const VisitListScreen = ({
         </div>
       )}
 
-      {/* Ziyaret listesi */}
+      {/* Liste */}
       {visibleItems.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           Hiç ziyaret bulunamadı.
