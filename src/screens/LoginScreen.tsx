@@ -33,17 +33,18 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         const { error } = await signUp(email, password, { name, phone, role });
         if (error) {
           if (error.message.includes('User already registered')) {
-            throw new Error('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+            setError('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+            return;
           }
           if (error.message.includes('Password should be at least')) {
-            throw new Error('Şifre en az 6 karakter olmalıdır.');
+            setError('Şifre en az 6 karakter olmalıdır.');
+            return;
           }
-          throw error;
+          setError(error.message);
+          return;
         }
       }
       onLogin();
-    } catch (err: any) {
-      setError(err.message);
     } finally {
       setLoading(false);
     }
