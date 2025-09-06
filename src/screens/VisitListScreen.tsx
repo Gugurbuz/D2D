@@ -49,9 +49,10 @@ const VisitListScreen: React.FC<Props> = ({
       list = list.filter((c) => c.status === statusFilter);
     }
 
-    if (dateFilter !== "Tümü") {
-      list = list.filter((c) => {
-        const date = parseISO(c.plannedTime);
+   if (dateFilter !== "Tümü") {
+  list = list.filter((c) => {
+    if (!c.visitDate) return false;
+    const date = parseISO(c.visitDate);
         if (dateFilter === "Bugün") return isToday(date);
         if (dateFilter === "Yarın") return isTomorrow(date);
         if (dateFilter === "Bu Hafta") return isThisWeek(date, { weekStartsOn: 1 });
