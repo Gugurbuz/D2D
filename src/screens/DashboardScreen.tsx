@@ -112,7 +112,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
       {announcements.join("   •   ")}
     </div>
   </div>
-</div>
+
 
 
       {/* KPI Kartları */}
