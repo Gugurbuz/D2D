@@ -407,4 +407,215 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
         </div>
         <label className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
           <input type="checkbox" checked={isBypassChecked} onChange={(e) => handleBypassToggle(e.target.checked)} className="h-4 w-4" />
-          <span className="text-sm font-medium text-yellow-800">
+          <span className="text-sm font-medium text-yellow-800">Test Modu</span>
+        </label>
+      </div>
+
+      {!isBypassChecked && (
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* OCR Section */}
+          <div className="border rounded-lg p-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Kimlik Fotoğrafı
+            </h4>
+            
+            {state.ocrStatus === 'idle' && !state.idPhoto && (
+              <div className="space-y-3">
+                {!stream && (
+                  <button onClick={startCamera} className="w-full p-3 border-2 border-dashed rounded-lg text-center hover:bg-gray-50">
+                    <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-600">Kamerayı Başlat</p>
+                  </button>
+                )}
+                {cameraError && <p className="text-red-600 text-sm">{cameraError}</p>}
+              </div>
+            )}
+
+            {stream && (
+              <div className="space-y-3">
+                <div className="relative">
+                  <video ref={videoRef} autoPlay playsInline className="w-full rounded-lg" />
+                  <button onClick={handleCaptureAndOcr} className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-[#0099CB] text-white p-3 rounded-full">
+                    <Camera className="w-6 h-6" />
+                  </button>
+                </div>
+                <button onClick={stopCamera} className="w-full p-2 text-gray-600 border rounded-lg">Kamerayı Kapat</button>
+              </div>
+            )}
+
+            {state.ocrStatus === 'scanning' && (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#0099CB]" />
+                <p className="text-sm text-gray-600">Kimlik okunuyor...</p>
+              </div>
+            )}
+
+            {state.ocrStatus === 'success' && (
+              <div className="text-center py-4">
+                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p className="text-sm text-green-600">Kimlik başarıyla okundu</p>
+              </div>
+            )}
+
+            {state.ocrStatus === 'error' && (
+              <div className="text-center py-4">
+                <XCircle className="w-8 h-8 mx-auto mb-2 text-red-500" />
+                <p className="text-sm text-red-600">Kimlik okunamadı, tekrar deneyin</p>
+                <button onClick={() => dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' })} className="mt-2 text-[#0099CB] text-sm">Tekrar Dene</button>
+              </div>
+            )}
+          </div>
+
+          {/* NFC Section */}
+          <div className="border rounded-lg p-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Nfc className="w-4 h-4" />
+              NFC Okuma
+            </h4>
+            
+            {state.nfcStatus === 'idle' && (
+              <button onClick={handleNfcRead} className="w-full p-6 border-2 border-dashed rounded-lg text-center hover:bg-gray-50">
+                <Nfc className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm text-gray-600">Kimliği NFC ile okut</p>
+              </button>
+            )}
+
+            {state.nfcStatus === 'scanning' && (
+              <div className="text-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-[#0099CB]" />
+                <p className="text-sm text-gray-600">NFC okunuyor...</p>
+              </div>
+            )}
+
+            {state.nfcStatus === 'success' && (
+              <div className="text-center py-4">
+                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p className="text-sm text-green-600">NFC başarıyla okundu</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+      <div className="mt-6 flex justify-between">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 border rounded-lg">Geri</button>
+        <button 
+          onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} 
+          disabled={!isVerified}
+          className={`px-6 py-2 rounded-lg ${isVerified ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+        >
+          Devam Et
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --- Adım 3: Sözleşme ---
+const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => (
+  <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+    <div className="flex items-center gap-3 mb-4">
+      <FileText className="w-5 h-5 text-[#0099CB]" />
+      <h3 className="text-lg font-semibold">3. Sözleşme İmzalama</h3>
+    </div>
+
+    <div className="bg-gray-50 p-4 rounded-lg mb-4">
+      <h4 className="font-medium mb-2">Sözleşme Özeti</h4>
+      <div className="text-sm text-gray-600 space-y-1">
+        <p>Müşteri: {customer.name}</p>
+        <p>Abone Tipi: {customer.subscriberType}</p>
+        <p>Aylık Ortalama Tüketim: {customer.avgMonthlyConsumptionKwh} kWh</p>
+        <p>Mevcut Birim Fiyat: {customer.currentKwhPrice} TL/kWh</p>
+      </div>
+    </div>
+
+    <div className="border rounded-lg p-4 mb-4">
+      <label className="flex items-start gap-3">
+        <input 
+          type="checkbox" 
+          checked={state.contractAccepted}
+          onChange={(e) => dispatch({ type: 'SET_CONTRACT_ACCEPTED', payload: e.target.checked })}
+          className="mt-1 h-4 w-4"
+        />
+        <div className="text-sm">
+          <p className="font-medium">Sözleşme Onayı</p>
+          <p className="text-gray-600">Müşteri sözleşme şartlarını okudu ve kabul etti.</p>
+        </div>
+      </label>
+    </div>
+
+    <div className="mt-6 flex justify-between">
+      <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 border rounded-lg">Geri</button>
+      <button 
+        onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })} 
+        disabled={!state.contractAccepted}
+        className={`px-6 py-2 rounded-lg ${state.contractAccepted ? 'bg-[#0099CB] text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+      >
+        Devam Et
+      </button>
+    </div>
+  </div>
+);
+
+// --- Adım 4: Tamamlama ---
+const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Action>; onComplete: () => void }> = ({ customer, dispatch, onComplete }) => {
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendSms = async () => {
+    setIsSending(true);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    dispatch({ type: 'SET_SMS_SENT', payload: true });
+    setIsSending(false);
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
+      <div className="flex items-center gap-3 mb-4">
+        <Sparkles className="w-5 h-5 text-[#0099CB]" />
+        <h3 className="text-lg font-semibold">4. Ziyaret Tamamlama</h3>
+      </div>
+
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-2 mb-2">
+          <CheckCircle className="w-5 h-5 text-green-600" />
+          <h4 className="font-medium text-green-800">Sözleşme Başarıyla Tamamlandı!</h4>
+        </div>
+        <p className="text-sm text-green-700">
+          {customer.name} için sözleşme süreci başarıyla tamamlandı. 
+          Müşteriye onay SMS'i gönderebilirsiniz.
+        </p>
+      </div>
+
+      <div className="border rounded-lg p-4 mb-4">
+        <h4 className="font-medium mb-2 flex items-center gap-2">
+          <Smartphone className="w-4 h-4" />
+          SMS Gönderimi
+        </h4>
+        <p className="text-sm text-gray-600 mb-3">
+          Müşteriye sözleşme onay SMS'i gönderilsin mi?
+        </p>
+        <button 
+          onClick={handleSendSms}
+          disabled={isSending}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-50"
+        >
+          {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {isSending ? 'Gönderiliyor...' : 'SMS Gönder'}
+        </button>
+      </div>
+
+      <div className="mt-6 flex justify-between">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 border rounded-lg">Geri</button>
+        <button onClick={onComplete} className="px-6 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          Ziyareti Tamamla
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default VisitFlowScreen;
