@@ -145,8 +145,7 @@ function App() {
         return <TeamMapScreen reps={teamReps} />;
       case 'messages':
         return <MessagesScreen />;
-      case 'notifications':
-        return <div className="p-6">📢 Bildirimler ekranı (TODO)</div>;
+     
       case 'profile':
         return <ProfileScreens role="sales" />;
       case 'invoiceOcr':
