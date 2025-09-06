@@ -35,7 +35,7 @@ function App() {
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
   const [role, setRole] = useState<Role>('sales_rep');
 
-  // Data
+  // Data state
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
   const [allReps, setAllReps] = useState<SalesRep[]>([]);
@@ -80,7 +80,7 @@ function App() {
     } else {
       setCustomers([]);
       setAllReps([]);
-      // TODO: Supabase'den data fetch edilecek
+      // TODO: Supabase'den gerçek veriler çekilecek
     }
   }, [isLoggedIn, isDemoMode]);
 
@@ -88,6 +88,14 @@ function App() {
   useEffect(() => {
     if (!isLoggedIn) return;
 
+    if (isDemoMode) {
+      // ✅ Demo modunda mock koordinat
+      setSalesRepLocation({ lat: 40.9923, lng: 29.0275 }); // Kadıköy örnek
+      setLocationError(null);
+      return;
+    }
+
+    // ✅ Gerçek login modunda cihaz konumu
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -98,15 +106,15 @@ function App() {
           setLocationError(null);
         },
         (err) => {
-          console.error("Konum alınamadı:", err);
-          setLocationError("Konum izni gerekli. Lütfen cihaz ayarlarından açın.");
+          console.error('Konum alınamadı:', err);
+          setLocationError('Konum izni gerekli. Lütfen cihaz ayarlarından açın.');
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      setLocationError("Tarayıcınız konum servisini desteklemiyor.");
+      setLocationError('Tarayıcınız konum servisini desteklemiyor.');
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, isDemoMode]);
 
   if (!isLoggedIn) {
     if (showRoleSelect) {
@@ -119,7 +127,7 @@ function App() {
     switch (currentScreen) {
       case 'dashboard':
         return (
-          <DashboardScreen 
+          <DashboardScreen
             customers={customers}
             assignments={assignments}
             allReps={allReps}
@@ -128,27 +136,32 @@ function App() {
           />
         );
       case 'route':
-        if (locationError) {
-          return (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-600">
-              <p className="mb-4">{locationError}</p>
-              <p className="text-sm text-gray-500">Konum servisi olmadan rota haritası görüntülenemez.</p>
-            </div>
-          );
-        }
+        if (!isDemoMode) {
+          // Sadece gerçek login için hata ve loading kontrolleri
+          if (locationError) {
+            return (
+              <div className="flex flex-col items-center justify-center h-full text-center text-gray-600">
+                <p className="mb-4">{locationError}</p>
+                <p className="text-sm text-gray-500">
+                  Konum servisi olmadan rota haritası görüntülenemez.
+                </p>
+              </div>
+            );
+          }
 
-        if (!salesRepLocation) {
-          return (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              Konum alınıyor...
-            </div>
-          );
+          if (!salesRepLocation) {
+            return (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                Konum alınıyor...
+              </div>
+            );
+          }
         }
 
         return (
-          <RouteMapScreen 
+          <RouteMapScreen
             customers={customers}
-            salesRep={{ name: agentName, ...salesRepLocation }}
+            salesRep={{ name: agentName, ...(salesRepLocation || { lat: 40.9923, lng: 29.0275 }) }}
           />
         );
       case 'visits':
@@ -222,7 +235,7 @@ function App() {
         return <FieldOpsMapScreen />;
       default:
         return (
-          <DashboardScreen 
+          <DashboardScreen
             customers={customers}
             assignments={assignments}
             allReps={allReps}
