@@ -124,8 +124,8 @@ const Navigation: React.FC<Props> = ({
             <Btn onClick={() => setCurrentScreen("reports")} active={currentScreen === "reports"} label="Raporlar"><BarChart3 className="w-5 h-5" /></Btn>
             {role === "manager" && (
               <>
-                <Btn onClick={() => setCurrentScreen("assignment")} active={currentScreen === "assignment" || currentScreen === "assignmentMap"} label="Görev Atama"><UserCheck className="w-5 h-5" /></Btn>
-                <Btn onClick={() => setCurrentScreen("teamMap")} active={currentScreen === "teamMap"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
+                <Btn onClick={() => setCurrentScreen("assignments")} active={currentScreen === "assignments" || currentScreen === "assignmentMap"} label="Görev Atama"><UserCheck className="w-5 h-5" /></Btn>
+                <Btn onClick={() => setCurrentScreen("team")} active={currentScreen === "team"} label="Ekip Haritası"><Users className="w-5 h-5" /></Btn>
               </>
             )}
             
