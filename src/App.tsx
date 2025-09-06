@@ -27,7 +27,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     // Timeout protection - if signIn takes too long, reset loading state
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+      setError('Supabase auth servisi yanıt vermiyor. Demo modunda devam edebilirsiniz.');
     }, 10000); // 10 saniye timeout
     
     try {
@@ -35,7 +35,8 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       clearTimeout(timeoutId); // Clear timeout if request completes
       
       if (error) {
-        // If user doesn't exist, try to create it
+        // If auth fails, suggest demo mode
+        setError(`Supabase auth hatası: ${error.message}. Demo modunda devam edebilirsiniz.`);
         if (error.message.includes('Invalid login credentials')) {
           setError('Test kullanıcısı bulunamadı. Kayıt ol sekmesinden test kullanıcısını oluşturun.');
           // Auto switch to signup mode
@@ -52,16 +53,11 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       setTimeout(() => onLogin(), 500);
     } catch (err: any) {
       clearTimeout(timeoutId); // Clear timeout on error
-      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+      setError(`Supabase bağlantı hatası: ${err.message || 'Bilinmeyen hata'}. Demo modunda devam edebilirsiniz.`);
       // If Supabase is not configured, still allow demo access
       if (!isSupabaseConfigured) {
         setTimeout(() => onLogin(), 1000);
       }
-      // If Supabase is not configured, still allow demo access
-      if (!isSupabaseConfigured) {
-        setTimeout(() => onLogin(), 1000);
-      }
-      onLogin();
     } finally {
       setLoading(false);
     }
@@ -70,16 +66,6 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isSupabaseConfigured) {
-      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
-      return;
-    }
-
-    if (!isSupabaseConfigured) {
-      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
-      return;
-    }
-
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -87,7 +73,6 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     // Timeout protection for form submission too
     const timeoutId = setTimeout(() => {
       setLoading(false);
-      setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
     }, 10000);
 
     try {
