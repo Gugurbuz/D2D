@@ -111,7 +111,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     <div className="inline-block text-sm text-blue-100 py-2 animate-marquee">
       {announcements.join("   •   ")}
     </div>
-  </div>
+  
 
 
 
