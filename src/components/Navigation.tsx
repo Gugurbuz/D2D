@@ -13,6 +13,7 @@ import {
   ScanLine,
   Settings,
   Shield,
+  MapPinPlus,
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from "../data/messages";
