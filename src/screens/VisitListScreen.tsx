@@ -203,7 +203,7 @@ const VisitListScreen = ({
       );
     })}
   </div>
-</div>
+
 
   );
 };
