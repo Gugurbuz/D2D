@@ -98,21 +98,20 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
             {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
 
-        {/* Duyurular */}
-<div
-  className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
-  onClick={() => setShowAnnouncements(true)}
->
-  {/* İkon en solda sabit */}
-  <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-
-  {/* Kayan yazı */}
-  <div className="overflow-hidden whitespace-nowrap flex-1">
-    <div className="inline-block text-sm text-blue-100 py-2 animate-marquee">
-      {announcements.join("   •   ")}
-    </div>
-  </div>
-
+          {/* Duyurular */}
+          <div
+            className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+            onClick={() => setShowAnnouncements(true)}
+          >
+            <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2" />
+            <div className="overflow-hidden whitespace-nowrap flex-1">
+              <div className="animate-marquee inline-block text-sm text-blue-100 py-2">
+                {announcements.join("   •   ")}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -196,7 +195,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   );
 };
 
-const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => 
+const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
       <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
