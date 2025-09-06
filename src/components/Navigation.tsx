@@ -242,7 +242,13 @@ const Navigation: React.FC<Props> = ({
             {/* Admin */}
             {role === "admin" && (
               <>
-           
+                <Btn
+                  onClick={() => setCurrentScreen("reports")}
+                  active={currentScreen === "reports"}
+                  label="Raporlar"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </Btn>
                 <Btn
                   onClick={() => setCurrentScreen("systemReports")}
                   active={currentScreen === "systemReports"}
@@ -298,11 +304,11 @@ const Navigation: React.FC<Props> = ({
             <Btn
               onClick={() => {
                 setNotifOpen(false);
-                setMessageMenuOpen(false);
-                setCurrentScreen("messages");
+                setMessageMenuOpen((o) => !o);
               }}
               active={currentScreen === "messages"}
               label="Mesajlar"
+              refProp={messageAnchorRef}
             >
               <MessageSquare className="w-5 h-5" />
               {messageUnreadCount > 0 && (
@@ -319,18 +325,86 @@ const Navigation: React.FC<Props> = ({
                 type="button"
                 onClick={() => {
                   setMessageMenuOpen(false);
-                  setNotifOpen(false);
-                  setCurrentScreen("notifications");
+                  setNotifOpen((o) => !o);
                 }}
                 className="px-3 py-2 rounded-lg relative text-gray-600 hover:bg-gray-100"
                 title="Bildirimler"
+                aria-expanded={notifOpen}
               >
                 {notifUnread > 0 ? (
                   <BellDot className="w-5 h-5" />
                 ) : (
                   <Bell className="w-5 h-5" />
                 )}
+                {notifUnread > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">
+                    {notifUnread}
+                  </span>
+                )}
               </button>
+
+              {/* Bildirim popup menüsü */}
+              {notifOpen && (
+                <div
+                  ref={notifMenuRef}
+                  className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg animate-fade-in-down"
+                >
+                  <div className="px-4 py-3 border-b flex items-center justify-between">
+                    <div className="font-semibold text-gray-900">Bildirimler</div>
+                    <button
+                      onClick={() =>
+                        setNotifItems((prev) =>
+                          prev.map((n) => ({ ...n, unread: false }))
+                        )
+                      }
+                      className="text-xs text-[#0099CB] hover:underline"
+                    >
+                      Tümünü okundu işaretle
+                    </button>
+                  </div>
+                  <div className="max-h-[300px] overflow-auto">
+                    {notifItems.length === 0 ? (
+                      <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                        Bildirim yok
+                      </div>
+                    ) : (
+                      notifItems.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 border-b last:border-b-0 ${
+                            n.unread ? "bg-[#0099CB]/5" : ""
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span
+                              className={`mt-0.5 inline-block w-2 h-2 rounded-full ${
+                                n.type === "assignment"
+                                  ? "bg-amber-500"
+                                  : n.type === "visit"
+                                  ? "bg-green-500"
+                                  : "bg-gray-400"
+                              }`}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">
+                                {n.title}
+                              </div>
+                              {n.desc && (
+                                <div className="text-xs text-gray-600 truncate">
+                                  {n.desc}
+                                </div>
+                              )}
+                              <div className="text-[11px] text-gray-500 mt-0.5">
+                                {n.timeAgo}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
