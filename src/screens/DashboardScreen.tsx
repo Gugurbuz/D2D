@@ -101,26 +101,40 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
 
           {/* Duyurular */}
-          <div
-            className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
-            onClick={() => setShowAnnouncements(true)}
-          >
-            <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-            <Marquee
-              gradient={false}
-              speed={50}
-              pauseOnHover={true}
-              className="text-sm text-blue-100 py-2"
-            >
-              {announcements.map((a, idx) => (
-                <span key={idx} className="mx-6">
-                  {a}
-                </span>
-              ))}
-            </Marquee>
-          </div>
-        </div>
-      </div>
+         <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
+  <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
+  <p className="text-blue-100">
+    Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+  </p>
+
+  {/* Saat + Tarih */}
+  <div className="mt-4">
+    <div className="text-3xl sm:text-4xl font-bold">
+      {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    </div>
+    <div className="text-sm text-blue-100 mt-1">
+      {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+    </div>
+  </div>
+
+  {/* Duyurular */}
+  <div
+    className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+    onClick={() => setShowAnnouncements(true)}
+  >
+    <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
+    <Marquee
+      gradient={false}
+      speed={50}
+      pauseOnHover={true}
+      className="text-sm text-blue-100 py-2"
+    >
+      {announcements.map((a, idx) => (
+        <span key={idx} className="mx-6">{a}</span>
+      ))}
+    </Marquee>
+  </div>
+</div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
