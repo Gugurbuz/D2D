@@ -7,7 +7,8 @@ import {
   MapPin, 
   Users,
   Calendar,
-  Award
+  Award,
+  Megaphone
 } from 'lucide-react';
 import VisitCard from '../components/VisitCard';
 import type { Customer, SalesRep } from '../types';
@@ -21,7 +22,6 @@ type Props = {
 };
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
-  // Bugünün tarihi
   const today = new Date().toISOString().split('T')[0];
   
   // Saat & Tarih
@@ -31,47 +31,39 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     return () => clearInterval(interval);
   }, []);
 
-  // Bugünkü ziyaretler
-  const todaysVisits = useMemo(() => {
-    return customers.filter(c => c.visitDate === today);
-  }, [customers, today]);
+  // Duyurular
+  const announcements = [
+    "📢 Yeni tarife kampanyası başladı!",
+    "⚡ Sistem bakımı bu gece 02:00-04:00 arası yapılacak.",
+    "🎯 Günlük hedefinize ulaşmayı unutmayın!"
+  ];
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
 
-  // Tamamlanan ziyaretler
-  const completedVisits = useMemo(() => {
-    return todaysVisits.filter(c => c.status === 'Tamamlandı');
-  }, [todaysVisits]);
+  const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
+  const completedVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Tamamlandı'), [todaysVisits]);
+  const pendingVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Planlandı'), [todaysVisits]);
 
-  // Bekleyen ziyaretler
-  const pendingVisits = useMemo(() => {
-    return todaysVisits.filter(c => c.status === 'Planlandı');
-  }, [todaysVisits]);
-
-  // Atanan rep ismi bulma fonksiyonu
   const getAssignedName = (customerId: string) => {
     const repId = assignments[customerId];
     return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
   };
 
-  // Ziyaret detayına git
   const handleVisitDetail = (customer: Customer) => {
     onSelectCustomer(customer);
     setCurrentScreen('visitDetail');
   };
 
-  // Ziyaret başlat
   const handleStartVisit = (customer: Customer) => {
     onSelectCustomer(customer);
     setCurrentScreen('visitFlow');
   };
 
-  // Günlük hedef
   const dailyTarget = 20;
   const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
 
-  // Haftalık istatistikler
   const weeklyStats = useMemo(() => {
     const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Pazartesi
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
     weekStart.setHours(0, 0, 0, 0);
     
     const weeklyVisits = customers.filter(c => {
@@ -98,49 +90,35 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
             Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right w-52">
           <div className="text-3xl sm:text-4xl font-bold">
             {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
           <div className="text-sm text-blue-100 mt-1">
             {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
+
+          {/* Duyurular */}
+          <div
+            className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+            onClick={() => setShowAnnouncements(true)}
+          >
+            <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2" />
+            <div className="overflow-hidden whitespace-nowrap flex-1">
+              <div className="animate-marquee inline-block text-sm text-blue-100 py-2">
+                {announcements.join("   •   ")}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          title="Günlük Hedef"
-          value={`${completedVisits.length}/${dailyTarget}`}
-          subtitle={`%${completionRate} tamamlandı`}
-          icon={<Target className="w-6 h-6" />}
-          color="bg-[#0099CB]"
-        />
-        
-        <KPICard
-          title="Tamamlanan"
-          value={completedVisits.length.toString()}
-          subtitle="Bugün"
-          icon={<CheckCircle className="w-6 h-6" />}
-          color="bg-green-500"
-        />
-        
-        <KPICard
-          title="Bekleyen"
-          value={pendingVisits.length.toString()}
-          subtitle="Ziyaret"
-          icon={<Clock className="w-6 h-6" />}
-          color="bg-yellow-500"
-        />
-        
-        <KPICard
-          title="Haftalık"
-          value={`%${weeklyStats.rate}`}
-          subtitle={`${weeklyStats.completed}/${weeklyStats.total} tamamlandı`}
-          icon={<TrendingUp className="w-6 h-6" />}
-          color="bg-purple-500"
-        />
+        <KPICard title="Günlük Hedef" value={`${completedVisits.length}/${dailyTarget}`} subtitle={`%${completionRate} tamamlandı`} icon={<Target className="w-6 h-6" />} color="bg-[#0099CB]" />
+        <KPICard title="Tamamlanan" value={completedVisits.length.toString()} subtitle="Bugün" icon={<CheckCircle className="w-6 h-6" />} color="bg-green-500" />
+        <KPICard title="Bekleyen" value={pendingVisits.length.toString()} subtitle="Ziyaret" icon={<Clock className="w-6 h-6" />} color="bg-yellow-500" />
+        <KPICard title="Haftalık" value={`%${weeklyStats.rate}`} subtitle={`${weeklyStats.completed}/${weeklyStats.total} tamamlandı`} icon={<TrendingUp className="w-6 h-6" />} color="bg-purple-500" />
       </div>
 
       {/* Bugünkü Program */}
@@ -166,7 +144,6 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
                 onStart={() => handleStartVisit(customer)}
               />
             ))}
-            
             {todaysVisits.length > 5 && (
               <div className="text-center pt-4">
                 <button
@@ -189,44 +166,39 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
         </div>
         
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          <ActionButton
-            title="Rota Haritası"
-            subtitle="Bugünkü rotanı gör"
-            icon={<MapPin className="w-5 h-5" />}
-            onClick={() => setCurrentScreen('route')}
-          />
-          
-          <ActionButton
-            title="Ziyaret Listesi"
-            subtitle="Tüm ziyaretleri listele"
-            icon={<Users className="w-5 h-5" />}
-            onClick={() => setCurrentScreen('visits')}
-          />
-          
-          <ActionButton
-            title="Raporlar"
-            subtitle="Performans analizi"
-            icon={<TrendingUp className="w-5 h-5" />}
-            onClick={() => setCurrentScreen('reports')}
-          />
+          <ActionButton title="Rota Haritası" subtitle="Bugünkü rotanı gör" icon={<MapPin className="w-5 h-5" />} onClick={() => setCurrentScreen('route')} />
+          <ActionButton title="Ziyaret Listesi" subtitle="Tüm ziyaretleri listele" icon={<Users className="w-5 h-5" />} onClick={() => setCurrentScreen('visits')} />
+          <ActionButton title="Raporlar" subtitle="Performans analizi" icon={<TrendingUp className="w-5 h-5" />} onClick={() => setCurrentScreen('reports')} />
         </div>
       </div>
+
+      {/* Popup: Duyurular */}
+      {showAnnouncements && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h2 className="text-lg font-bold mb-4">Duyurular</h2>
+            <ul className="space-y-2 text-gray-700">
+              {announcements.map((a, idx) => (
+                <li key={idx}>- {a}</li>
+              ))}
+            </ul>
+            <button
+              onClick={() => setShowAnnouncements(false)}
+              className="mt-4 px-4 py-2 bg-[#0099CB] text-white rounded-lg hover:bg-[#0088b8]"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const KPICard: React.FC<{
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;
-}> = ({ title, value, subtitle, icon, color }) => (
+const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
-      <div className={`p-2 rounded-lg ${color} text-white`}>
-        {icon}
-      </div>
+      <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
     </div>
     <div className="space-y-1">
       <p className="text-sm text-gray-600">{title}</p>
@@ -236,16 +208,8 @@ const KPICard: React.FC<{
   </div>
 );
 
-const ActionButton: React.FC<{
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}> = ({ title, subtitle, icon, onClick }) => (
-  <button
-    onClick={onClick}
-    className="p-4 text-left border border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-colors"
-  >
+const ActionButton: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; onClick: () => void; }> = ({ title, subtitle, icon, onClick }) => (
+  <button onClick={onClick} className="p-4 text-left border border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-colors">
     <div className="flex items-center gap-3">
       <div className="text-[#0099CB]">{icon}</div>
       <div>
