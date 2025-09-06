@@ -200,7 +200,7 @@ const Navigation: React.FC<Props> = ({
                   active={currentScreen === "invoiceOcr"}
                   label="Bölge Dışı Ziyaret"
                 >
-                  <ScanLine className="w-5 h-5" />
+                  <MapPinOff  className="w-5 h-5" />
                 </Btn>
               </>
             )}
@@ -234,7 +234,7 @@ const Navigation: React.FC<Props> = ({
                   active={currentScreen === "invoiceOcr"}
                   label="Bölgedışı Ziyaret"
                 >
-                  <ScanLine className="w-5 h-5" />
+                  <MapPinOff  className="w-5 h-5" />
                 </Btn>
               </>
             )}
@@ -413,4 +413,4 @@ const Navigation: React.FC<Props> = ({
   );
 };
 
-export default Navigation;
+export default Navigation;  
