@@ -1,6 +1,6 @@
 import React from 'react';
 import { Customer, Rep } from '../types';
-import { VisitCard } from '../components/VisitCard';
+import VisitCard from '../components/VisitCard';
 
 interface VisitListScreenProps {
   customers: Customer[];
