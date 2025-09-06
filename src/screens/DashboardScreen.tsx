@@ -84,57 +84,41 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   return (
     <div className="space-y-6">
       {/* Hoş geldin + Saat + Tarih + Duyurular */}
-      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
-          <p className="text-blue-100">
-            Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
+        <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
+        <p className="text-blue-100">
+          Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+        </p>
 
-        <div className="text-right w-56">
+        {/* Saat + Tarih */}
+        <div className="mt-4">
           <div className="text-3xl sm:text-4xl font-bold">
             {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
           <div className="text-sm text-blue-100 mt-1">
             {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
+        </div>
 
-          {/* Duyurular */}
-         <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
-  <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
-  <p className="text-blue-100">
-    Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
-  </p>
-
-  {/* Saat + Tarih */}
-  <div className="mt-4">
-    <div className="text-3xl sm:text-4xl font-bold">
-      {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-    </div>
-    <div className="text-sm text-blue-100 mt-1">
-      {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-    </div>
-  </div>
-
-  {/* Duyurular */}
-  <div
-    className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
-    onClick={() => setShowAnnouncements(true)}
-  >
-    <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-    <Marquee
-      gradient={false}
-      speed={50}
-      pauseOnHover={true}
-      className="text-sm text-blue-100 py-2"
-    >
-      {announcements.map((a, idx) => (
-        <span key={idx} className="mx-6">{a}</span>
-      ))}
-    </Marquee>
-  </div>
-</div>
+        {/* Duyurular */}
+        <div
+          className="relative mt-3 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+          onClick={() => setShowAnnouncements(true)}
+        >
+          <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
+          <Marquee
+            gradient={false}
+            speed={50}
+            pauseOnHover={true}
+            direction="left"
+            className="text-sm text-blue-100 py-2"
+          >
+            {announcements.map((a, idx) => (
+              <span key={idx} className="mx-6">{a}</span>
+            ))}
+          </Marquee>
+        </div>
+      </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -219,7 +203,19 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   );
 };
 
-const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: React.ReactNode; color: string; }> = ({ title, value, subtitle, icon, color }) => (
+/* ------------------------
+   Reusable Components
+------------------------ */
+
+interface KPICardProps {
+  title: string;
+  value: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  color: string;
+}
+
+const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
       <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
@@ -232,8 +228,18 @@ const KPICard: React.FC<{ title: string; value: string; subtitle: string; icon: 
   </div>
 );
 
-const ActionButton: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; onClick: () => void; }> = ({ title, subtitle, icon, onClick }) => (
-  <button onClick={onClick} className="p-4 text-left border border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-colors">
+interface ActionButtonProps {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+const ActionButton: React.FC<ActionButtonProps> = ({ title, subtitle, icon, onClick }) => (
+  <button
+    onClick={onClick}
+    className="p-4 text-left border border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-colors"
+  >
     <div className="flex items-center gap-3">
       <div className="text-[#0099CB]">{icon}</div>
       <div>
