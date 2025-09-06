@@ -25,21 +25,24 @@ import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
 import { teamReps } from './data/team';
 import type { Customer, SalesRep, Screen, Role } from './types';
-// import { supabase } from './lib/supabase'; // Gerçek data için
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false); // ✅ Demo / gerçek ayrımı
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
   const [role, setRole] = useState<Role>('sales_rep');
 
-  // Data state
+  // Data
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
   const [allReps, setAllReps] = useState<SalesRep[]>([]);
+
+  // Konum state
+  const [salesRepLocation, setSalesRepLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const handleLogin = (isDemo = false) => {
     if (isDemo) {
@@ -67,7 +70,7 @@ function App() {
     setSelectedCustomer(customer);
   };
 
-  // ✅ Demo / Gerçek veri yükleme
+  // Demo / gerçek veri yükleme
   useEffect(() => {
     if (!isLoggedIn) return;
 
@@ -75,21 +78,35 @@ function App() {
       setCustomers(mockCustomers);
       setAllReps(mockReps);
     } else {
-      setCustomers([]); // Başlangıçta boş
+      setCustomers([]);
       setAllReps([]);
-
-      // TODO: Gerçek Supabase verisini buradan çek
-      /*
-      supabase.from('customers').select('*').then(({ data }) => {
-        if (data) setCustomers(data);
-      });
-
-      supabase.from('sales_reps').select('*').then(({ data }) => {
-        if (data) setAllReps(data);
-      });
-      */
+      // TODO: Supabase'den data fetch edilecek
     }
   }, [isLoggedIn, isDemoMode]);
+
+  // Konum alma
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setSalesRepLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+          setLocationError(null);
+        },
+        (err) => {
+          console.error("Konum alınamadı:", err);
+          setLocationError("Konum izni gerekli. Lütfen cihaz ayarlarından açın.");
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setLocationError("Tarayıcınız konum servisini desteklemiyor.");
+    }
+  }, [isLoggedIn]);
 
   if (!isLoggedIn) {
     if (showRoleSelect) {
@@ -102,7 +119,7 @@ function App() {
     switch (currentScreen) {
       case 'dashboard':
         return (
-          <DashboardScreen
+          <DashboardScreen 
             customers={customers}
             assignments={assignments}
             allReps={allReps}
@@ -111,10 +128,27 @@ function App() {
           />
         );
       case 'route':
+        if (locationError) {
+          return (
+            <div className="flex flex-col items-center justify-center h-full text-center text-gray-600">
+              <p className="mb-4">{locationError}</p>
+              <p className="text-sm text-gray-500">Konum servisi olmadan rota haritası görüntülenemez.</p>
+            </div>
+          );
+        }
+
+        if (!salesRepLocation) {
+          return (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              Konum alınıyor...
+            </div>
+          );
+        }
+
         return (
-          <RouteMapScreen
+          <RouteMapScreen 
             customers={customers}
-            salesRep={{ name: agentName, lat: 40.9368, lng: 29.1553 }}
+            salesRep={{ name: agentName, ...salesRepLocation }}
           />
         );
       case 'visits':
@@ -188,7 +222,7 @@ function App() {
         return <FieldOpsMapScreen />;
       default:
         return (
-          <DashboardScreen
+          <DashboardScreen 
             customers={customers}
             assignments={assignments}
             allReps={allReps}
