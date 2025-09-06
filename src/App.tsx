@@ -18,43 +18,87 @@ import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
 import { teamReps } from './data/team';
 import type { Customer, SalesRep, Screen, Role } from './types';
+import { supabase } from './lib/supabase'; // Supabase bağlantısı burada
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [agentName] = useState('Ahmet Yılmaz');
+  const [agentName, setAgentName] = useState('');
   const [role, setRole] = useState<Role>('sales_rep');
-  
-  // Data state
-  const [customers] = useState<Customer[]>(mockCustomers);
-  const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
-  const [allReps] = useState<SalesRep[]>(mockReps);
 
-  const handleLogin = (isDemoMode = false) => {
-    if (isDemoMode) {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
+  const [allReps, setAllReps] = useState<SalesRep[]>([]);
+
+  const handleLogin = async (demo = false) => {
+    setIsDemoMode(demo);
+
+    if (demo) {
       setShowRoleSelect(true);
     } else {
       setIsLoggedIn(true);
+
+      // Supabase kullanıcı bilgilerini al
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: rep } = await supabase
+          .from('sales_reps')
+          .select('name')
+          .eq('user_id', user.id)
+          .single();
+
+        setAgentName(rep?.name || 'Kullanıcı');
+      }
     }
   };
 
   const handleRoleSelect = (selectedRole: string) => {
-    // Role string'ini Role tipine dönüştür
     const roleMap: Record<string, Role> = {
       'rep-1': 'sales_rep',
       'manager-1': 'manager'
     };
-    
+
     setRole(roleMap[selectedRole] || 'sales_rep');
     setShowRoleSelect(false);
     setIsLoggedIn(true);
+    setAgentName('Ahmet Yılmaz'); // Demo login adı
   };
 
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (!isLoggedIn) return;
+
+      if (isDemoMode) {
+        // Demo login: mock veriler
+        setCustomers(mockCustomers);
+        setAllReps(mockReps);
+      } else {
+        // Gerçek kullanıcı: Supabase verileri
+        const { data: customersData } = await supabase
+          .from('customers')
+          .select('*');
+
+        const { data: repsData } = await supabase
+          .from('sales_reps')
+          .select('*');
+
+        setCustomers(customersData || []);
+        setAllReps(repsData || []);
+      }
+    };
+
+    loadData();
+  }, [isLoggedIn, isDemoMode]);
 
   if (!isLoggedIn) {
     if (showRoleSelect) {
@@ -147,6 +191,8 @@ function App() {
             customers={customers}
             assignments={assignments}
             allReps={allReps}
+            setCurrentScreen={setCurrentScreen}
+            onSelectCustomer={handleSelectCustomer}
           />
         );
     }
