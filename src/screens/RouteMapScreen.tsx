@@ -66,7 +66,7 @@ const allMockCustomers: Customer[] = [
 ];
 
 /* ==== İkonlar & Yardımcılar ==== */
-const repIcon = new L.Icon({ iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=17202å44491", iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -28] });
+const repIcon = new L.Icon({ iconUrl: "https://companieslogo.com/img/orig/ENJSA.IS-d388e8cb.png?t=1720244491", iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -28] });
 function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }) { const bg = opts?.starred ? "#F5B301" : opts?.highlight ? "#FF6B00" : "#0099CB"; const pulse = opts?.highlight ? "box-shadow:0 0 0 6px rgba(255,107,0,.15);" : ""; return L.divIcon({ className: "number-marker", html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);${pulse}transform:${opts?.highlight ? "scale(1.14)" : "scale(1)"};">${n}</div>`, iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -28] }); }
 const fmtKm = (km: number | null) => km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 const toCoordStr = (lat: number, lng: number) => `${lng.toFixed(6)},${lat.toFixed(6)}`;
@@ -155,8 +155,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         setRouteCoords(combinedCoords);
         setRouteKm(combinedKm);
       }
-    } catch (e) { console.error("Rota optimizasyonu hatası:", e); alert("Rota optimizasyon servisinde bir hata oluştu."); } 
-    finally { setLoading(false); }
+    } catch (e) { console.error("Rota optimizasyonu hatası:", e); alert("Rota optimizasyon servisinde bir hata oluştu."); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { handleOptimize(); }, [starredId, assignedCustomers, travelMode]);
@@ -207,8 +207,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           ))}
           {routeCoords.length > 0 && <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />}
         </MapContainer>
+
         <div className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"} flex`}>
-          <button onClick={() => setPanelOpen(o => !o)} className="w-6 bg-[#0099CB] hover:bg-[#007DA1] flex items-center justify-center text-white"><mrowpanelOpen ? <Minimize2 className="w-4 h-4 -rotate-90" /> : <Maximize2 className="w-4 h-4 -rotate-90" />}</div></button>
+          <button onClick={() => setPanelOpen(o => !o)} className="w-6 bg-[#0099CB] hover:bg-[#007DA1] flex items-center justify-center text-white">
+            {panelOpen ? <Minimize2 className="w-4 h-4 -rotate-90" /> : <Maximize2 className="w-4 h-4 -rotate-90" />}
+          </button>
           <div className="bg-white/90 backdrop-blur-sm rounded-l-xl shadow-md px-4 py-4 flex flex-col gap-3 min-w-[320px] max-w-[21.6rem] h-full">
             <div className="font-semibold text-gray-700 text-base">Ziyaret Sırası</div>
             <div className="text-[11px] text-gray-600">⭐ Bir müşteriyi yıldızlayarak rotayı o müşteriden başlatabilirsiniz.</div>
