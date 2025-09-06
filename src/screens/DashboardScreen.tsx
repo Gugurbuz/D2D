@@ -40,6 +40,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   ];
   const [showAnnouncements, setShowAnnouncements] = useState(false);
 
+  // Bugünkü ziyaretler
   const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
   const completedVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Tamamlandı'), [todaysVisits]);
   const pendingVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Planlandı'), [todaysVisits]);
@@ -83,16 +84,19 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
   return (
     <div className="space-y-6">
-      {/* Hoş geldin + Saat + Tarih + Duyurular */}
-      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex justify-between items-start">
-        {/* Sol taraf */}
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
-          <p className="text-blue-100">
-            Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
-          </p>
+      {/* Hoş geldin + Saat + Tarih */}
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
+        <div className="flex justify-between items-start">
+          {/* Sol taraf */}
+          <div>
+            <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
+            <p className="text-blue-100">
+              Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+            </p>
+          </div>
 
-          <div className="mt-4">
+          {/* Sağ taraf */}
+          <div className="text-right">
             <div className="text-3xl sm:text-4xl font-bold">
               {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
@@ -102,9 +106,9 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
         </div>
 
-        {/* Sağ taraf: Duyurular */}
+        {/* Alt satır: Duyurular */}
         <div
-          className="relative mt-2 w-80 bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
+          className="relative mt-4 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
           onClick={() => setShowAnnouncements(true)}
         >
           <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
