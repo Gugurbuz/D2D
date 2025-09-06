@@ -89,9 +89,6 @@ const Navigation: React.FC<Props> = ({
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  const markAllNotificationsRead = () =>
-    setNotifItems((prev) => prev.map((n) => ({ ...n, unread: false })));
-
   const avatarSrc =
     agentAvatarUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -199,12 +196,12 @@ const Navigation: React.FC<Props> = ({
                   <List className="w-5 h-5" />
                 </Btn>
                 <Btn
-      onClick={() => setCurrentScreen("invoiceOcr")}
-      active={currentScreen === "invoiceOcr"}
-      label="Fatura OCR"
-    >
-      <ScanLine className="w-5 h-5" />
-    </Btn>
+                  onClick={() => setCurrentScreen("invoiceOcr")}
+                  active={currentScreen === "invoiceOcr"}
+                  label="Fatura OCR"
+                >
+                  <ScanLine className="w-5 h-5" />
+                </Btn>
               </>
             )}
 
@@ -232,13 +229,13 @@ const Navigation: React.FC<Props> = ({
                 >
                   <Users className="w-5 h-5" />
                 </Btn>
-                 <Btn
-      onClick={() => setCurrentScreen("invoiceOcr")}
-      active={currentScreen === "invoiceOcr"}
-      label="Fatura OCR"
-    >
-      <ScanLine className="w-5 h-5" />
-    </Btn>
+                <Btn
+                  onClick={() => setCurrentScreen("invoiceOcr")}
+                  active={currentScreen === "invoiceOcr"}
+                  label="Fatura OCR"
+                >
+                  <ScanLine className="w-5 h-5" />
+                </Btn>
               </>
             )}
 
@@ -246,9 +243,16 @@ const Navigation: React.FC<Props> = ({
             {role === "admin" && (
               <>
                 <Btn
+                  onClick={() => setCurrentScreen("reports")}
+                  active={currentScreen === "reports"}
+                  label="Raporlar"
+                >
+                  <BarChart3 className="w-5 h-5" />
+                </Btn>
+                <Btn
                   onClick={() => setCurrentScreen("systemReports")}
                   active={currentScreen === "systemReports"}
-                  label="Raporlar"
+                  label="Sistem Raporları"
                 >
                   <BarChart3 className="w-5 h-5" />
                 </Btn>
@@ -266,33 +270,6 @@ const Navigation: React.FC<Props> = ({
                 >
                   <Settings className="w-5 h-5" />
                 </Btn>
-                {role === "admin" && (
-  <>
- 
-    <Btn
-      onClick={() => setCurrentScreen("systemReports")}
-      active={currentScreen === "systemReports"}
-      label="Sistem Raporları"
-    >
-      <BarChart3 className="w-5 h-5" />
-    </Btn>
-    <Btn
-      onClick={() => setCurrentScreen("userManagement")}
-      active={currentScreen === "userManagement"}
-      label="Kullanıcı Yönetimi"
-    >
-      <Shield className="w-5 h-5" />
-    </Btn>
-    <Btn
-      onClick={() => setCurrentScreen("systemSettings")}
-      active={currentScreen === "systemSettings"}
-      label="Sistem Ayarları"
-    >
-      <Settings className="w-5 h-5" />
-    </Btn>
-  </>
-)}
-
               </>
             )}
 
@@ -328,7 +305,7 @@ const Navigation: React.FC<Props> = ({
               onClick={() => {
                 setNotifOpen(false);
                 setMessageMenuOpen(false);
-                setCurrentScreen("messages"); // 👈 FIX
+                setCurrentScreen("messages");
               }}
               active={currentScreen === "messages"}
               label="Mesajlar"
@@ -349,7 +326,7 @@ const Navigation: React.FC<Props> = ({
                 onClick={() => {
                   setMessageMenuOpen(false);
                   setNotifOpen(false);
-                  setCurrentScreen("notifications"); // 👈 FIX
+                  setCurrentScreen("notifications");
                 }}
                 className="px-3 py-2 rounded-lg relative text-gray-600 hover:bg-gray-100"
                 title="Bildirimler"
