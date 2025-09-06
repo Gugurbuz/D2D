@@ -173,72 +173,38 @@ const VisitListScreen = ({
           </div>
         </div>
 
-        {/* Sıralama */}
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {[
-              { key: "plannedTime", label: "Tarihe Göre" },
-              { key: "priority", label: "Önceliğe Göre" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => {
-                  if (sortBy === item.key) setAsc(!asc);
-                  else {
-                    setSortBy(item.key as any);
-                    setAsc(true);
-                  }
-                }}
-                className={buttonClass(sortBy === item.key, "purple")}
-              >
-                {item.label}{" "}
-                {sortBy === item.key &&
-                  (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Filtre sıfırla */}
-      <div className="text-right">
+    {/* Sıralama */}
+<div className="flex-1">
+  <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
+  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+    {[
+      { key: "plannedTime", label: "Tarihe Göre" },
+      { key: "priority", label: "Önceliğe Göre" },
+    ].map((item) => {
+      const isActive = sortBy === item.key;
+      return (
         <button
-          onClick={resetFilters}
-          className="text-sm text-blue-600 hover:underline"
+          key={item.key}
+          onClick={() => {
+            if (sortBy === item.key) setAsc(!asc);
+            else {
+              setSortBy(item.key as any);
+              setAsc(true);
+            }
+          }}
+          className={buttonClass(isActive, "purple")}
         >
-          Filtreleri Sıfırla
+          <div className="flex items-center justify-center gap-1">
+            {item.label}
+            {isActive &&
+              (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+          </div>
         </button>
-      </div>
+      );
+    })}
+  </div>
+</div>
 
-      {/* Liste */}
-      {visibleItems.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          Hiç ziyaret bulunamadı.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {visibleItems.map((c) => (
-            <VisitCard
-              key={c.id}
-              customer={c}
-              assignedName={getAssignedName(c.id)}
-              onDetail={() => selectAndGo(c, "visitDetail")}
-              onStart={() => selectAndGo(c, "visitFlow")}
-            />
-          ))}
-
-          {filteredSorted.length > visibleItems.length && (
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              className="mt-4 mx-auto block bg-gray-100 px-4 py-2 rounded hover:bg-gray-200 text-sm"
-            >
-              Daha Fazla Yükle
-            </button>
-          )}
-        </div>
-      )}
-    </div>
   );
 };
 
