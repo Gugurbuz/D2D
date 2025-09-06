@@ -1,4 +1,5 @@
-export type Role = 'sales_rep' | 'manager';
+export type Role = 'sales_rep' | 'manager' | 'admin' | 'operations_manager';
+
 
 export type Screen = 
   | 'dashboard' 
