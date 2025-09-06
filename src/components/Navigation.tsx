@@ -242,9 +242,7 @@ const Navigation: React.FC<Props> = ({
             {/* Admin */}
             {role === "admin" && (
               <>
-               
-                  <BarChart3 className="w-5 h-5" />
-                </Btn>
+           
                 <Btn
                   onClick={() => setCurrentScreen("systemReports")}
                   active={currentScreen === "systemReports"}
