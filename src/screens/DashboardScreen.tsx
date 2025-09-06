@@ -9,6 +9,7 @@ import {
   Calendar,
   Award
 } from 'lucide-react';
+import VisitCard from '../components/VisitCard';
 import type { Customer, SalesRep } from '../types';
 
 type Props = {
@@ -16,9 +17,10 @@ type Props = {
   assignments: Record<string, string | undefined>;
   allReps: SalesRep[];
   setCurrentScreen: (screen: string) => void;
+  onSelectCustomer: (customer: Customer) => void;
 };
 
-const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps }) => {
+const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
   // Bugünün tarihi
   const today = new Date().toISOString().split('T')[0];
   
@@ -37,6 +39,23 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps }) =
     return todaysVisits.filter(c => c.status === 'Planlandı');
   }, [todaysVisits]);
 
+  // Atanan rep ismi bulma fonksiyonu
+  const getAssignedName = (customerId: string) => {
+    const repId = assignments[customerId];
+    return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
+  };
+
+  // Ziyaret detayına git
+  const handleVisitDetail = (customer: Customer) => {
+    onSelectCustomer(customer);
+    setCurrentScreen('visitDetail');
+  };
+
+  // Ziyaret başlat
+  const handleStartVisit = (customer: Customer) => {
+    onSelectCustomer(customer);
+    setCurrentScreen('visitFlow');
+  };
   // Günlük hedef
   const dailyTarget = 20;
   const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
@@ -117,31 +136,25 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps }) =
             <p>Bugün için planlanmış ziyaret yok</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {todaysVisits.slice(0, 5).map((customer) => (
-              <div key={customer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium">{customer.name}</div>
-                  <div className="text-sm text-gray-600">{customer.address}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium">{customer.plannedTime}</div>
-                  <div className={`text-xs px-2 py-1 rounded-full ${
-                    customer.status === 'Tamamlandı' ? 'bg-green-100 text-green-800' :
-                    customer.status === 'Planlandı' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {customer.status}
-                  </div>
-                </div>
-              </div>
+              <VisitCard
+                key={customer.id}
+                customer={customer}
+                assignedName={getAssignedName(customer.id)}
+                onDetail={() => handleVisitDetail(customer)}
+                onStart={() => handleStartVisit(customer)}
+              />
             ))}
             
             {todaysVisits.length > 5 && (
-              <div className="text-center pt-2">
-                <span className="text-sm text-gray-500">
-                  +{todaysVisits.length - 5} ziyaret daha...
-                </span>
+              <div className="text-center pt-4">
+                <button
+                  onClick={() => setCurrentScreen('visits')}
+                  className="text-sm text-[#0099CB] hover:underline font-medium"
+                >
+                  +{todaysVisits.length - 5} ziyaret daha... (Tümünü Gör)
+                </button>
               </div>
             )}
           </div>
