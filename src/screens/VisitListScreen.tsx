@@ -32,15 +32,6 @@ const VisitListScreen = ({
     return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
   };
 
-  const getStatusTone = (status: Customer["status"]) =>
-    status === "Tamamlandı"
-      ? "green"
-      : status === "Yolda"
-      ? "blue"
-      : status === "İptal"
-      ? "red"
-      : "yellow";
-
   const filteredSorted = useMemo(() => {
     let list = [...customers];
 
@@ -114,33 +105,36 @@ const VisitListScreen = ({
 
       {/* 🔲 Filtreler: 3 Sütun, 3 Kutu */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* DURUM */}
+        {/* ✅ DURUM */}
         <div className="bg-white border border-gray-300 rounded-xl p-4 space-y-4 shadow-sm">
           <label className="block text-sm font-medium text-gray-700">Durum</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => {
-              const active = statusFilter === status;
+              const isActive = statusFilter === status;
 
-              const tone =
-                status === "Tamamlandı"
-                  ? "green"
-                  : status === "Yolda"
-                  ? "blue"
-                  : status === "İptal"
-                  ? "red"
-                  : status === "Tümü"
-                  ? "green"
-                  : "yellow";
-
-              const activeClass = active
-                ? `bg-${tone}-600 text-white border-${tone}-600`
-                : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50";
+              const statusColors: Record<string, string> = {
+                "Tümü": isActive
+                  ? "bg-green-600 text-white border-green-600"
+                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50",
+                "Planlandı": isActive
+                  ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50",
+                "Tamamlandı": isActive
+                  ? "bg-green-100 text-green-800 border-green-200"
+                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50",
+                "Yolda": isActive
+                  ? "bg-blue-100 text-blue-800 border-blue-200"
+                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50",
+                "İptal": isActive
+                  ? "bg-red-100 text-red-800 border-red-200"
+                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50",
+              };
 
               return (
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status as any)}
-                  className={`px-4 py-2 min-w-[96px] rounded-full border text-sm transition whitespace-nowrap ${activeClass}`}
+                  className={`px-4 py-2 min-w-[96px] rounded-full border text-sm transition whitespace-nowrap ${statusColors[status]}`}
                 >
                   {status}
                 </button>
