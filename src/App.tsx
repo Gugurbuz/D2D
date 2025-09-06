@@ -13,7 +13,7 @@ import { teamReps, managerUser } from './data/team';
 
 import { GuideProvider, HelpFAB, AppRole, AppScreen } from "./guide/GuideSystem";
 
-// === 2. TÜM EKRANLAR NAMED EXPORT'A UYGUN ŞEKİLDE LAZY OLARAK YÜKLENDİ ===
+// === TÜM EKRANLAR NAMED EXPORT'A UYGUN ŞEKİLDE LAZY OLARAK YÜKLENDİ ===
 // .then(module => ({ default: module.BileşenAdı })) eklemesi yapıldı.
 const LoginScreen = lazy(() => import('./screens/LoginScreen').then(module => ({ default: module.LoginScreen })));
 const RoleSelectScreen = lazy(() => import('./screens/RoleSelectScreen').then(module => ({ default: module.RoleSelectScreen })));
@@ -45,7 +45,6 @@ function App() {
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
 
-  // State ve fonksiyonlarınızın geri kalanı olduğu gibi kalıyor...
   const salesUser = teamReps[0];
   const currentRepId = role === 'sales' ? salesUser.id : undefined;
   const isVisibleForCurrentRole = (c: Customer) => {
