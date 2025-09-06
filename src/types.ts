@@ -2,43 +2,46 @@ export type Role = 'sales_rep' | 'manager';
 
 export type Screen = 
   | 'dashboard' 
+  | 'route'
   | 'visits' 
+  | 'visitDetail'
+  | 'visitFlow'
   | 'customers' 
-  | 'route' 
   | 'messages' 
   | 'profile' 
   | 'reports'
   | 'team'
-  | 'assignments';
+  | 'assignments'
+  | 'assignmentMap'
+  | 'invoiceOcr';
 
 export interface Customer {
   id: string;
   name: string;
   address: string;
   district: string;
-  phone?: string;
+  phone: string;
   email?: string;
-  customer_number?: string;
-  installation_number?: string;
-  meter_number?: string;
-  location?: {
-    lat: number;
-    lng: number;
-  };
-  customer_type: 'residential' | 'commercial' | 'industrial';
-  tariff?: string;
-  current_supplier?: string;
-  avg_consumption?: number;
-  annual_consumption?: number;
-  is_free_consumer: boolean;
-  offer_history: any[];
-  created_at: string;
-  updated_at: string;
+  customerNumber?: string;
+  installationNumber?: string;
+  meterNumber?: string;
+  lat: number;
+  lng: number;
+  customerType: 'Mesken' | 'Ticarethane' | 'Sanayi';
+  tariff: string;
+  consumption: string;
+  offerHistory: string[];
+  status: 'Planlandı' | 'Yolda' | 'Tamamlandı' | 'İptal';
+  priority: 'Yüksek' | 'Orta' | 'Düşük';
+  plannedTime: string;
+  estimatedDuration: string;
+  distance: string;
+  visitDate: string;
+  isFreeConsumer: boolean;
 }
 
 export interface SalesRep {
   id: string;
-  user_id?: string;
   name: string;
   email: string;
   phone?: string;
@@ -49,10 +52,8 @@ export interface SalesRep {
     lat: number;
     lng: number;
   };
-  daily_target: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  dailyTarget: number;
+  isActive: boolean;
 }
 
 export interface Visit {
