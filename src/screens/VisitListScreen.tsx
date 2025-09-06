@@ -3,7 +3,7 @@ import React, { useMemo, useState, useCallback } from "react";
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
-import { Search, Filter, SortAsc, SortDesc, RefreshCcw } from "lucide-react";
+import { SortAsc, SortDesc, RefreshCcw } from "lucide-react";
 
 type Props = {
   customers: Customer[];
@@ -76,7 +76,9 @@ const VisitListScreen: React.FC<Props> = ({
 
   return (
     <div className="px-4 md:px-6 py-6 space-y-6" role="main" aria-label="Ziyaret Listesi ekranı">
+      {/* Arama ve filtre alanı */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        {/* Arama kutusu */}
         <input
           type="text"
           value={q}
@@ -86,18 +88,7 @@ const VisitListScreen: React.FC<Props> = ({
           className="border rounded px-3 py-2 w-full md:w-1/3"
         />
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          aria-label="Durum filtresi"
-          className="border rounded px-3 py-2 w-full md:w-1/4"
-        >
-          <option value="Tümü">Tümü</option>
-          <option value="Planlandı">Planlandı</option>
-          <option value="Tamamlandı">Tamamlandı</option>
-          <option value="İptal">İptal</option>
-        </select>
-
+        {/* Sıralama kontrolü */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAsc((prev) => !prev)}
@@ -127,11 +118,30 @@ const VisitListScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Sonuç sayısı göstergesi */}
+      {/* Filtre butonları - Tablet dostu */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(status as any)}
+            className={`px-4 py-2 rounded-full border whitespace-nowrap transition ${
+              statusFilter === status
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-800 hover:bg-gray-100"
+            }`}
+            aria-pressed={statusFilter === status}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
+      {/* Sonuç sayısı */}
       <div className="text-sm text-gray-600">
         {filteredSorted.length > 0 ? `${filteredSorted.length} ziyaret bulundu.` : "Ziyaret bulunamadı."}
       </div>
 
+      {/* Liste veya boş ekran */}
       {filteredSorted.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg font-medium mb-2">Kriterlere uyan ziyaret bulunamadı.</p>
