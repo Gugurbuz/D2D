@@ -4,6 +4,7 @@ import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
 import { SortAsc, SortDesc, RefreshCcw } from "lucide-react";
+import { isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
 type Props = {
   customers: Customer[];
@@ -24,6 +25,7 @@ const VisitListScreen: React.FC<Props> = ({
   const [statusFilter, setStatusFilter] = useState<"Tümü" | Customer["status"]>("Tümü");
   const [sortBy, setSortBy] = useState<"plannedTime" | "priority">("plannedTime");
   const [asc, setAsc] = useState(true);
+  const [dateFilter, setDateFilter] = useState<"Tümü" | "Bugün" | "Yarın" | "Bu Hafta">("Tümü");
 
   const getAssignedName = (customerId: string) => {
     const repId = assignments[customerId];
@@ -32,6 +34,7 @@ const VisitListScreen: React.FC<Props> = ({
 
   const filteredSorted = useMemo(() => {
     let list = [...customers];
+
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
       list = list.filter(
@@ -41,7 +44,20 @@ const VisitListScreen: React.FC<Props> = ({
           c.district.toLowerCase().includes(needle)
       );
     }
-    if (statusFilter !== "Tümü") list = list.filter((c) => c.status === statusFilter);
+
+    if (statusFilter !== "Tümü") {
+      list = list.filter((c) => c.status === statusFilter);
+    }
+
+    if (dateFilter !== "Tümü") {
+      list = list.filter((c) => {
+        const date = parseISO(c.plannedTime);
+        if (dateFilter === "Bugün") return isToday(date);
+        if (dateFilter === "Yarın") return isTomorrow(date);
+        if (dateFilter === "Bu Hafta") return isThisWeek(date, { weekStartsOn: 1 });
+        return true;
+      });
+    }
 
     list.sort((a, b) => {
       if (sortBy === "plannedTime") {
@@ -52,12 +68,14 @@ const VisitListScreen: React.FC<Props> = ({
       const cmp = order[a.priority] - order[b.priority];
       return asc ? -cmp : cmp;
     });
+
     return list;
-  }, [customers, q, statusFilter, sortBy, asc]);
+  }, [customers, q, statusFilter, dateFilter, sortBy, asc]);
 
   const resetFilters = () => {
     setQ("");
     setStatusFilter("Tümü");
+    setDateFilter("Tümü");
     setSortBy("plannedTime");
     setAsc(true);
   };
@@ -76,9 +94,8 @@ const VisitListScreen: React.FC<Props> = ({
 
   return (
     <div className="px-4 md:px-6 py-6 space-y-6" role="main" aria-label="Ziyaret Listesi ekranı">
-      {/* Arama ve filtre alanı */}
+      {/* Arama ve sıralama */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Arama kutusu */}
         <input
           type="text"
           value={q}
@@ -88,7 +105,6 @@ const VisitListScreen: React.FC<Props> = ({
           className="border rounded px-3 py-2 w-full md:w-1/3"
         />
 
-        {/* Sıralama kontrolü */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAsc((prev) => !prev)}
@@ -118,7 +134,7 @@ const VisitListScreen: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Filtre butonları - Tablet dostu */}
+      {/* Statü filtre butonları */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
           <button
@@ -136,12 +152,30 @@ const VisitListScreen: React.FC<Props> = ({
         ))}
       </div>
 
+      {/* Tarih filtre butonları */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
+          <button
+            key={label}
+            onClick={() => setDateFilter(label as any)}
+            className={`px-4 py-2 rounded-full border whitespace-nowrap transition ${
+              dateFilter === label
+                ? "bg-green-600 text-white"
+                : "bg-white text-gray-800 hover:bg-gray-100"
+            }`}
+            aria-pressed={dateFilter === label}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Sonuç sayısı */}
       <div className="text-sm text-gray-600">
         {filteredSorted.length > 0 ? `${filteredSorted.length} ziyaret bulundu.` : "Ziyaret bulunamadı."}
       </div>
 
-      {/* Liste veya boş ekran */}
+      {/* Liste */}
       {filteredSorted.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg font-medium mb-2">Kriterlere uyan ziyaret bulunamadı.</p>
