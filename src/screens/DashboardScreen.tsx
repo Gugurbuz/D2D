@@ -10,6 +10,7 @@ import {
   Award,
   Megaphone
 } from 'lucide-react';
+import Marquee from "react-fast-marquee";
 import VisitCard from '../components/VisitCard';
 import type { Customer, SalesRep } from '../types';
 
@@ -105,11 +106,18 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
             onClick={() => setShowAnnouncements(true)}
           >
             <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-            <div className="overflow-hidden whitespace-nowrap flex-1">
-              <div className="inline-block text-sm text-blue-100 py-2 animate-marquee">
-                {announcements.join("   •   ")}
-              </div>
-            </div>
+            <Marquee
+              gradient={false}
+              speed={50}
+              pauseOnHover={true}
+              className="text-sm text-blue-100 py-2"
+            >
+              {announcements.map((a, idx) => (
+                <span key={idx} className="mx-6">
+                  {a}
+                </span>
+              ))}
+            </Marquee>
           </div>
         </div>
       </div>
