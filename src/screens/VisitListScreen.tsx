@@ -2,13 +2,10 @@ import React, { useMemo, useState, useCallback } from "react";
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
-import VisitRow from "../components/VisitRow";
 import {
   SortAsc,
   SortDesc,
   RefreshCcw,
-  Grid,
-  List,
 } from "lucide-react";
 import { isToday, isTomorrow, isThisWeek, parseISO } from "date-fns";
 
@@ -33,7 +30,6 @@ const VisitListScreen = ({
   const [asc, setAsc] = useState(true);
   const [dateFilter, setDateFilter] = useState<"Tümü" | "Bugün" | "Yarın" | "Bu Hafta">("Tümü");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [page, setPage] = useState(1);
 
   const getAssignedName = (customerId: string) => {
@@ -115,38 +111,14 @@ const VisitListScreen = ({
 
   return (
     <div className="px-4 md:px-6 py-6 space-y-4">
-      {/* Arama + görünüm + sıfırla */}
-      <div className="flex flex-col md:flex-row gap-4 md:items-center">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Müşteri adı, adres veya no ile ara..."
-          className="border rounded px-3 py-2 w-full md:w-1/3"
-        />
-
-        <div className="flex gap-2 items-center">
-          <button
-            onClick={() => setViewMode("card")}
-            className={buttonClass(viewMode === "card")}
-          >
-            <Grid size={16} /> Kart
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={buttonClass(viewMode === "list")}
-          >
-            <List size={16} /> Liste
-          </button>
-        </div>
-
-        <button
-          onClick={resetFilters}
-          className="text-sm text-blue-600 hover:underline md:ml-auto"
-        >
-          Filtreleri Sıfırla
-        </button>
-      </div>
+      {/* Arama alanı */}
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Müşteri adı, adres veya no ile ara..."
+        className="border rounded px-3 py-2 w-full"
+      />
 
       {/* Aktif filtre etiketleri */}
       <div className="flex flex-wrap gap-2">
@@ -164,7 +136,7 @@ const VisitListScreen = ({
         )}
       </div>
 
-      {/* Statü filtre */}
+      {/* Durum filtreleri */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
         <div className="flex gap-2 overflow-x-auto">
@@ -180,7 +152,7 @@ const VisitListScreen = ({
         </div>
       </div>
 
-      {/* Tarih filtre */}
+      {/* Tarih filtreleri */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
         <div className="flex gap-2 overflow-x-auto">
@@ -196,7 +168,7 @@ const VisitListScreen = ({
         </div>
       </div>
 
-      {/* Sıralama filtre */}
+      {/* Sıralama filtreleri */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
         <div className="flex gap-2 overflow-x-auto">
@@ -223,7 +195,17 @@ const VisitListScreen = ({
         </div>
       </div>
 
-      {/* Toplu seçim çubuğu */}
+      {/* Sıfırla butonu */}
+      <div className="text-right">
+        <button
+          onClick={resetFilters}
+          className="text-sm text-blue-600 hover:underline"
+        >
+          Filtreleri Sıfırla
+        </button>
+      </div>
+
+      {/* Toplu işlem çubuğu */}
       {selectedIds.length > 0 && (
         <div className="bg-yellow-100 border px-4 py-2 flex justify-between items-center text-sm">
           <span>{selectedIds.length} ziyaret seçildi</span>
@@ -234,35 +216,24 @@ const VisitListScreen = ({
         </div>
       )}
 
-      {/* Liste Alanı */}
+      {/* Ziyaret listesi */}
       {visibleItems.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           Hiç ziyaret bulunamadı.
         </div>
       ) : (
         <div className="space-y-4">
-          {visibleItems.map((c) =>
-            viewMode === "card" ? (
-              <VisitCard
-                key={c.id}
-                customer={c}
-                assignedName={getAssignedName(c.id)}
-                onDetail={() => selectAndGo(c, "visitDetail")}
-                onStart={() => selectAndGo(c, "visitFlow")}
-                selected={selectedIds.includes(c.id)}
-                onSelect={() => toggleSelection(c.id)}
-              />
-            ) : (
-              <VisitRow
-                key={c.id}
-                customer={c}
-                assignedName={getAssignedName(c.id)}
-                onDetail={() => selectAndGo(c, "visitDetail")}
-                selected={selectedIds.includes(c.id)}
-                onSelect={() => toggleSelection(c.id)}
-              />
-            )
-          )}
+          {visibleItems.map((c) => (
+            <VisitCard
+              key={c.id}
+              customer={c}
+              assignedName={getAssignedName(c.id)}
+              onDetail={() => selectAndGo(c, "visitDetail")}
+              onStart={() => selectAndGo(c, "visitFlow")}
+              selected={selectedIds.includes(c.id)}
+              onSelect={() => toggleSelection(c.id)}
+            />
+          ))}
 
           {filteredSorted.length > visibleItems.length && (
             <button
