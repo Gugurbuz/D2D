@@ -4,20 +4,24 @@ import type { Database } from './database.types';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Check if Supabase is configured
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-});
+export const supabase = isSupabaseConfigured 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    })
+  : null;
 
 // Auth helpers
 export const signIn = async (email: string, password: string) => {
+  if (!supabase) {
+    throw new Error('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+  }
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -30,6 +34,9 @@ export const signUp = async (email: string, password: string, userData: {
   phone?: string;
   role: 'sales_rep' | 'manager';
 }) => {
+  if (!supabase) {
+    throw new Error('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+  }
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -41,16 +48,23 @@ export const signUp = async (email: string, password: string, userData: {
 };
 
 export const signOut = async () => {
+  if (!supabase) return { error: null };
   const { error } = await supabase.auth.signOut();
   return { error };
 };
 
 export const getCurrentUser = async () => {
+  if (!supabase) {
+    return { user: null, error: { message: 'Supabase not configured' } };
+  }
   const { data: { user }, error } = await supabase.auth.getUser();
   return { user, error };
 };
 
 export const getCurrentSalesRep = async () => {
+  if (!supabase) {
+    return { data: null, error: { message: 'Supabase not configured' } };
+  }
   const { data, error } = await supabase
     .from('sales_reps')
     .select('*')
