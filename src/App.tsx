@@ -14,12 +14,12 @@ import MessagesScreen from './screens/MessagesScreen';
 import ProfileScreens from './screens/ProfileScreens';
 import InvoiceOcrPage from './screens/InvoiceOcrPage';
 import RoleSelectScreen from './screens/RoleSelectScreen';
-import SystemReportsScreen from './screens/SystemReportsScreen'; 
 
 import UserManagementScreen from './screens/UserManagementScreen';
 import SystemSettingsScreen from './screens/SystemSettingsScreen';
 import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
+import SystemReportsScreen from './screens/SystemReportsScreen';
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
@@ -34,7 +34,6 @@ function App() {
   const [agentName] = useState('Ahmet Yılmaz');
   const [role, setRole] = useState<Role>('sales_rep');
 
-  // Data state
   const [customers] = useState<Customer[]>(mockCustomers);
   const [assignments, setAssignments] = useState<Record<string, string | undefined>>({});
   const [allReps] = useState<SalesRep[]>(mockReps);
@@ -120,6 +119,8 @@ function App() {
         ) : null;
       case 'reports':
         return <ReportsScreen customers={customers} />;
+      case 'systemReports':
+        return <SystemReportsScreen />;
       case 'assignments':
         return (
           <AssignmentScreen
@@ -138,13 +139,8 @@ function App() {
             setAssignments={setAssignments}
             allReps={teamReps}
             onBack={() => setCurrentScreen('assignments')}
-            
           />
         );
-
-        case 'systemReports':
-  return <SystemReportsScreen />;
-        
       case 'team':
         return <TeamMapScreen reps={teamReps} />;
       case 'messages':
