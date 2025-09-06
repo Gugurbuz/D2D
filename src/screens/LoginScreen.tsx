@@ -35,7 +35,17 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
       clearTimeout(timeoutId); // Clear timeout if request completes
       
       if (error) {
-        setError(`Giriş hatası: ${error.message}`);
+        // If user doesn't exist, try to create it
+        if (error.message.includes('Invalid login credentials')) {
+          setError('Test kullanıcısı bulunamadı. Kayıt ol sekmesinden test kullanıcısını oluşturun.');
+          // Auto switch to signup mode
+          setIsLogin(false);
+          setName('Test Kullanıcısı');
+          setPhone('0555 123 45 67');
+          setRole('sales_rep');
+        } else {
+          setError(`Giriş hatası: ${error.message}`);
+        }
         return;
       }
       setSuccess('Giriş başarılı!');
@@ -43,6 +53,10 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     } catch (err: any) {
       clearTimeout(timeoutId); // Clear timeout on error
       setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+      // If Supabase is not configured, still allow demo access
+      if (!isSupabaseConfigured) {
+        setTimeout(() => onLogin(), 1000);
+      }
       // If Supabase is not configured, still allow demo access
       if (!isSupabaseConfigured) {
         setTimeout(() => onLogin(), 1000);
@@ -56,6 +70,11 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isSupabaseConfigured) {
+      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+      return;
+    }
+
     if (!isSupabaseConfigured) {
       setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
       return;
@@ -78,10 +97,13 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+            setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+          } else {
+            setError(error.message);
           }
-          throw error;
+          return;
         }
+        setSuccess('Giriş başarılı!');
       } else {
         const { error } = await signUp(email, password, { name, phone, role });
         clearTimeout(timeoutId);
@@ -89,6 +111,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         if (error) {
           if (error.message.includes('User already registered')) {
             setError('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+            setIsLogin(true); // Auto switch to login mode
             return;
           }
           if (error.message.includes('Password should be at least')) {
@@ -98,8 +121,9 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
           setError(error.message);
           return;
         }
+        setSuccess('Kayıt başarılı! Giriş yapılıyor...');
       }
-      onLogin();
+      setTimeout(() => onLogin(), 1000);
     } catch (err: any) {
       clearTimeout(timeoutId);
       setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
