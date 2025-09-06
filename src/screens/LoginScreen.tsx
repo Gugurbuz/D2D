@@ -23,10 +23,23 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     try {
       if (isLogin) {
         const { error } = await signIn(email, password);
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+          }
+          throw error;
+        }
       } else {
         const { error } = await signUp(email, password, { name, phone, role });
-        if (error) throw error;
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            throw new Error('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+          }
+          if (error.message.includes('Password should be at least')) {
+            throw new Error('Şifre en az 6 karakter olmalıdır.');
+          }
+          throw error;
+        }
       }
       onLogin();
     } catch (err: any) {
