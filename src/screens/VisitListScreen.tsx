@@ -1,5 +1,5 @@
-/* --- VisitListScreen.tsx --- */
-import React, { useMemo, useState } from "react";
+/* --- VisitListScreen.tsx (PATCH) --- */
+import React, { useMemo, useState, useCallback } from "react"; // ⬅️ useCallback eklendi
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
 import VisitCard from "../components/VisitCard";
@@ -10,7 +10,7 @@ type Props = {
   assignments: Record<string, string | undefined>;
   allReps: Rep[];
   setCurrentScreen: (s: any) => void;
-  setSelectedCustomer: (c: Customer) => void;
+  setSelectedCustomer: (c: Customer) => void; // parent'ın GERÇEKTEN fonksiyon geçmesi gerekiyor
 };
 
 const VisitListScreen: React.FC<Props> = ({
@@ -25,16 +25,32 @@ const VisitListScreen: React.FC<Props> = ({
   const [sortBy, setSortBy] = useState<"plannedTime" | "priority">("plannedTime");
   const [asc, setAsc] = useState(true);
 
+  // 👇 Tek noktadan güvenli seçim + ekran geçişi
+  const selectAndGo = useCallback(
+    (c: Customer, screen: "visitDetail" | "visitFlow") => {
+      if (typeof setSelectedCustomer !== "function") {
+        // Parent yanlış prop geçiyor: ör. setSelectedCustomer={selectedCustomer} gibi
+        console.error(
+          "VisitListScreen: setSelectedCustomer prop'u fonksiyon değil. Parent'ta `setSelectedCustomer={(c)=>...}` şeklinde FONKSİYON geçmelisiniz."
+        );
+        // Kullanıcı deneyimi için ekranı değiştirmeyi engelle
+        return;
+      }
+      // Önce müşteri state'i, sonra ekran geçişi (ilk frame'de null gelmesin)
+      setSelectedCustomer(c);
+      requestAnimationFrame(() => setCurrentScreen(screen));
+    },
+    [setSelectedCustomer, setCurrentScreen]
+  );
+
   const getAssignedName = (customerId: string) => {
     const repId = assignments[customerId];
     return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
-    // not: repId eşleşmezse fallback olarak repId yazdırıyoruz
   };
 
   const filteredSorted = useMemo(() => {
     let list = [...customers];
 
-    // Arama (isim / adres / ilçe)
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
       list = list.filter(
@@ -45,21 +61,18 @@ const VisitListScreen: React.FC<Props> = ({
       );
     }
 
-    // Durum filtresi
     if (statusFilter !== "Tümü") {
       list = list.filter((c) => c.status === statusFilter);
     }
 
-    // Sıralama
     list.sort((a, b) => {
       if (sortBy === "plannedTime") {
         const cmp = a.plannedTime.localeCompare(b.plannedTime);
         return asc ? cmp : -cmp;
       }
-      // priority: Yüksek > Orta > Düşük
-      const order = { "Yüksek": 3, "Orta": 2, "Düşük": 1 } as const;
+      const order = { Yüksek: 3, Orta: 2, Düşük: 1 } as const;
       const cmp = order[a.priority] - order[b.priority];
-      return asc ? -cmp : cmp; // yüksek önce gelsin istiyorsak tersle
+      return asc ? -cmp : cmp;
     });
 
     return list;
@@ -131,14 +144,8 @@ const VisitListScreen: React.FC<Props> = ({
               key={c.id}
               customer={c}
               assignedName={getAssignedName(c.id)}
-              onDetail={() => {
-                setSelectedCustomer(c);
-                setCurrentScreen("visitDetail");
-              }}
-              onStart={() => {
-                setSelectedCustomer(c);
-                setCurrentScreen("visitFlow");
-              }}
+              onDetail={() => selectAndGo(c, "visitDetail")}
+              onStart={() => selectAndGo(c, "visitFlow")}
             />
           ))}
         </div>
