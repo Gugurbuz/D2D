@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { 
   Target, 
   CheckCircle, 
@@ -24,6 +24,13 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   // Bugünün tarihi
   const today = new Date().toISOString().split('T')[0];
   
+  // Saat & Tarih
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Bugünkü ziyaretler
   const todaysVisits = useMemo(() => {
     return customers.filter(c => c.visitDate === today);
@@ -56,6 +63,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     onSelectCustomer(customer);
     setCurrentScreen('visitFlow');
   };
+
   // Günlük hedef
   const dailyTarget = 20;
   const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
@@ -82,10 +90,22 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
   return (
     <div className="space-y-6">
-      {/* Hoş geldin mesajı */}
-      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
-        <p className="text-blue-100">Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀</p>
+      {/* Hoş geldin mesajı + Saat & Tarih */}
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
+          <p className="text-blue-100">
+            Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-3xl sm:text-4xl font-bold">
+            {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </div>
+          <div className="text-sm text-blue-100 mt-1">
+            {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </div>
+        </div>
       </div>
 
       {/* KPI Kartları */}
