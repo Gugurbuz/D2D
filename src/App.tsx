@@ -138,10 +138,13 @@ function App() {
             setAssignments={setAssignments}
             allReps={teamReps}
             onBack={() => setCurrentScreen('assignments')}
-            case 'systemReports':
-  return <SystemReportsScreen />;
+            
           />
         );
+
+        case 'systemReports':
+  return <SystemReportsScreen />;
+        
       case 'team':
         return <TeamMapScreen reps={teamReps} />;
       case 'messages':
