@@ -4602,5 +4602,5 @@ export const mockCustomers: Customer[] =[[
     "installationNumber": "4000000200",
     "visitDate": "2025-07-27",
     "assignedRepId": "rep-12"
-  }
+  },
 ];
