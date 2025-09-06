@@ -1,4 +1,3 @@
-// src/screens/VisitListScreen.tsx
 import React, { useMemo, useState, useCallback } from "react";
 import type { Customer } from "../data/mockCustomers";
 import type { Rep } from "../types";
@@ -49,10 +48,10 @@ const VisitListScreen: React.FC<Props> = ({
       list = list.filter((c) => c.status === statusFilter);
     }
 
-   if (dateFilter !== "Tümü") {
-  list = list.filter((c) => {
-    if (!c.visitDate) return false;
-    const date = parseISO(c.visitDate);
+    if (dateFilter !== "Tümü") {
+      list = list.filter((c) => {
+        if (!c.visitDate) return false;
+        const date = parseISO(c.visitDate);
         if (dateFilter === "Bugün") return isToday(date);
         if (dateFilter === "Yarın") return isTomorrow(date);
         if (dateFilter === "Bu Hafta") return isThisWeek(date, { weekStartsOn: 1 });
@@ -62,7 +61,7 @@ const VisitListScreen: React.FC<Props> = ({
 
     list.sort((a, b) => {
       if (sortBy === "plannedTime") {
-        const cmp = a.plannedTime.localeCompare(b.plannedTime);
+        const cmp = a.visitDate.localeCompare(b.visitDate);
         return asc ? cmp : -cmp;
       }
       const order = { Yüksek: 3, Orta: 2, Düşük: 1 } as const;
@@ -83,10 +82,6 @@ const VisitListScreen: React.FC<Props> = ({
 
   const selectAndGo = useCallback(
     (c: Customer, screen: "visitDetail" | "visitFlow") => {
-      if (typeof onSelectCustomer !== "function") {
-        console.error("VisitListScreen: onSelectCustomer fonksiyon olmalı.");
-        return;
-      }
       onSelectCustomer(c);
       requestAnimationFrame(() => setCurrentScreen(screen));
     },
@@ -95,48 +90,18 @@ const VisitListScreen: React.FC<Props> = ({
 
   return (
     <div className="px-4 md:px-6 py-6 space-y-6" role="main" aria-label="Ziyaret Listesi ekranı">
-      {/* Arama ve sıralama */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <input
-          type="text"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Müşteri, adres veya ilçe ara..."
-          aria-label="Ziyaret arama"
-          className="border rounded px-3 py-2 w-full md:w-1/3"
-        />
+      {/* 🔍 Arama */}
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Müşteri, adres veya ilçe ara..."
+        aria-label="Ziyaret arama"
+        className="border rounded px-3 py-2 w-full"
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setAsc((prev) => !prev)}
-            aria-label={`Sıralama yönü: ${asc ? "Artan" : "Azalan"}`}
-            className="p-2 border rounded hover:bg-gray-100 transition"
-          >
-            {asc ? <SortAsc size={18} /> : <SortDesc size={18} />}
-          </button>
-
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            aria-label="Sıralama kriteri"
-            className="border rounded px-2 py-2"
-          >
-            <option value="plannedTime">Ziyaret Tarihi</option>
-            <option value="priority">Öncelik</option>
-          </select>
-
-          <button
-            onClick={resetFilters}
-            aria-label="Filtreleri sıfırla"
-            className="p-2 border rounded hover:bg-gray-100 transition"
-          >
-            <RefreshCcw size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Statü filtre butonları */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* ✅ Statü filtre butonları */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {["Tümü", "Planlandı", "Tamamlandı", "İptal"].map((status) => (
           <button
             key={status}
@@ -153,8 +118,8 @@ const VisitListScreen: React.FC<Props> = ({
         ))}
       </div>
 
-      {/* Tarih filtre butonları */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      {/* 📅 Tarih filtre butonları */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
           <button
             key={label}
@@ -171,12 +136,49 @@ const VisitListScreen: React.FC<Props> = ({
         ))}
       </div>
 
-      {/* Sonuç sayısı */}
+      {/* 🔃 Sıralama buton grubu (yeni) */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {[
+          { key: "plannedTime", label: "Tarihe Göre" },
+          { key: "priority", label: "Önceliğe Göre" },
+        ].map((item) => (
+          <button
+            key={item.key}
+            onClick={() => {
+              if (sortBy === item.key) {
+                setAsc(!asc);
+              } else {
+                setSortBy(item.key as any);
+                setAsc(true);
+              }
+            }}
+            className={`px-4 py-2 rounded-full border flex items-center gap-1 whitespace-nowrap transition ${
+              sortBy === item.key
+                ? "bg-purple-600 text-white"
+                : "bg-white text-gray-800 hover:bg-gray-100"
+            }`}
+            aria-pressed={sortBy === item.key}
+          >
+            <span>{item.label}</span>
+            {sortBy === item.key && (asc ? <SortAsc size={16} /> : <SortDesc size={16} />)}
+          </button>
+        ))}
+
+        <button
+          onClick={resetFilters}
+          className="px-4 py-2 rounded-full border text-sm hover:bg-gray-100 whitespace-nowrap"
+        >
+          <RefreshCcw size={16} className="inline-block mr-1" />
+          Sıfırla
+        </button>
+      </div>
+
+      {/* 📊 Sonuç sayısı */}
       <div className="text-sm text-gray-600">
         {filteredSorted.length > 0 ? `${filteredSorted.length} ziyaret bulundu.` : "Ziyaret bulunamadı."}
       </div>
 
-      {/* Liste */}
+      {/* 🔽 Liste */}
       {filteredSorted.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <p className="text-lg font-medium mb-2">Kriterlere uyan ziyaret bulunamadı.</p>
