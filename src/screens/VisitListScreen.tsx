@@ -139,12 +139,12 @@ const VisitListScreen = ({
         className="border rounded px-3 py-2 w-full"
       />
 
-      {/* Filtre Alanı: 3 Sütun */}
+      {/* Filtreler */}
       <div className="flex flex-col md:flex-row gap-6">
         {/* Durum */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Durum</label>
-          <div className="flex gap-2 flex-wrap md:flex-nowrap overflow-x-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {["Tümü", "Planlandı", "Tamamlandı", "İptal", "Yolda"].map((status) => (
               <button
                 key={status}
@@ -160,7 +160,7 @@ const VisitListScreen = ({
         {/* Tarih */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Tarih</label>
-          <div className="flex gap-2 flex-wrap md:flex-nowrap overflow-x-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {["Tümü", "Bugün", "Yarın", "Bu Hafta"].map((label) => (
               <button
                 key={label}
@@ -176,7 +176,7 @@ const VisitListScreen = ({
         {/* Sıralama */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">Sıralama</label>
-          <div className="flex gap-2 flex-wrap md:flex-nowrap overflow-x-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {[
               { key: "plannedTime", label: "Tarihe Göre" },
               { key: "priority", label: "Önceliğe Göre" },
