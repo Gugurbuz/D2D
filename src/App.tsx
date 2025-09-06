@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { signIn, signUp, isSupabaseConfigured } from '../lib/supabase';
+import { signIn, signUp, isSupabaseConfigured } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 type Props = { 
