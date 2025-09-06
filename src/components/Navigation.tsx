@@ -163,7 +163,7 @@ const Navigation: React.FC<Props> = ({
                 : role === "sales_rep"
                 ? "Saha Temsilcisi"
                 : role === "admin"
-                ? "Yönetici (Admin)"
+                ? "Admin"
                 : "Operasyon Yöneticisi"}
             </p>
           </div>
@@ -181,7 +181,7 @@ const Navigation: React.FC<Props> = ({
               <Home className="w-5 h-5" />
             </Btn>
 
-            {/* Sales Rep Menüsü */}
+            {/* Sales Rep */}
             {role === "sales_rep" && (
               <>
                 <Btn
@@ -201,7 +201,7 @@ const Navigation: React.FC<Props> = ({
               </>
             )}
 
-            {/* Manager Menüsü */}
+            {/* Manager */}
             {role === "manager" && (
               <>
                 <Btn
@@ -213,10 +213,7 @@ const Navigation: React.FC<Props> = ({
                 </Btn>
                 <Btn
                   onClick={() => setCurrentScreen("assignments")}
-                  active={
-                    currentScreen === "assignments" ||
-                    currentScreen === "assignmentMap"
-                  }
+                  active={currentScreen === "assignments"}
                   label="Görev Atama"
                 >
                   <UserCheck className="w-5 h-5" />
@@ -231,7 +228,7 @@ const Navigation: React.FC<Props> = ({
               </>
             )}
 
-            {/* Admin Menüsü */}
+            {/* Admin */}
             {role === "admin" && (
               <>
                 <Btn
@@ -285,12 +282,12 @@ const Navigation: React.FC<Props> = ({
               </>
             )}
 
-            {/* Ortak Mesajlar */}
+            {/* Mesajlar */}
             <Btn
-              refProp={messageAnchorRef}
               onClick={() => {
                 setNotifOpen(false);
-                setMessageMenuOpen((o) => !o);
+                setMessageMenuOpen(false);
+                setCurrentScreen("messages"); // 👈 FIX
               }}
               active={currentScreen === "messages"}
               label="Mesajlar"
@@ -304,27 +301,22 @@ const Navigation: React.FC<Props> = ({
               )}
             </Btn>
 
-            {/* Ortak Bildirimler */}
+            {/* Bildirimler */}
             <div className="relative shrink-0" ref={notifAnchorRef}>
               <button
                 type="button"
                 onClick={() => {
                   setMessageMenuOpen(false);
-                  setNotifOpen((o) => !o);
+                  setNotifOpen(false);
+                  setCurrentScreen("notifications"); // 👈 FIX
                 }}
                 className="px-3 py-2 rounded-lg relative text-gray-600 hover:bg-gray-100"
                 title="Bildirimler"
-                aria-expanded={notifOpen}
               >
                 {notifUnread > 0 ? (
                   <BellDot className="w-5 h-5" />
                 ) : (
                   <Bell className="w-5 h-5" />
-                )}
-                {notifUnread > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center px-1">
-                    {notifUnread}
-                  </span>
                 )}
               </button>
             </div>
