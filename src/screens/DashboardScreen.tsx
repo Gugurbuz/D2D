@@ -48,10 +48,10 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   // --- Zaman bazlı selamlama ---
   const hour = time.getHours();
   let greeting = "Hoş geldin";
-  if (hour >= 6 && hour < 12) greeting = "🌅 Günaydın";
-  else if (hour >= 12 && hour < 17) greeting = "☀️ Hoş geldin";
-  else if (hour >= 17 && hour < 21) greeting = "🌆 İyi akşamlar";
-  else greeting = "🌙 İyi geceler";
+  if (hour >= 6 && hour < 12) greeting = "Günaydın";
+  else if (hour >= 12 && hour < 17) greeting = "Hoş geldin";
+  else if (hour >= 17 && hour < 21) greeting = "İyi akşamlar";
+  else greeting = "İyi geceler";
 
   // --- Ziyaret mesajı (mesai saatine göre) ---
   let visitMessage = "";
