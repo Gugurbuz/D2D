@@ -1,67 +1,17 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-html, body, #root {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-* {
-  min-width: 0;
-}
-
-img, video, canvas {
-  max-width: 100%;
-  height: auto;
-}
-
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-}
-
-.nav-scroll {
-  scroll-behavior: smooth;
-}
-
-.nav-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.leaflet-container {
-  touch-action: pan-x pan-y;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-.leaflet-draw-toolbar a {
-  color: #333;
-  background-color: #f8f8f8;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease-in-out;
-}
-
-.leaflet-draw-toolbar a:hover {
-  background-color: #e8e8e8;
-  border-color: #bbb;
-}
-
-.leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled {
-  background-color: #d1ecf1;
-  border-color: #bee5eb;
-  color: #0c5460;
-}
-
-.leaflet-draw-toolbar .leaflet-draw-edit-remove a {
-  color: #dc3545;
-}
-
-.leaflet-draw-toolbar .leaflet-draw-edit-remove a:hover {
-  background-color: #f8d7da;
-}
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      keyframes: {
+        marquee: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
+      },
+      animation: {
+        marquee: 'marquee 15s linear infinite',
+      },
+    },
+  },
+  plugins: [],
+};
