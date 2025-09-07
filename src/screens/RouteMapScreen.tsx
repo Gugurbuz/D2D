@@ -154,7 +154,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 : "bg-[#0099CB] text-white hover:opacity-90"
             }`}
           >
-            {loading ? "..." : "Optimize"}
+            {loading ? "..." : "Rota Oluştur"}
           </button>
           <FullscreenBtn />
         </div>
