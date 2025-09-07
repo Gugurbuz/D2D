@@ -105,20 +105,28 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   return (
     <div className="space-y-6">
       {/* Hoş geldin bloğu */}
-      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex flex-col md:flex-row md:items-center md:justify-between relative">
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex flex-col md:flex-row md:items-start md:justify-between relative">
         {/* Sol: selamlama + motivasyon */}
-        <div>
-          <h1 className="text-2xl font-bold mb-2">{greeting}, Ahmet!</h1>
-          <p className="text-blue-100">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold mb-1">{greeting}, Ahmet!</h1>
+          <p className="text-blue-100 mb-2">
             Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
           </p>
-          <p className="mt-2 text-yellow-200 text-sm">{motivation}</p>
+          <p className="text-yellow-200 text-sm leading-snug">{motivation}</p>
         </div>
 
         {/* Sağ: saat ve tarih */}
-        <div className="text-right mt-4 md:mt-0">
-          <div className="text-3xl font-bold">{time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</div>
-          <div className="text-sm text-blue-100">{time.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}</div>
+        <div className="text-right mt-4 md:mt-0 md:ml-6">
+          <div className="text-3xl font-bold">
+            {time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+          </div>
+          <div className="text-sm text-blue-100">
+            {time.toLocaleDateString("tr-TR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </div>
         </div>
 
         {/* Alt: duyuru barı */}
