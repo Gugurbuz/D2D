@@ -88,6 +88,7 @@ async function osrmTrip(coords: string) {
   if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
   return data;
 }
+
 async function osrmRoute(from: LatLng, to: LatLng) {
   const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
   const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
