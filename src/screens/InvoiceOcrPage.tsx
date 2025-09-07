@@ -236,7 +236,7 @@ export default function InvoiceOcrPage() {
 
 
 
-  
+  const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
 
 
 
