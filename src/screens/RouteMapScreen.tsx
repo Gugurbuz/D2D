@@ -141,10 +141,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 flex items-center justify-between 
                 shadow-sm border-b rounded-bl-xl">
 
-  <div className="flex items-center gap-2 text-sm text-gray-900 font-medium">
-    <RouteIcon className="w-4 h-4 text-[#0099CB]" />
-    Rota
-  </div>
+  
 
   <div className="flex items-center gap-2">
     <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
@@ -157,7 +154,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           : "bg-[#0099CB] text-white hover:opacity-90"
       }`}
     >
-      {loading ? "..." : "Optimize"}
+      {loading ? "..." : "Rota Oluştur"}
     </button>
     <FullscreenBtn />
   </div>
