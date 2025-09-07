@@ -579,7 +579,7 @@ export default function InvoiceOcrPage() {
                       <img
                         src={imagePreviewUrl}
                         alt="Fatura Önizlemesi"
-                        className="w-full h-full object-cover rounded-lg border"
+                        className="w-full h-full object-cover object-top rounded-lg border"
                       />
                     </button>
                     <button
