@@ -177,7 +177,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         <MapContainer
-          center={center}
+          center={start}
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
