@@ -181,7 +181,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
-          className="y-0"
+          className="yield-0"
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
