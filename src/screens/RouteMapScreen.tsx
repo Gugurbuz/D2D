@@ -141,7 +141,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 flex items-center justify-between 
                 shadow-sm border-b rounded-bl-xl">
 
-  
+
 
   <div className="flex items-center gap-2">
     <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
