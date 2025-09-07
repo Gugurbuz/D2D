@@ -47,28 +47,9 @@ interface Props {
 
 /* ==== Varsayılanlar ==== */
 const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
-
-// Buradaki müşteri datası aynı kalıyor (kısaltılmıştır)
 const anadoluCustomers: Customer[] = [
-  {
-    id: "1",
-    name: "Buse Aksoy",
-    address: "Bağdat Cd. No:120",
-    district: "Maltepe",
-    plannedTime: "09:00",
-    priority: "Düşük",
-    tariff: "Mesken",
-    meterNumber: "210000001",
-    consumption: "270 kWh/ay",
-    offerHistory: ["2025-03: Dijital sözleşme"],
-    status: "Bekliyor",
-    estimatedDuration: "25 dk",
-    distance: "0.9 km",
-    lat: 40.9359,
-    lng: 29.1569,
-    phone: "0555 111 22 01",
-  },
-  // ... diğerleri
+  // --- müşteri listesi (kısaltılmış) ---
+  { id: "1", name: "Buse Aksoy", address: "Bağdat Cd. No:120", district: "Maltepe", plannedTime: "09:00", priority: "Düşük", tariff: "Mesken", meterNumber: "210000001", consumption: "270 kWh/ay", offerHistory: ["2025-03: Dijital sözleşme"], status: "Bekliyor", estimatedDuration: "25 dk", distance: "0.9 km", lat: 40.9359, lng: 29.1569, phone: "0555 111 22 01" },
 ];
 
 /* ==== İkonlar ==== */
@@ -84,9 +65,7 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
   const bg = starred ? "#F5B301" : highlight ? "#FF6B00" : "#0099CB";
   return L.divIcon({
     className: "number-marker",
-    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;line-height:1;background:${bg};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);transform:${
-      highlight ? "scale(1.14)" : "scale(1)"
-    };">${n}</div>`,
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);">${n}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 28],
     popupAnchor: [0, -28],
@@ -100,88 +79,55 @@ function haversineKm(a: LatLng, b: LatLng) {
   const dLng = ((b[1] - a[1]) * Math.PI) / 180;
   const lat1 = (a[0] * Math.PI) / 180;
   const lat2 = (b[0] * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 const fmtKm = (km: number | null) =>
-  km == null
-    ? "—"
-    : new Intl.NumberFormat("tr-TR", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(km) + " km";
+  km == null ? "—" : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
 /* ==== Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
-
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [starredId, setStarredId] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-
-  const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
-  const mapWrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setOrderedCustomers(baseCustomers);
+  }, [baseCustomers]);
 
   const center: LatLng = [rep.lat, rep.lng];
 
   return (
     <div className="relative w-full">
       {/* Sticky üst bar */}
-       
-<div className="sticky top-0 z-20 bg-white py-2 flex items-center justify-between shadow-sm border-b">  </div>
-        {/* Sol başlık */}
-        <div className="flex items-center gap-2 text-gray-900 font-semibold pl-2 text-sm sm:text-base">
+      <div className="sticky top-0 z-20 bg-white py-2 flex items-center justify-between shadow-sm border-b">
+        <div className="flex items-center gap-2 text-gray-900 font-semibold">
           <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-          <span className="truncate">Rota Haritası</span>
+          Rota Haritası
         </div>
-
-        {/* Sağ aksiyonlar */}
-        <div className="flex items-center gap-2 sm:gap-3 pr-2">
-          {/* Mesafe */}
-          <div className="text-xs sm:text-sm text-gray-700 flex items-center gap-1">
-            <span className="sm:hidden">📏</span>
-            <span>
-              <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
-            </span>
-            <span className="hidden sm:inline">Toplam Mesafe</span>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-700">
+            Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
           </div>
-
-          {/* Optimize butonu */}
           <button
-            onClick={() => alert("Optimize edilecek")}
+            onClick={() => alert("Optimize fonksiyonu bağlanacak")}
             disabled={loading}
-            className={`px-2 sm:px-4 py-1.5 rounded-lg font-semibold text-xs sm:text-sm ${
-              loading
-                ? "bg-gray-300 text-gray-600"
-                : "bg-[#0099CB] text-white hover:opacity-90"
+            className={`px-4 py-2 rounded-lg font-semibold ${
+              loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
             }`}
           >
-            {loading ? "Hesaplanıyor…" : (
-              <>
-                <span className="hidden sm:inline">Rotayı Optimize Et</span>
-                <span className="sm:hidden">Optimize</span>
-              </>
-            )}
+            {loading ? "Rota Hesaplanıyor…" : "Rotayı Optimize Et"}
           </button>
-
-          {/* Fullscreen butonu */}
-          <FullscreenBtn mapWrapperRef={mapWrapperRef} />
+          <FullscreenBtn />
         </div>
       </div>
 
-      {/* Harita kutusu */}
-      <div
-        ref={mapWrapperRef}
-        className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl"
-      >
+      {/* Harita */}
+      <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         <MapContainer
           center={center}
           zoom={13}
@@ -189,22 +135,19 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           whenCreated={(m) => (mapRef.current = m)}
           className="z-0"
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
-          />
-
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
-            <Popup>
-              <b>{rep.name}</b>
-            </Popup>
+            <Popup><b>{rep.name}</b></Popup>
           </Marker>
 
+          {orderedCustomers.map((c, i) => (
+            <Marker key={c.id} position={[c.lat, c.lng]} icon={numberIcon(i + 1)}>
+              <Popup>{c.name}</Popup>
+            </Marker>
+          ))}
+
           {routeCoords.length > 0 && (
-            <Polyline
-              positions={routeCoords}
-              pathOptions={{ color: "#0099CB", weight: 7 }}
-            />
+            <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
           )}
         </MapContainer>
       </div>
@@ -212,39 +155,40 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   );
 };
 
-/* ==== Fullscreen butonu ==== */
-const FullscreenBtn: React.FC<{ mapWrapperRef: React.RefObject<HTMLDivElement> }> = ({
-  mapWrapperRef,
-}) => {
+/* ==== Tam ekran butonu ==== */
+const FullscreenBtn: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     const h = () => setIsFs(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", h);
     return () => document.removeEventListener("fullscreenchange", h);
   }, []);
+
   return (
-    <button
-      onClick={async () => {
-        if (!document.fullscreenElement && mapWrapperRef.current) {
-          await mapWrapperRef.current.requestFullscreen();
-        } else {
-          await document.exitFullscreen();
-        }
-      }}
-      className="px-2 sm:px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1 sm:gap-2 text-xs sm:text-sm"
-    >
-      {isFs ? (
-        <>
-          <Minimize2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Kapat</span>
-        </>
-      ) : (
-        <>
-          <Maximize2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Tam Ekran</span>
-        </>
-      )}
-    </button>
+    <div ref={mapContainerRef}>
+      <button
+        onClick={async () => {
+          if (!document.fullscreenElement && mapContainerRef.current) {
+            await mapContainerRef.current.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        }}
+        className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-2"
+      >
+        {isFs ? (
+          <>
+            <Minimize2 className="w-4 h-4" /> Tam Ekranı Kapat
+          </>
+        ) : (
+          <>
+            <Maximize2 className="w-4 h-4" /> Tam Ekran
+          </>
+        )}
+      </button>
+    </div>
   );
 };
 
