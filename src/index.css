@@ -23,16 +23,15 @@ img, video, canvas {
   display: none; 
 }
 .no-scrollbar { 
-  scrollbar-width: none; 
+  /* Chrome & Safari için scrollbar gizleme */
 }
 
 /* Navigation butonları için yatay kaydırma iyileştirmesi */
 .nav-scroll {
-  scrollbar-width: none;       /* Firefox */
-  scroll-behavior: smooth;     /* Modern browsers */
+  scroll-behavior: smooth; /* Modern browsers */
 }
 .nav-scroll::-webkit-scrollbar {
-  display: none;               /* Chrome, Safari */
+  display: none; /* Chrome, Safari, Edge (Blink) */
 }
 
 /* Leaflet harita container için */
