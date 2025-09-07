@@ -127,11 +127,17 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
         </div>
 
-      {/* Alt: duyuru barı */}
-      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-0.5 overflow-hidden rounded-b-2xl">
+    {/* Alt: duyuru barı */}
+      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-1 rounded-b-2xl">
+        {/* İkon sabit kalıyor */}
         <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
-        <div className="animate-marquee whitespace-nowrap text-xs">
-          ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
+
+        {/* YENİ: Yazı için maskeleme alanı */}
+        <div className="flex-1 overflow-hidden">
+          {/* Kayan yazı bu yeni alanın içinde kalacak */}
+          <div className="animate-marquee whitespace-nowrap text-sm">
+            ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
+          </div>
         </div>
       </div>
     </div>
