@@ -13,6 +13,7 @@
     "@google-cloud/vision": "^5.3.3",
     "@supabase/supabase-js": "^2.57.2",
     "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
     "d3-delaunay": "^6.0.4",
     "date-fns": "^4.1.0",
     "hotkeys-js": "^3.13.15",
