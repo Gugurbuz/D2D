@@ -1,21 +1,45 @@
 // src/screens/RouteMapScreen.tsx
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from "react-leaflet";
+
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  Polyline,
+} from "react-leaflet";
 import L, { Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-// ÖNEMLİ: önce CSS, sonra JS (side-effect) import
 import "leaflet-sidebar-v2/css/leaflet-sidebar.min.css";
 import "leaflet-sidebar-v2";
 
-// (opsiyonel) default marker fix (Vite/React)
 import iconUrl from "leaflet/dist/images/marker-icon.png";
 import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
 import shadowUrl from "leaflet/dist/images/marker-shadow.png";
-const DefaultIcon = L.icon({ iconUrl, iconRetinaUrl, shadowUrl, iconSize: [25, 41], iconAnchor: [12, 41] });
+
+// Marker icon (global ayar) — sadece 1 kez yapılmalı
+const DefaultIcon = L.icon({
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Projendeki tipinle uyumlu basit Customer tipi (kendi tipini import edebilirsin)
+// TypeScript'e sidebar fonksiyonunu tanıt
+declare module "leaflet" {
+  namespace control {
+    function sidebar(options: any): any;
+  }
+}
+
 type Customer = {
   id: string;
   name: string;
@@ -27,54 +51,76 @@ type Customer = {
   lng: number;
 };
 
-type Props = { customers?: Customer[] };
+type Props = {
+  customers?: Customer[];
+};
 
 const RouteMapScreen: React.FC<Props> = ({ customers }) => {
-  // Demo veri (dışarıdan customers gelmezse boş kalmasın)
-  const data: Customer[] = useMemo(
-    () =>
-      customers ?? [
-        { id: "1", name: "Ali Veli", address: "Kadıköy", district: "Kadıköy", lat: 41.0, lng: 29.03 },
-        { id: "2", name: "Ayşe Kaya", address: "Üsküdar", district: "Üsküdar", lat: 41.03, lng: 29.02 },
-      ],
-    [customers]
-  );
+  const data: Customer[] =
+    customers ??
+    [
+      {
+        id: "1",
+        name: "Ali Veli",
+        address: "Kadıköy",
+        district: "Kadıköy",
+        lat: 41.0,
+        lng: 29.03,
+      },
+      {
+        id: "2",
+        name: "Ayşe Kaya",
+        address: "Üsküdar",
+        district: "Üsküdar",
+        lat: 41.03,
+        lng: 29.02,
+      },
+    ];
 
   const mapRef = useRef<LeafletMap | null>(null);
   const sidebarRef = useRef<any>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const initDoneRef = useRef(false); // StrictMode tekrarlı init koruması
+  const initDoneRef = useRef(false);
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [routeIds, setRouteIds] = useState<string[]>([]);
   const [starred, setStarred] = useState<Record<string, boolean>>({});
 
-  // Leaflet Sidebar init (Plan-B hack YOK)
+  // SSR koruması
+  const isBrowser = typeof window !== "undefined";
+
   useLayoutEffect(() => {
-    if (!mapRef.current || initDoneRef.current) return;
-    const sidebar = (L as any).control.sidebar({
+    if (!isBrowser || !mapRef.current || initDoneRef.current) return;
+
+    if (typeof (L.control as any).sidebar !== "function") {
+      console.warn("Sidebar plugin not found.");
+      return;
+    }
+
+    const sidebar = L.control.sidebar({
       container: "sidebar",
       position: "left",
       autopan: true,
       closeButton: true,
     });
+
     sidebar.addTo(mapRef.current);
-    requestAnimationFrame(() => sidebar.open("panel")); // açılışta panel açık
+    requestAnimationFrame(() => sidebar.open("panel"));
     sidebarRef.current = sidebar;
     initDoneRef.current = true;
-  }, []);
+  }, [isBrowser]);
 
-  // İlk açılışta tüm noktaları kapsa
   useEffect(() => {
     if (!mapRef.current || data.length === 0) return;
     const bounds = L.latLngBounds(data.map((c) => [c.lat, c.lng]));
     mapRef.current.fitBounds(bounds, { padding: [40, 40] });
   }, [data]);
 
-  // Yardımcılar
-  const registerMarker = (id: string, m: L.Marker | null) => {
-    if (m) markersRef.current.set(id, m);
+  const registerMarker = (id: string, marker: L.Marker | null) => {
+    if (marker) {
+      markersRef.current.set(id, marker);
+    }
   };
 
   const focusOn = (c: Customer) => {
@@ -83,20 +129,25 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
       animate: true,
       duration: 0.6,
     });
-    const mk = markersRef.current.get(c.id);
-    if (mk) {
+
+    const marker = markersRef.current.get(c.id);
+    if (marker) {
       mapRef.current.closePopup();
-      mk.openPopup();
+      marker.openPopup();
     }
   };
 
-  const addToRoute = (id: string) => setRouteIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-  const removeFromRoute = (id: string) => setRouteIds((prev) => prev.filter((x) => x !== id));
+  const addToRoute = (id: string) =>
+    setRouteIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+  const removeFromRoute = (id: string) =>
+    setRouteIds((prev) => prev.filter((x) => x !== id));
+
   const clearRoute = () => setRouteIds([]);
 
-  const toggleStar = (id: string) => setStarred((p) => ({ ...p, [id]: !p[id] }));
+  const toggleStar = (id: string) =>
+    setStarred((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  // Arama filtresi
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return data;
@@ -108,17 +159,21 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
     );
   }, [data, search]);
 
-  // Polyline noktaları (rota sırasına göre)
   const routePoints = useMemo(() => {
     const byId = new Map(data.map((c) => [c.id, c]));
-    return routeIds.map((id) => byId.get(id)).filter(Boolean).map((c) => [c!.lat, c!.lng]) as [number, number][];
+    return routeIds
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((c) => [c!.lat, c!.lng]) as [number, number][];
   }, [data, routeIds]);
 
   return (
     <div style={{ display: "flex", height: "100vh", position: "relative" }}>
-      {/* Aç/Kapa butonu (haritanın üstüne) */}
+      {/* Toggle button */}
       <button
-        onClick={() => sidebarRef.current?.toggle?.() || sidebarRef.current?.open?.("panel")}
+        onClick={() =>
+          sidebarRef.current?.toggle?.() || sidebarRef.current?.open?.("panel")
+        }
         style={{
           position: "absolute",
           right: 12,
@@ -131,12 +186,11 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
           boxShadow: "0 2px 8px rgba(0,0,0,.12)",
           cursor: "pointer",
         }}
-        title="Paneli Aç/Kapat"
       >
         Panel
       </button>
 
-      {/* LEAFLET SIDEBAR CONTAINER — collapsed (eklenti yönetsin) */}
+      {/* Sidebar */}
       <div
         id="sidebar"
         className="leaflet-sidebar collapsed"
@@ -153,7 +207,6 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
         </div>
 
         <div className="leaflet-sidebar-content">
-          {/* PANE ID = 'panel' */}
           <div className="leaflet-sidebar-pane" id="panel">
             <h1 className="leaflet-sidebar-header">
               Panel
@@ -162,32 +215,32 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
               </span>
             </h1>
 
-            {/* İçerik */}
             <div style={{ padding: "10px 12px" }}>
-              {/* Arama + özet */}
-              <div className="flex items-center gap-2 mb-3">
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Ara: isim / adres / ilçe"
-                  className="border rounded px-3 py-2 w-full"
+                  style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "1px solid #ccc" }}
                 />
                 {search && (
-                  <button className="px-3 py-2 border rounded" onClick={() => setSearch("")} title="Temizle">
+                  <button onClick={() => setSearch("")} title="Temizle">
                     <i className="fa fa-xmark" />
                   </button>
                 )}
               </div>
 
-              <div className="text-xs text-gray-600 mb-3">
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 12 }}>
                 Seçili: {selectedId ?? "—"} • Rota: {routeIds.length} müşteri
-                <button className="ml-3 px-2 py-1 border rounded" onClick={clearRoute}>
+                <button
+                  style={{ marginLeft: 8, padding: "2px 6px", border: "1px solid #ccc", borderRadius: 4 }}
+                  onClick={clearRoute}
+                >
                   Rotayı Temizle
                 </button>
               </div>
 
-              {/* Müşteriler */}
-              <div style={{ maxHeight: "calc(100vh - 260px)", overflow: "auto", paddingRight: 4 }}>
+              <div style={{ maxHeight: "calc(100vh - 260px)", overflowY: "auto", paddingRight: 4 }}>
                 {filtered.map((c, i) => {
                   const selected = selectedId === c.id;
                   const inRoute = routeIds.includes(c.id);
@@ -196,54 +249,59 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
                   return (
                     <div
                       key={c.id}
-                      className={`border rounded-lg p-3 mb-2 ${selected ? "bg-sky-50 border-sky-300" : "bg-white border-gray-200"}`}
+                      style={{
+                        border: "1px solid #ddd",
+                        borderRadius: 8,
+                        padding: 8,
+                        marginBottom: 8,
+                        backgroundColor: selected ? "#e0f2fe" : "#fff",
+                      }}
                     >
-                      <div className="flex items-start justify-between gap-2">
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                         <div
-                          className="cursor-pointer"
+                          style={{ cursor: "pointer" }}
                           onClick={() => {
                             setSelectedId(c.id);
                             focusOn(c);
                           }}
-                          title="Haritada odakla"
                         >
-                          <div className="font-bold">{i + 1}. {c.name}</div>
-                          <div className="text-xs text-gray-600">
+                          <strong>{i + 1}. {c.name}</strong>
+                          <div style={{ fontSize: 12, color: "#666" }}>
                             {c.address} {c.district ? `• ${c.district}` : ""}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
                             Planlı: {c.plannedTime ?? "-"} • Öncelik: {c.priority ?? "-"}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button className="px-2 py-1 border rounded" onClick={() => toggleStar(c.id)} title={isStar ? "Yıldızı kaldır" : "Yıldızla"}>
+                        <div style={{ display: "flex", gap: 6 }}>
+                          <button onClick={() => toggleStar(c.id)} title="Yıldız">
                             <i className={isStar ? "fa fa-star" : "fa-regular fa-star"} />
                           </button>
-
-                          {inRoute ? (
-                            <button className="px-2 py-1 border rounded" onClick={() => removeFromRoute(c.id)} title="Rotadan çıkar">
-                              <i className="fa fa-minus" />
-                            </button>
-                          ) : (
-                            <button className="px-2 py-1 border rounded" onClick={() => addToRoute(c.id)} title="Rotaya ekle">
-                              <i className="fa fa-plus" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() =>
+                              inRoute ? removeFromRoute(c.id) : addToRoute(c.id)
+                            }
+                            title={inRoute ? "Rotadan çıkar" : "Rotaya ekle"}
+                          >
+                            <i className={inRoute ? "fa fa-minus" : "fa fa-plus"} />
+                          </button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
 
-                {!filtered.length && <div className="text-sm text-gray-600">Sonuç bulunamadı.</div>}
+                {!filtered.length && (
+                  <div style={{ fontSize: 13, color: "#888" }}>Sonuç bulunamadı.</div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* HARİTA */}
+      {/* MAP */}
       <MapContainer
         center={[41.015, 28.979]}
         zoom={12}
@@ -256,33 +314,41 @@ const RouteMapScreen: React.FC<Props> = ({ customers }) => {
         />
 
         {data.map((c) => (
-          <Marker key={c.id} position={[c.lat, c.lng]} ref={(mk) => registerMarker(c.id, mk)}>
+          <Marker
+            key={c.id}
+            position={[c.lat, c.lng]}
+            eventHandlers={{
+              add: (e) => registerMarker(c.id, e.target as L.Marker),
+            }}
+          >
             <Popup>
               <div style={{ minWidth: 220 }}>
-                <div className="font-bold mb-1">{c.name}</div>
-                <div className="text-xs text-gray-600">
+                <strong>{c.name}</strong>
+                <div style={{ fontSize: 12, color: "#666" }}>
                   {c.address} {c.district ? `• ${c.district}` : ""}
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <button className="px-2 py-1 border rounded" onClick={() => { setSelectedId(c.id); focusOn(c); }}>
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  <button onClick={() => { setSelectedId(c.id); focusOn(c); }}>
                     <i className="fa fa-location-arrow" />
                   </button>
-                  {routeIds.includes(c.id) ? (
-                    <button className="px-2 py-1 border rounded" onClick={() => removeFromRoute(c.id)}>
-                      <i className="fa fa-minus" />
-                    </button>
-                  ) : (
-                    <button className="px-2 py-1 border rounded" onClick={() => addToRoute(c.id)}>
-                      <i className="fa fa-plus" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() =>
+                      routeIds.includes(c.id)
+                        ? removeFromRoute(c.id)
+                        : addToRoute(c.id)
+                    }
+                  >
+                    <i className={routeIds.includes(c.id) ? "fa fa-minus" : "fa fa-plus"} />
+                  </button>
                 </div>
               </div>
             </Popup>
           </Marker>
         ))}
 
-        {routePoints.length >= 2 && <Polyline positions={routePoints} weight={5} opacity={0.9} />}
+        {routePoints.length >= 2 && (
+          <Polyline positions={routePoints} weight={5} opacity={0.9} />
+        )}
       </MapContainer>
     </div>
   );
