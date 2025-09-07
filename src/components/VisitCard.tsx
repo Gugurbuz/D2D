@@ -1,5 +1,5 @@
 import React from "react";
-import { Eye, Play, MapPin, UserCheck, StickyNote } from "lucide-react";
+import { Eye, Play, MapPin, UserCheck } from "lucide-react"; // StickyNote kaldırıldı
 import type { Customer } from "../types";
 import { Chip } from "./Chip";
 
@@ -36,19 +36,16 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* SOL TARAF */}
         <div className="flex-1 space-y-2">
-          {/* İsim + müşteri & tesisat no */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
             <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber ?? "-"}</div>
             <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber ?? "-"}</div>
           </div>
 
-          {/* Adres */}
           <div className="text-sm text-gray-600 flex items-center gap-1">
             <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
           </div>
 
-          {/* Chip alanları */}
           <div className="mt-2 flex flex-wrap gap-2">
             <Chip tone={statusTone}>{customer.status}</Chip>
             <Chip tone={priorityTone}>{customer.priority} Öncelik</Chip>
@@ -64,12 +61,10 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
         {/* SAĞ TARAF */}
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
-            {/* Tarih + Saat aynı satırda */}
             <div className="text-sm font-medium text-gray-900 flex gap-2">
               <span>{formatDate(customer.visitDate)}</span>
               <span>{customer.plannedTime}</span>
             </div>
-            {/* Mesafe */}
             <div className="text-xs text-gray-500">{customer.distance}</div>
           </div>
 
@@ -95,15 +90,6 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
                 <Play className="w-4 h-4" /> Başlat
               </button>
             )}
-
-            {/* Not ekle */}
-            <button
-              onClick={() => alert("Not Ekle özelliği geliştirilecek")}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs transition"
-              title="Not Ekle"
-            >
-              <StickyNote className="w-4 h-4" /> Not Ekle
-            </button>
           </div>
         </div>
       </div>
