@@ -40,10 +40,15 @@ export type SalesRep = {
 
 type LatLng = [number, number];
 
+interface Props {
+  customers?: Customer[];
+  salesRep?: SalesRep;
+}
+
 /* ==== Varsayılanlar ==== */
 const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
 const anadoluCustomers: Customer[] = [
-  // ... mevcut müşteri listesi (kısalttım) ...
+  // kısa tuttum, sende mevcut
 ];
 
 /* ==== İkonlar ==== */
@@ -65,29 +70,23 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
 }
 
 /* ==== Yardımcılar ==== */
+async function osrmTrip(coords: string) {
+  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM trip error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
+  return data;
+}
 const fmtKm = (km: number | null) =>
   km == null
     ? "—"
     : new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(km) + " km";
 
-/* ==== OSRM ==== */
-async function osrmTrip(coords: string) {
-  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&roundtrip=false&overview=full&geometries=geojson`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("OSRM trip error");
-  const data = await res.json();
-  if (data.code !== "Ok") throw new Error("Trip not found");
-  return data;
-}
-
 /* ==== Bileşen ==== */
-const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
-  customers,
-  salesRep,
-}) => {
+const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
-
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
@@ -101,24 +100,39 @@ const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
+  const highlightCustomer = (c: Customer) => {
+    setSelectedId(c.id);
+    const m = markerRefs.current[c.id];
+    if (m) m.openPopup();
+    if (mapRef.current) {
+      mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
+    }
+  };
+
   /* ==== Rota hesaplama ==== */
   const handleOptimize = async () => {
     try {
       setLoading(true);
-      const points = [{ lat: rep.lat, lng: rep.lng }, ...baseCustomers];
-      let coords = points.map((p: any) => `${p.lng},${p.lat}`).join(";");
+
+      const coords = [
+        `${rep.lng},${rep.lat}`,
+        ...baseCustomers.map((c) => `${c.lng},${c.lat}`),
+      ].join(";");
+
       const data = await osrmTrip(coords);
 
+      // waypoint_index=0 rep, diğerleri müşteri
       const sorted = data.waypoints
         .sort((a: any, b: any) => a.waypoint_index - b.waypoint_index)
+        .filter((wp: any) => wp.waypoint_index > 0)
         .map((wp: any) => baseCustomers[wp.waypoint_index - 1]);
 
-      // yıldızlı müşteri varsa ilk sıraya koy
       const final = starredId
         ? [baseCustomers.find((c) => c.id === starredId)!, ...sorted.filter((c) => c.id !== starredId)]
         : sorted;
 
       setOrderedCustomers(final);
+
       const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
         ([lng, lat]: [number, number]) => [lat, lng]
       );
@@ -135,33 +149,18 @@ const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
     }
   };
 
-  /* Yıldız değişince yeniden hesapla */
-  useEffect(() => {
-    if (starredId) handleOptimize();
-  }, [starredId]);
-
   useEffect(() => {
     setOrderedCustomers(baseCustomers);
   }, [baseCustomers]);
 
   const center: LatLng = [rep.lat, rep.lng];
-  const bounds: L.LatLngBoundsExpression = [
-    [40.8, 29.0],
-    [41.2, 29.4],
-  ];
 
   return (
-    <div className="relative w-full" id="map-wrapper">
+    <div className="relative w-full">
       {/* Sticky üst bar */}
-      <div className="sticky top-0 z-20 bg-white/80 py-2 px-3 
-                      w-full md:w-1/3 md:ml-auto 
-                      flex items-center justify-between 
-                      shadow-sm border-b rounded-bl-xl">
+      <div className="sticky top-0 z-20 bg-white/70 py-2 px-3 w-full md:w-1/3 md:ml-auto flex items-center justify-between shadow-sm border-b rounded-bl-xl">
         <div className="flex items-center gap-2">
-          <RouteIcon className="w-4 h-4 text-[#0099CB]" />
-          <div className="text-xs text-gray-700">Mesafe: {fmtKm(routeKm)}</div>
-        </div>
-        <div className="flex items-center gap-2">
+          <div className="text-xs text-gray-700">Toplam Mesafe: <b>{fmtKm(routeKm)}</b></div>
           <button
             onClick={handleOptimize}
             disabled={loading}
@@ -182,34 +181,24 @@ const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
-          maxBounds={bounds}
-          maxBoundsViscosity={1.0}
+          className="z-0"
         >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
 
-          {/* Satış uzmanı */}
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
-            <Popup>
-              <b>{rep.name}</b>
-            </Popup>
+            <Popup><b>{rep.name}</b></Popup>
           </Marker>
 
-          {/* Müşteriler */}
           {orderedCustomers.map((c, i) => (
             <Marker
               key={c.id}
               position={[c.lat, c.lng]}
-              icon={numberIcon(i + 1, {
-                highlight: selectedId === c.id,
-                starred: starredId === c.id,
-              })}
-              ref={(ref: any) => {
-                if (ref) markerRefs.current[c.id] = ref;
-              }}
-              eventHandlers={{ click: () => setSelectedId(c.id) }}
+              icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
+              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+              eventHandlers={{ click: () => highlightCustomer(c) }}
             >
               <Popup>
                 <div className="space-y-1">
@@ -219,22 +208,17 @@ const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setStarredId((prev) => (prev === c.id ? null : c.id));
+                        setStarredId(prev => (prev === c.id ? null : c.id));
+                        handleOptimize();
                       }}
                       className="p-1 rounded hover:bg-gray-100"
                     >
-                      <Star
-                        className={`w-4 h-4 ${
-                          starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"
-                        }`}
-                      />
+                      <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
                     </button>
                   </div>
                   <div>{c.address}, {c.district}</div>
                   <div>Saat: {c.plannedTime}</div>
-                  <div>
-                    Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a>
-                  </div>
+                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
                     target="_blank"
@@ -254,27 +238,74 @@ const RouteMap: React.FC<{ customers?: Customer[]; salesRep?: SalesRep }> = ({
           )}
         </MapContainer>
 
-        {/* Sağ panel (sürükleyerek aç/kapat) */}
+        {/* Sağ panel */}
         <div
           className={`absolute top-4 right-0 bottom-4 z-10 transition-transform duration-300 ${
             panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]"
           } flex`}
-          onTouchStart={(e) => (touchStartX.current = e.touches[0].clientX)}
-          onTouchEnd={(e) => {
-            if (touchStartX.current == null) return;
-            const dx = e.changedTouches[0].clientX - touchStartX.current;
-            if (dx > 50) setPanelOpen(true);
-            if (dx < -50) setPanelOpen(false);
-            touchStartX.current = null;
-          }}
         >
-          {/* ... Panel içeriği buraya eklenebilir ... */}
+          <button
+            onClick={() => setPanelOpen((o) => !o)}
+            className="w-6 bg-[#0099CB] hover:bg-[#007DA1] transition-colors flex flex-col items-center justify-center text-white"
+          >
+            {panelOpen ? (
+              <Minimize2 className="w-4 h-4 -rotate-90" />
+            ) : (
+              <div className="flex flex-col items-center">
+                <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span>
+                <Minimize2 className="w-4 h-4 rotate-90" />
+              </div>
+            )}
+          </button>
+          <div className="bg-white/90 rounded-l-xl shadow-md px-6 py-4 flex flex-col gap-3 min-w-[270px] max-w-[21.6rem] h-full">
+            <div className="flex items-center gap-2">
+              <RouteIcon className="w-5 h-5 text-[#0099CB]" />
+              <span className="font-semibold text-gray-700 text-base">Ziyaret Sırası</span>
+            </div>
+            <div className="max-h-full overflow-auto pr-1">
+              {orderedCustomers.map((c, i) => {
+                const selected = selectedId === c.id;
+                const starred = starredId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    className={`flex items-center gap-2 p-2 rounded transition ${
+                      selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"
+                    }`}
+                    onClick={() => highlightCustomer(c)}
+                  >
+                    <span className={`w-7 h-7 flex items-center justify-center font-bold rounded-full text-white ${
+                      starred ? "bg-[#F5B301]" : selected ? "bg-[#FF6B00]" : "bg-[#0099CB]"
+                    }`}>{i + 1}</span>
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900 truncate">{c.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{c.address}, {c.district}</div>
+                      <a className="text-xs text-[#0099CB] underline" href={toTelHref(c.phone)} onClick={(e)=>e.stopPropagation()}>{c.phone}</a>
+                    </div>
+                    <button
+                      className="ml-auto p-1.5 rounded-lg hover:bg-gray-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStarredId(prev => prev === c.id ? null : c.id);
+                        handleOptimize();
+                      }}
+                    >
+                      {starred
+                        ? <Star className="w-5 h-5 text-[#F5B301] fill-[#F5B301]" />
+                        : <StarOff className="w-5 h-5 text-gray-500" />}
+                    </button>
+                    <span className="text-xs text-gray-700 font-semibold">{c.plannedTime}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {loading && (
-          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-10">
-            <div className="rounded-lg bg-green-100 border border-green-300 px-5 py-3 text-sm font-semibold text-green-800 shadow">
-              Rota hesaplanıyor…
+          <div className="absolute inset-0 bg-white/40 backdrop-blur-[1px] flex items-center justify-center z-20">
+            <div className="rounded-lg bg-green-600 text-white px-5 py-3 text-sm font-semibold shadow">
+              Rota Hesaplanıyor…
             </div>
           </div>
         )}
@@ -294,21 +325,13 @@ const FullscreenBtn: React.FC = () => {
   return (
     <button
       onClick={async () => {
-        const el = document.getElementById("map-wrapper");
+        const el = document.querySelector(".leaflet-container") as HTMLElement;
         if (!document.fullscreenElement && el) await el.requestFullscreen();
         else await document.exitFullscreen();
       }}
       className="px-2 py-1 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1"
     >
-      {isFs ? (
-        <>
-          <Minimize2 className="w-3 h-3" /> Kapat
-        </>
-      ) : (
-        <>
-          <Maximize2 className="w-3 h-3" /> Tam Ekran
-        </>
-      )}
+      {isFs ? <><Minimize2 className="w-3 h-3" /> Kapat</> : <><Maximize2 className="w-3 h-3" /> Tam Ekran</>}
     </button>
   );
 };
