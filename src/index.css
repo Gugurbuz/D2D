@@ -20,8 +20,9 @@ img, video, canvas {
 .no-scrollbar::-webkit-scrollbar { 
   display: none; 
 }
+
 .no-scrollbar { 
-  /* Chrome & Safari için scrollbar gizleme */
+  /* boş bırakıldı */
 }
 
 .nav-scroll {
