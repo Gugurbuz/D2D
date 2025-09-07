@@ -16,7 +16,15 @@ import {
   Check,
   CheckCircle2,
   Save,
-  FileImage, // Önizleme alanı için ikon eklendi
+  FileImage,
+  ListTree,
+  ReceiptText,
+  CalendarClock,
+  FileBadge2,
+  Coins,
+  Banknote,
+  Info,
+  AlertTriangle,
 } from "lucide-react";
 
 /* ------------ process polyfill (tarayıcı) ------------- */
@@ -40,6 +48,60 @@ interface InvoiceData {
   skttStatus?: string;
   meterReadings?: { consumption?: { total_kWh?: number | string } };
   charges?: { energyLow?: { unitPrice?: number | string } };
+}
+
+/** allDetails şeması (esnek, alanlar boş olabilir) */
+interface AllDetails {
+  parties?: {
+    supplierName?: string;
+    supplierTaxNo?: string;
+    customerName?: string;
+    customerAddress?: string;
+  };
+  identifiers?: {
+    invoiceNumber?: string;
+    billNumber?: string;
+    subscriberNumber?: string;
+    installationNumber?: string;
+    meterNumber?: string;
+  };
+  period?: {
+    startDate?: string;
+    endDate?: string;
+    issueDate?: string;
+    dueDate?: string;
+    days?: string;
+  };
+  readings?: {
+    prevReading?: string;
+    currReading?: string;
+    multiplier?: string;
+    active_kWh?: string;
+    reactive_kvarh?: string;
+    inductive_kvarh?: string;
+    capacitive_kvarh?: string;
+  };
+  pricing?: {
+    currency?: string;
+    tiers?: Array<{
+      label?: string;
+      kWh?: string;
+      unitPrice?: string;
+      amountExclTax?: string;
+    }>;
+    energySubtotalExclTax?: string;
+    distributionExclTax?: string;
+    otherFeesExclTax?: string;
+    taxes?: Array<{ label?: string; rate?: string; amount?: string }>;
+    totalExclTax?: string;
+    totalInclTax?: string;
+  };
+  payment?: {
+    iban?: string;
+    paymentChannels?: string;
+  };
+  notes?: string;
+  anomalies?: string[]; // boş dizi/undefined olabilir
 }
 
 type StatusOverlayState = {
@@ -72,7 +134,7 @@ async function generateInvoiceSummary(rawText: string) {
   );
   const result = await response.json();
   if (!response.ok) throw new Error(result.error || "AI hatası");
-  return result;
+  return result as { invoiceData?: any; summary?: string; allDetails?: AllDetails };
 }
 
 function computeSktt(tariff: string, yearly: number): string {
@@ -124,9 +186,34 @@ const StatusOverlay = ({ status }: { status: StatusOverlayState }) => {
   );
 };
 
+/* ---------- küçük yardımcı renderlar ---------- */
+const KV = ({ label, value }: { label: string; value?: any }) => {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  return (
+    <tr className="border-t">
+      <td className="px-3 py-2 font-medium text-gray-700 w-60">{label}</td>
+      <td className="px-3 py-2 text-gray-800 break-words">{String(value)}</td>
+    </tr>
+  );
+};
+
+const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode }> = ({
+  title,
+  children,
+}) => (
+  <div className="mt-3 bg-white rounded-xl border">
+    <div className="px-3 py-2 border-b bg-gray-50 font-semibold text-gray-800 flex items-center gap-2">
+      {title}
+    </div>
+    <div className="p-3">{children}</div>
+  </div>
+);
+
 export default function InvoiceOcrPage() {
   const [summary, setSummary] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
+  const [allDetails, setAllDetails] = useState<AllDetails | null>(null);
+
   const [rawText, setRawText] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -232,6 +319,7 @@ export default function InvoiceOcrPage() {
     }
     setImagePreviewUrl(null);
     setData(initialData);
+    setAllDetails(null);
     setSummary(null);
     setError(null);
     setRawText("");
@@ -305,7 +393,8 @@ export default function InvoiceOcrPage() {
       );
 
       setData(aiData);
-      setSummary(result.summary);
+      setSummary(result.summary ?? null);
+      setAllDetails(result.allDetails ?? null);
 
       setStatusOverlay({
         show: true,
@@ -509,16 +598,28 @@ export default function InvoiceOcrPage() {
     { label: "Ortalama Tüketim (kWh)", value: data.avgConsumption },
     { label: "SKTT Durumu", value: data.skttStatus },
     {
-      label: "Tüketim (kWh)",
+      label: "Dönem Tüketimi (kWh)",
       value: data.meterReadings?.consumption?.total_kWh,
     },
-    { label: "Birim Fiyat", value: data.charges?.energyLow?.unitPrice },
+    { label: "Birim Fiyat (TL/kWh)", value: data.charges?.energyLow?.unitPrice },
   ].filter(
     (r) => r.value !== undefined && r.value !== null && String(r.value) !== ""
   );
 
-  const hasAnyAIData = detailRows.length > 0 || !!summary;
+  const hasAnyAIData = detailRows.length > 0 || !!summary || !!allDetails;
   const isLoading = statusOverlay.show && statusOverlay.type === "loading";
+
+  /* -------- allDetails render yardımcıları -------- */
+  const has = (obj?: Record<string, any>) =>
+    !!obj && Object.values(obj).some((v) => (v ?? "") !== "");
+
+  const tiers = allDetails?.pricing?.tiers?.filter(
+    (t) => (t?.label ?? t?.kWh ?? t?.unitPrice ?? t?.amountExclTax) && true
+  );
+
+  const taxes = allDetails?.pricing?.taxes?.filter(
+    (t) => (t?.label ?? t?.rate ?? t?.amount) && true
+  );
 
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
@@ -535,6 +636,7 @@ export default function InvoiceOcrPage() {
 
       <main className="p-2 pb-24">
         <div className="space-y-6">
+          {/* 1. Fatura Yükle */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
@@ -629,12 +731,14 @@ export default function InvoiceOcrPage() {
             </div>
           </div>
 
+          {/* 2. Müşteri Bilgileri */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
             <div className="p-4 md:p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Wand2 />
                 <h2 className="text-lg font-semibold">2. Müşteri Bilgileri</h2>
               </div>
+
               <div className="space-y-4">
                 <div className="space-y-1">
                   <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
@@ -653,6 +757,7 @@ export default function InvoiceOcrPage() {
                     <option value="Sanayi">Sanayi</option>
                   </select>
                 </div>
+
                 <div className="space-y-1">
                   <FieldLabel icon={<Building2 className="w-3.5 h-3.5" />}>
                     Rakip Şirket
@@ -666,6 +771,7 @@ export default function InvoiceOcrPage() {
                     placeholder="-"
                   />
                 </div>
+
                 <div className="space-y-1">
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
                     Müşteri Adı Soyadı
@@ -679,6 +785,7 @@ export default function InvoiceOcrPage() {
                     placeholder="-"
                   />
                 </div>
+
                 <div className="space-y-1">
                   <FieldLabel icon={<Home className="w-3.5 h-3.5" />}>
                     Adres
@@ -693,6 +800,7 @@ export default function InvoiceOcrPage() {
                     placeholder="-"
                   />
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <FieldLabel icon={<Hash className="w-3.5 h-3.5" />}>
@@ -710,9 +818,10 @@ export default function InvoiceOcrPage() {
                       placeholder="-"
                     />
                   </div>
+
                   <div className="space-y-1">
                     <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
-                      Tüketim (kWh)
+                      Dönem Tüketimi (kWh)
                     </FieldLabel>
                     <input
                       value={data.meterReadings?.consumption?.total_kWh ?? ""}
@@ -726,9 +835,10 @@ export default function InvoiceOcrPage() {
                       placeholder="-"
                     />
                   </div>
+
                   <div className="space-y-1">
                     <FieldLabel icon={<Percent className="w-3.5 h-3.5" />}>
-                      Birim Fiyat
+                      Birim Fiyat (TL/kWh)
                     </FieldLabel>
                     <input
                       value={data.charges?.energyLow?.unitPrice ?? ""}
@@ -743,6 +853,7 @@ export default function InvoiceOcrPage() {
                     />
                   </div>
                 </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
@@ -758,6 +869,7 @@ export default function InvoiceOcrPage() {
                       placeholder="-"
                     />
                   </div>
+
                   <div className="space-y-1">
                     <FieldLabel icon={<Gauge className="w-3.5 h-3.5" />}>
                       Ortalama Tüketim (kWh)
@@ -772,6 +884,7 @@ export default function InvoiceOcrPage() {
                       placeholder="-"
                     />
                   </div>
+
                   <div className="space-y-1">
                     <FieldLabel icon={<Zap className="w-3.5 h-3.5" />}>
                       SKTT Durumu
@@ -783,33 +896,267 @@ export default function InvoiceOcrPage() {
                     />
                   </div>
                 </div>
+
+                {/* Detayları Göster */}
                 {hasAnyAIData && (
                   <div className="pt-2">
                     <details>
-                      <summary className="cursor-pointer text-sm text-gray-600 select-none">
+                      <summary className="cursor-pointer text-sm text-gray-600 select-none flex items-center gap-2">
+                        <ListTree className="w-4 h-4" />
                         Detayları Göster
                       </summary>
-                      <div className="mt-2 bg-gray-50 p-3 rounded-lg border">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-gray-100">
-                              <th className="text-left px-3 py-2 w-56">Alan</th>
-                              <th className="text-left px-3 py-2">Değer</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {detailRows.map((r, i) => (
-                              <tr key={i} className="border-t even:bg-white">
-                                <td className="px-3 py-2 font-medium text-gray-700">
-                                  {r.label}
-                                </td>
-                                <td className="px-3 py-2 text-gray-800 break-words">
-                                  {String(r.value)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+
+                      <div className="mt-3 space-y-3">
+                        {/* Özet tablo (invoiceData) */}
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <ReceiptText className="w-4 h-4" />
+                              Özet Alanlar (invoiceData)
+                            </span>
+                          }
+                        >
+                          <div className="bg-gray-50 p-3 rounded-lg border">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-gray-100">
+                                  <th className="text-left px-3 py-2 w-56">Alan</th>
+                                  <th className="text-left px-3 py-2">Değer</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {detailRows.map((r, i) => (
+                                  <tr key={i} className="border-t even:bg-white">
+                                    <td className="px-3 py-2 font-medium text-gray-700">
+                                      {r.label}
+                                    </td>
+                                    <td className="px-3 py-2 text-gray-800 break-words">
+                                      {String(r.value)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </SectionCard>
+
+                        {/* allDetails bölümleri */}
+                        {allDetails && (
+                          <>
+                            {has(allDetails.parties) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <Home className="w-4 h-4" />
+                                    Taraflar
+                                  </span>
+                                }
+                              >
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <KV label="Tedarikçi Adı" value={allDetails.parties?.supplierName} />
+                                    <KV label="Tedarikçi VKN" value={allDetails.parties?.supplierTaxNo} />
+                                    <KV label="Müşteri Adı" value={allDetails.parties?.customerName} />
+                                    <KV label="Müşteri Adresi" value={allDetails.parties?.customerAddress} />
+                                  </tbody>
+                                </table>
+                              </SectionCard>
+                            )}
+
+                            {has(allDetails.identifiers) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <FileBadge2 className="w-4 h-4" />
+                                    Kimlikler
+                                  </span>
+                                }
+                              >
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <KV label="Fatura No" value={allDetails.identifiers?.invoiceNumber} />
+                                    <KV label="Belge No" value={allDetails.identifiers?.billNumber} />
+                                    <KV label="Abone No" value={allDetails.identifiers?.subscriberNumber} />
+                                    <KV label="Tesisat No" value={allDetails.identifiers?.installationNumber} />
+                                    <KV label="Sayaç No" value={allDetails.identifiers?.meterNumber} />
+                                  </tbody>
+                                </table>
+                              </SectionCard>
+                            )}
+
+                            {has(allDetails.period) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <CalendarClock className="w-4 h-4" />
+                                    Dönem Bilgileri
+                                  </span>
+                                }
+                              >
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <KV label="Başlangıç" value={allDetails.period?.startDate} />
+                                    <KV label="Bitiş" value={allDetails.period?.endDate} />
+                                    <KV label="Düzenleme Tarihi" value={allDetails.period?.issueDate} />
+                                    <KV label="Son Ödeme" value={allDetails.period?.dueDate} />
+                                    <KV label="Gün Sayısı" value={allDetails.period?.days} />
+                                  </tbody>
+                                </table>
+                              </SectionCard>
+                            )}
+
+                            {has(allDetails.readings) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <Gauge className="w-4 h-4" />
+                                    Okumalar
+                                  </span>
+                                }
+                              >
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <KV label="Önceki Endeks" value={allDetails.readings?.prevReading} />
+                                    <KV label="Güncel Endeks" value={allDetails.readings?.currReading} />
+                                    <KV label="Çarpan" value={allDetails.readings?.multiplier} />
+                                    <KV label="Aktif (kWh)" value={allDetails.readings?.active_kWh} />
+                                    <KV label="Reaktif (kvarh)" value={allDetails.readings?.reactive_kvarh} />
+                                    <KV label="Endüktif (kvarh)" value={allDetails.readings?.inductive_kvarh} />
+                                    <KV label="Kapasitif (kvarh)" value={allDetails.readings?.capacitive_kvarh} />
+                                  </tbody>
+                                </table>
+                              </SectionCard>
+                            )}
+
+                            {(has(allDetails.pricing) ||
+                              (tiers && tiers.length) ||
+                              (taxes && taxes.length)) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <Coins className="w-4 h-4" />
+                                    Fiyatlandırma
+                                  </span>
+                                }
+                              >
+                                <div className="space-y-3">
+                                  <table className="w-full text-sm">
+                                    <tbody>
+                                      <KV label="Para Birimi" value={allDetails.pricing?.currency} />
+                                      <KV label="Enerji Ara Toplam (KDV Hariç)" value={allDetails.pricing?.energySubtotalExclTax} />
+                                      <KV label="Dağıtım (KDV Hariç)" value={allDetails.pricing?.distributionExclTax} />
+                                      <KV label="Diğer Ücretler (KDV Hariç)" value={allDetails.pricing?.otherFeesExclTax} />
+                                      <KV label="Toplam (KDV Hariç)" value={allDetails.pricing?.totalExclTax} />
+                                      <KV label="Toplam (KDV Dahil)" value={allDetails.pricing?.totalInclTax} />
+                                    </tbody>
+                                  </table>
+
+                                  {/* Kademeler */}
+                                  {tiers && tiers.length > 0 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border">
+                                      <div className="font-semibold text-gray-800 mb-2">Kademeli Tablolar</div>
+                                      <table className="w-full text-sm">
+                                        <thead>
+                                          <tr className="bg-gray-100">
+                                            <th className="text-left px-3 py-2">Kademe</th>
+                                            <th className="text-left px-3 py-2">kWh</th>
+                                            <th className="text-left px-3 py-2">Birim Fiyat</th>
+                                            <th className="text-left px-3 py-2">Tutar (KDV Hariç)</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {tiers.map((t, i) => (
+                                            <tr key={i} className="border-t">
+                                              <td className="px-3 py-2">{t.label || "-"}</td>
+                                              <td className="px-3 py-2">{t.kWh || "-"}</td>
+                                              <td className="px-3 py-2">{t.unitPrice || "-"}</td>
+                                              <td className="px-3 py-2">{t.amountExclTax || "-"}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+
+                                  {/* Vergiler */}
+                                  {taxes && taxes.length > 0 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border">
+                                      <div className="font-semibold text-gray-800 mb-2">Vergiler</div>
+                                      <table className="w-full text-sm">
+                                        <thead>
+                                          <tr className="bg-gray-100">
+                                            <th className="text-left px-3 py-2">Ad</th>
+                                            <th className="text-left px-3 py-2">Oran</th>
+                                            <th className="text-left px-3 py-2">Tutar</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {taxes.map((t, i) => (
+                                            <tr key={i} className="border-t">
+                                              <td className="px-3 py-2">{t.label || "-"}</td>
+                                              <td className="px-3 py-2">{t.rate || "-"}</td>
+                                              <td className="px-3 py-2">{t.amount || "-"}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              </SectionCard>
+                            )}
+
+                            {has(allDetails.payment) && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <Banknote className="w-4 h-4" />
+                                    Ödeme
+                                  </span>
+                                }
+                              >
+                                <table className="w-full text-sm">
+                                  <tbody>
+                                    <KV label="IBAN" value={allDetails.payment?.iban} />
+                                    <KV label="Kanallar" value={allDetails.payment?.paymentChannels} />
+                                  </tbody>
+                                </table>
+                              </SectionCard>
+                            )}
+
+                            {(allDetails.notes && allDetails.notes.trim() !== "") && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <Info className="w-4 h-4" />
+                                    Notlar
+                                  </span>
+                                }
+                              >
+                                <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                                  {allDetails.notes}
+                                </div>
+                              </SectionCard>
+                            )}
+
+                            {allDetails.anomalies && allDetails.anomalies.length > 0 && (
+                              <SectionCard
+                                title={
+                                  <span className="inline-flex items-center gap-2">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    Anomaliler
+                                  </span>
+                                }
+                              >
+                                <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
+                                  {allDetails.anomalies.map((a, i) => (
+                                    <li key={i}>{a}</li>
+                                  ))}
+                                </ul>
+                              </SectionCard>
+                            )}
+                          </>
+                        )}
                       </div>
                     </details>
                   </div>
@@ -833,6 +1180,7 @@ export default function InvoiceOcrPage() {
         </div>
       </footer>
 
+      {/* Özet Modal */}
       {isSummaryModalOpen && summary && (
         <div
           className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
@@ -874,6 +1222,7 @@ export default function InvoiceOcrPage() {
         </div>
       )}
 
+      {/* Görsel Modal */}
       {isImageModalOpen && imagePreviewUrl && (
         <div
           className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
@@ -895,6 +1244,7 @@ export default function InvoiceOcrPage() {
         </div>
       )}
 
+      {/* Kamera */}
       {cameraOn && (
         <div className="fixed inset-0 z-[1000] bg-black">
           <div className="absolute top-0 left-0 right-0 h-14 bg-black/40 backdrop-blur flex items-center justify-between px-3">
@@ -966,4 +1316,3 @@ export default function InvoiceOcrPage() {
     </div>
   );
 }
-
