@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { 
   Target, 
   CheckCircle, 
@@ -11,7 +11,6 @@ import {
   Megaphone
 } from 'lucide-react';
 import VisitCard from '../components/VisitCard';
-import Marquee from "react-fast-marquee";
 import type { Customer, SalesRep } from '../types';
 
 type Props = {
@@ -23,25 +22,9 @@ type Props = {
 };
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
-  const [time, setTime] = useState(new Date());
-  const [showAnnouncements, setShowAnnouncements] = useState(false);
-
-  // Duyurular örnek (normalde backend'den gelebilir)
-  const announcements = [
-    "⚡ Yeni kampanya başladı! Elektrik tarifelerinde indirim.",
-    "📊 Haftalık toplantı yarın saat 09:00’da.",
-    "🚀 Bu ay en çok satış yapan temsilciye ödül var!"
-  ];
-
-  // Zaman güncelle
-  useEffect(() => {
-    const interval = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Bugünün tarihi
   const today = new Date().toISOString().split('T')[0];
-  
+  const time = new Date();
+
   // Bugünkü ziyaretler
   const todaysVisits = useMemo(() => {
     return customers.filter(c => c.visitDate === today);
@@ -57,20 +40,12 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     return todaysVisits.filter(c => c.status === 'Planlandı');
   }, [todaysVisits]);
 
-  // Atanan rep ismi bulma fonksiyonu
-  const getAssignedName = (customerId: string) => {
-    const repId = assignments[customerId];
-    return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
-  };
-
-  // Günlük hedef ve dönüşüm
+  // Günlük hedef
   const dailyTarget = 20;
   const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
-  const conversionRate = completedVisits.length > 0 
-    ? Math.round((completedVisits.filter(c => c.contractSigned).length / completedVisits.length) * 100) 
-    : 0;
+  const conversionRate = Math.round((completedVisits.length / (todaysVisits.length || 1)) * 100);
 
-  // Dinamik selamlama
+  // --- Zaman bazlı selamlama ---
   const hour = time.getHours();
   let greeting = "Hoş geldin";
   if (hour >= 6 && hour < 12) greeting = "🌅 Günaydın";
@@ -78,7 +53,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   else if (hour >= 17 && hour < 21) greeting = "🌆 İyi akşamlar";
   else greeting = "🌙 İyi geceler";
 
-  // Motivasyon mesajları
+  // --- Motivasyon mesajları ---
   const motivationalMessages = {
     high: [
       "🎉 Harikasın, hedefinin çoğunu tamamladın!",
@@ -107,7 +82,11 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     ]
   };
 
-  // Motivasyon seçimi
+  function randomPick(arr: string[]) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  // Dinamik motivasyon seçimi (oranlara göre)
   let motivation = "";
   if (completionRate >= 80) {
     motivation = randomPick(motivationalMessages.high);
@@ -125,46 +104,29 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
   return (
     <div className="space-y-6">
-      {/* Hoş geldin mesajı + saat + tarih + duyurular */}
-      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
-        <div className="flex justify-between items-start">
-          {/* Sol taraf */}
-          <div>
-            <h1 className="text-2xl font-bold mb-2">{greeting}, Ahmet!</h1>
-            <p className="text-blue-100">
-              Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
-            </p>
-            <p className="mt-2 text-yellow-200 text-sm">{motivation}</p>
-          </div>
-
-          {/* Sağ taraf */}
-          <div className="text-right">
-            <div className="text-3xl sm:text-4xl font-bold">
-              {time.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
-            <div className="text-sm text-blue-100 mt-1">
-              {time.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </div>
-          </div>
+      {/* Hoş geldin bloğu */}
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex flex-col md:flex-row md:items-center md:justify-between relative">
+        {/* Sol: selamlama + motivasyon */}
+        <div>
+          <h1 className="text-2xl font-bold mb-2">{greeting}, Ahmet!</h1>
+          <p className="text-blue-100">
+            Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+          </p>
+          <p className="mt-2 text-yellow-200 text-sm">{motivation}</p>
         </div>
 
-        {/* Alt satır: Duyurular */}
-        <div
-          className="relative mt-4 w-full bg-[#007ca8]/40 rounded-lg overflow-hidden flex items-center cursor-pointer"
-          onClick={() => setShowAnnouncements(true)}
-        >
-          <Megaphone className="w-5 h-5 text-yellow-300 flex-shrink-0 ml-2 mr-3" />
-          <Marquee
-            gradient={false}
-            speed={50}
-            pauseOnHover={true}
-            direction="left"
-            className="text-sm text-blue-100 py-2"
-          >
-            {announcements.map((a, idx) => (
-              <span key={idx} className="mx-6">{a}</span>
-            ))}
-          </Marquee>
+        {/* Sağ: saat ve tarih */}
+        <div className="text-right mt-4 md:mt-0">
+          <div className="text-3xl font-bold">{time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</div>
+          <div className="text-sm text-blue-100">{time.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}</div>
+        </div>
+
+        {/* Alt: duyuru barı */}
+        <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-1 overflow-hidden rounded-b-2xl">
+          <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
+          <div className="animate-marquee whitespace-nowrap text-sm">
+            ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
+          </div>
         </div>
       </div>
 
@@ -177,7 +139,6 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           icon={<Target className="w-6 h-6" />}
           color="bg-[#0099CB]"
         />
-        
         <KPICard
           title="Tamamlanan"
           value={completedVisits.length.toString()}
@@ -185,7 +146,6 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           icon={<CheckCircle className="w-6 h-6" />}
           color="bg-green-500"
         />
-        
         <KPICard
           title="Bekleyen"
           value={pendingVisits.length.toString()}
@@ -193,11 +153,10 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           icon={<Clock className="w-6 h-6" />}
           color="bg-yellow-500"
         />
-        
         <KPICard
-          title="Dönüşüm"
-          value={`%${conversionRate}`}
-          subtitle="Satış oranı"
+          title="Haftalık"
+          value={`%${completionRate}`}
+          subtitle={`${completedVisits.length}/${dailyTarget} tamamlandı`}
           icon={<TrendingUp className="w-6 h-6" />}
           color="bg-purple-500"
         />
@@ -221,18 +180,14 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
               <VisitCard
                 key={customer.id}
                 customer={customer}
-                assignedName={getAssignedName(customer.id)}
-                onDetail={() => {
-                  onSelectCustomer(customer);
-                  setCurrentScreen('visitDetail');
-                }}
+                assignedName={assignments[customer.id] ? allReps.find(r => r.id === assignments[customer.id])?.name : undefined}
+                onDetail={() => onSelectCustomer(customer)}
                 onStart={() => {
                   onSelectCustomer(customer);
                   setCurrentScreen('visitFlow');
                 }}
               />
             ))}
-            
             {todaysVisits.length > 5 && (
               <div className="text-center pt-4">
                 <button
@@ -250,11 +205,6 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   );
 };
 
-// Yardımcı: random mesaj seç
-function randomPick(arr: string[]) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 const KPICard: React.FC<{
   title: string;
   value: string;
@@ -264,9 +214,7 @@ const KPICard: React.FC<{
 }> = ({ title, value, subtitle, icon, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
-      <div className={`p-2 rounded-lg ${color} text-white`}>
-        {icon}
-      </div>
+      <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
     </div>
     <div className="space-y-1">
       <p className="text-sm text-gray-600">{title}</p>
