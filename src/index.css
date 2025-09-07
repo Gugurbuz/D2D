@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 /* Yatay taşmayı global kapat */
 html, body, #root {
   width: 100%;
@@ -12,53 +13,61 @@ html, body, #root {
 * { min-width: 0; }
 
 /* Görsel elemanlar taşmasın */
-img, video, canvas { max-width: 100%; height: auto; }
+img, video, canvas { 
+  max-width: 100%; 
+  height: auto; 
+}
 
 /* Kaydırılabilir nav / buton barı için scrollbar gizle */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { 
+  display: none; 
+}
+.no-scrollbar { 
+  scrollbar-width: none; 
+}
 
 /* Navigation butonları için yatay kaydırma iyileştirmesi */
 .nav-scroll {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  scroll-behavior: smooth;
+  scrollbar-width: none;       /* Firefox */
+  scroll-behavior: smooth;     /* Modern browsers */
 }
 .nav-scroll::-webkit-scrollbar {
-  display: none;
+  display: none;               /* Chrome, Safari */
 }
 
+/* Leaflet harita container için */
 .leaflet-container {
   touch-action: pan-x pan-y;
   will-change: transform;
   backface-visibility: hidden;
 }
+
 /* leaflet-draw ikonlarının görünürlüğünü artırma */
 .leaflet-draw-toolbar a {
-    color: #333; /* Daha koyu bir ikon rengi */
-    background-color: #f8f8f8; /* Hafif gri arka plan */
-    border: 1px solid #ccc; /* İkon etrafına ince kenarlık */
-    border-radius: 4px; /* Hafif yuvarlak köşeler */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Hafif gölge */
-    transition: all 0.2s ease-in-out;
+  color: #333; /* Daha koyu ikon rengi */
+  background-color: #f8f8f8; /* Hafif gri arka plan */
+  border: 1px solid #ccc; /* İnce kenarlık */
+  border-radius: 4px; /* Yuvarlak köşeler */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* Hafif gölge */
+  transition: all 0.2s ease-in-out;
 }
 
 .leaflet-draw-toolbar a:hover {
-    background-color: #e8e8e8; /* Hover durumunda daha koyu gri */
-    border-color: #bbb;
+  background-color: #e8e8e8; 
+  border-color: #bbb;
 }
 
-/* Aktif (seçili) ikonlar için */
+/* Aktif (seçili) ikonlar */
 .leaflet-draw-toolbar a.leaflet-draw-toolbar-button-enabled {
-    background-color: #d1ecf1; /* Aktifken daha belirgin bir renk */
-    border-color: #bee5eb;
-    color: #0c5460;
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
 }
 
 /* Çöp kutusu (silme) ikonu için özel ayar */
 .leaflet-draw-toolbar .leaflet-draw-edit-remove a {
-    color: #dc3545; /* Kırmızı renk */
+  color: #dc3545; /* Kırmızı */
 }
 .leaflet-draw-toolbar .leaflet-draw-edit-remove a:hover {
-    background-color: #f8d7da;
+  background-color: #f8d7da;
 }
