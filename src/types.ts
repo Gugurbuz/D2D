@@ -14,7 +14,9 @@ export type Screen =
   | 'team'
   | 'assignments'
   | 'assignmentMap'
-  | 'invoiceOcr';
+  | 'invoiceOcr'
+| 'systemManagement'
+  | 'systemReports';
 
 export interface Customer {
   id: string;
