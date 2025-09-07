@@ -1348,5 +1348,3 @@ export default function InvoiceOcrPage() {
   );
 }
 
-
-
