@@ -8,7 +8,6 @@ import {
   Minimize2,
   Route as RouteIcon,
   Star,
-  StarOff,
   Navigation,
 } from "lucide-react";
 
@@ -48,7 +47,7 @@ interface Props {
 /* ==== Varsayılanlar ==== */
 const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
 const anadoluCustomers: Customer[] = [
-  // ... müşteri listesi (kısalttım, sende mevcut) ...
+  // ... müşteri listesi burada (kısalttım) ...
 ];
 
 /* ==== İkonlar ==== */
@@ -72,15 +71,6 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
 }
 
 /* ==== Yardımcılar ==== */
-function haversineKm(a: LatLng, b: LatLng) {
-  const R = 6371;
-  const dLat = ((b[0] - a[0]) * Math.PI) / 180;
-  const dLng = ((b[1] - a[1]) * Math.PI) / 180;
-  const lat1 = (a[0] * Math.PI) / 180;
-  const lat2 = (b[0] * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
 const fmtKm = (km: number | null) =>
   km == null
     ? "—"
@@ -113,15 +103,39 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     }
   };
 
+  /* ==== OSRM TRIP ==== */
   async function handleOptimize() {
     try {
       setLoading(true);
-      // basit hesap: sırayı değiştirmeden mesafeyi ölç
-      const seq: LatLng[] = [[rep.lat, rep.lng], ...baseCustomers.map(c => [c.lat, c.lng])];
-      setRouteCoords(seq);
-      let acc = 0;
-      for (let i = 1; i < seq.length; i++) acc += haversineKm(seq[i - 1], seq[i]);
-      setRouteKm(acc);
+      const tripPoints = [
+        { kind: "rep" as const, lat: rep.lat, lng: rep.lng },
+        ...baseCustomers.map((c) => ({ kind: "cust" as const, lat: c.lat, lng: c.lng, ref: c })),
+      ];
+      const coords = tripPoints.map((p) => `${p.lng},${p.lat}`).join(";");
+
+      const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("OSRM API error");
+      const data = await res.json();
+      if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("OSRM trip not found");
+
+      const orderedByTrip = data.waypoints
+        .map((wp: any, inputIdx: number) => ({ inputIdx, order: wp.waypoint_index }))
+        .sort((a: any, b: any) => a.order - b.order)
+        .map((x: any) => tripPoints[x.inputIdx]);
+
+      const sortedCustomers = orderedByTrip.filter((p) => p.kind === "cust").map((p) => (p as any).ref as Customer);
+      setOrderedCustomers(sortedCustomers);
+
+      const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
+        ([lng, lat]: [number, number]) => [lat, lng]
+      );
+      setRouteCoords(latlngs);
+      setRouteKm((data.trips[0].distance as number) / 1000);
+
+      if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0]);
+    } catch (e) {
+      console.error("OSRM rota hatası:", e);
     } finally {
       setLoading(false);
     }
@@ -135,31 +149,25 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   return (
     <div className="relative w-full">
-     {/* Sticky üst bar */}
-<div className="sticky top-0 z-20 bg-white/55 py-2 px-3 
-                w-full md:w-1/3 md:ml-auto 
-                flex items-center justify-between 
-                shadow-sm border-b rounded-bl-xl">
-
-
-
-  <div className="flex items-center gap-2">
-    <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
-    <button
-      onClick={handleOptimize}
-      disabled={loading}
-      className={`px-2 py-1 text-xs rounded-lg font-semibold ${
-        loading
-          ? "bg-gray-300 text-gray-600"
-          : "bg-[#0099CB] text-white hover:opacity-90"
-      }`}
-    >
-      {loading ? "..." : "Rota Oluştur"}
-    </button>
-    <FullscreenBtn />
-  </div>
-</div>
-
+      {/* Sticky üst bar */}
+      <div
+        className="sticky top-0 z-20 bg-white/60 py-2 px-3 
+                   w-full md:w-1/3 md:ml-auto 
+                   flex items-center justify-end gap-2
+                   shadow-sm border-b rounded-bl-xl"
+      >
+        <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
+        <button
+          onClick={handleOptimize}
+          disabled={loading}
+          className={`px-2 py-1 text-xs rounded-lg font-semibold ${
+            loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
+          }`}
+        >
+          {loading ? "..." : "Rota Optimize Et"}
+        </button>
+        <FullscreenBtn />
+      </div>
 
       {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
