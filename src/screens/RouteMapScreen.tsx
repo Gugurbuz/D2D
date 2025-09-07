@@ -108,7 +108,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         <div className="flex items-center gap-2 text-gray-900 font-semibold">
         
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-right gap-3">
           <div className="text-sm text-gray-700">
             Toplam Mesafe: <b className="text-[#0099CB]">{fmtKm(routeKm)}</b>
           </div>
@@ -132,7 +132,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
-          className="y-0"
+          className="yield-0"
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap contributors" />
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
