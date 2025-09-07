@@ -94,7 +94,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
         <div className="text-center mb-8">
           <div className="w-360 h-240 mx-auto mb-4 flex items-center justify-center">
             <img
-              src="https://ehqotgebdywdmwxbwbjl.supabase.co/storage/v1/object/sign/Logo/animatedlogo3.gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82YTJkNThmMC1kMzNhLTRiY2MtODMxMy03ZjE2NmIwN2NjMDUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMb2dvL2FuaW1hdGVkbG9nbzMuZ2lmIiwiaWF0IjoxNzU3MjY2MTM1LCJleHAiOjE3ODg4MDIxMzV9.bAOU2LnKoaXL8GSFIB20QoJ46Gr8f-FTXD9YnhBqwQg"
+              src="https://ehqotgebdywdmwxbwbjl.supabase.co/storage/v1/object/sign/Logo/animatedlogo3.gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82YTJkNThmMC1kMzNhLTRiY2MtODMxMy03ZjE2NmIwN2NjMDUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMb2dvL2FuaW1hdGVkbG9nbzMuZ2lmIiwiaWF0IjoxNzU3MjY2NDMzLCJleHAiOjE3ODg4MDI0MzN9.J6IxjFdcZwL38INubr8hwsMYpzZM3il9GllxYQF_BFk"
               alt="Enerjisa Logo"
               className="max-w-full max-h-full object-contain"
             />
