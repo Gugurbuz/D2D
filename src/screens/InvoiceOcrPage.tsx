@@ -591,7 +591,7 @@ export default function InvoiceOcrPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-top text-gray-400 text-sm border rounded-xl">
+                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-start text-gray-400 text-sm border rounded-xl">
                     <FileImage className="w-8 h-8 mb-2" />
                     <span>Önizleme için fatura yükleyin</span>
                   </div>
