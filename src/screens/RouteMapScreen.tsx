@@ -136,7 +136,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   return (
     <div className="relative w-full">
      {/* Sticky üst bar */}
-<div className="sticky top-0 z-20 bg-white/80 py-2 px-3 
+<div className="sticky top-0 z-20 bg-white/55 py-2 px-3 
                 w-full md:w-1/3 md:ml-auto 
                 flex items-center justify-between 
                 shadow-sm border-b rounded-bl-xl">
