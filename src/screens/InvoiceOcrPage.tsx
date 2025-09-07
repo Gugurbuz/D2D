@@ -579,7 +579,7 @@ export default function InvoiceOcrPage() {
                       <img
                         src={imagePreviewUrl}
                         alt="Fatura Önizlemesi"
-                        className="w-full h-full object-cover object-top rounded-lg border"
+                        className="w-full h-full object-cover rounded-lg border"
                       />
                     </button>
                     <button
@@ -591,7 +591,7 @@ export default function InvoiceOcrPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-center text-gray-400 text-sm border rounded-xl">
+                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-top text-gray-400 text-sm border rounded-xl">
                     <FileImage className="w-8 h-8 mb-2" />
                     <span>Önizleme için fatura yükleyin</span>
                   </div>
