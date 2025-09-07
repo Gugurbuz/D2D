@@ -228,7 +228,7 @@ function App() {
       case 'userManagement':
         return <UserManagementScreen />;
       case 'systemSettings':
-        return <SystemSettingsScreen />;
+        return <SystemManagementScreen  />;
       case 'tariffs':
         return <TariffsScreen />;
       case 'fieldOpsMap':
