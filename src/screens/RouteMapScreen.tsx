@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import {
   Maximize2,
   Minimize2,
-  Route as RouteIcon,
   Star,
   Navigation,
 } from "lucide-react";
@@ -30,13 +29,7 @@ export type Customer = {
   lng: number;
   phone: string;
 };
-
-export type SalesRep = {
-  name: string;
-  lat: number;
-  lng: number;
-};
-
+export type SalesRep = { name: string; lat: number; lng: number };
 type LatLng = [number, number];
 
 interface Props {
@@ -47,7 +40,7 @@ interface Props {
 /* ==== Varsayılanlar ==== */
 const defaultSalesRep: SalesRep = { name: "Satış Uzmanı", lat: 40.9368, lng: 29.1553 };
 const anadoluCustomers: Customer[] = [
-  // ... müşteri listesi burada (kısalttım) ...
+  // ... müşteri listesi burada ...
 ];
 
 /* ==== İkonlar ==== */
@@ -58,9 +51,7 @@ const repIcon = new L.Icon({
   popupAnchor: [0, -28],
 });
 function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }) {
-  const highlight = !!opts?.highlight;
-  const starred = !!opts?.starred;
-  const bg = starred ? "#F5B301" : highlight ? "#FF6B00" : "#0099CB";
+  const bg = opts?.starred ? "#F5B301" : opts?.highlight ? "#FF6B00" : "#0099CB";
   return L.divIcon({
     className: "number-marker",
     html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;">${n}</div>`,
@@ -72,12 +63,10 @@ function numberIcon(n: number, opts?: { highlight?: boolean; starred?: boolean }
 
 /* ==== Yardımcılar ==== */
 const fmtKm = (km: number | null) =>
-  km == null
-    ? "—"
-    : new Intl.NumberFormat("tr-TR", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }).format(km) + " km";
+  km == null ? "—" : new Intl.NumberFormat("tr-TR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(km) + " km";
 
 /* ==== Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
@@ -98,9 +87,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     setSelectedId(c.id);
     const m = markerRefs.current[c.id];
     if (m) m.openPopup();
-    if (mapRef.current) {
-      mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
-    }
+    if (mapRef.current) mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
   };
 
   /* ==== OSRM TRIP ==== */
@@ -115,8 +102,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
       const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("OSRM API error");
       const data = await res.json();
+
       if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("OSRM trip not found");
 
       const orderedByTrip = data.waypoints
@@ -127,11 +114,14 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       const sortedCustomers = orderedByTrip.filter((p) => p.kind === "cust").map((p) => (p as any).ref as Customer);
       setOrderedCustomers(sortedCustomers);
 
-      const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(
-        ([lng, lat]: [number, number]) => [lat, lng]
-      );
+      const latlngs: LatLng[] = data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
       setRouteCoords(latlngs);
       setRouteKm((data.trips[0].distance as number) / 1000);
+
+      if (mapRef.current) {
+        const bounds = L.geoJSON(data.trips[0].geometry).getBounds();
+        mapRef.current.fitBounds(bounds, { padding: [40, 40] });
+      }
 
       if (sortedCustomers[0]) highlightCustomer(sortedCustomers[0]);
     } catch (e) {
@@ -143,20 +133,20 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   useEffect(() => {
     setOrderedCustomers(baseCustomers);
+    if (mapRef.current) {
+      const bounds = L.latLngBounds([[rep.lat, rep.lng], ...baseCustomers.map(c => [c.lat, c.lng] as LatLng)]);
+      mapRef.current.fitBounds(bounds, { padding: [40, 40] });
+    }
   }, [baseCustomers]);
-
-  const center: LatLng = [rep.lat, rep.lng];
 
   return (
     <div className="relative w-full">
       {/* Sticky üst bar */}
       <div
-        className="sticky top-0 z-20 bg-white/60 py-2 px-3 
-                   w-full md:w-1/3 md:ml-auto 
-                   flex items-center justify-end gap-2
-                   shadow-sm border-b rounded-bl-xl"
+        className="absolute top-2 right-2 z-20 bg-white/90 px-3 py-2
+                   rounded-lg shadow-md border flex items-center gap-2"
       >
-        <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
+        <div className="text-xs text-gray-700">Mesafe: {fmtKm(routeKm)}</div>
         <button
           onClick={handleOptimize}
           disabled={loading}
@@ -164,7 +154,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
           }`}
         >
-          {loading ? "..." : "Rota Optimize Et"}
+          {loading ? "..." : "Rota Oluştur"}
         </button>
         <FullscreenBtn />
       </div>
@@ -172,20 +162,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         <MapContainer
-          center={center}
+          center={[rep.lat, rep.lng]}
           zoom={13}
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors"
-          />
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
-            <Popup>
-              <b>{rep.name}</b>
-            </Popup>
+            <Popup><b>{rep.name}</b></Popup>
           </Marker>
 
           {orderedCustomers.map((c, i) => (
@@ -193,48 +178,30 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               key={c.id}
               position={[c.lat, c.lng]}
               icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
-              ref={(ref: any) => {
-                if (ref) markerRefs.current[c.id] = ref;
-              }}
+              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
               eventHandlers={{ click: () => highlightCustomer(c) }}
             >
               <Popup>
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <b>{i + 1}. {c.name}</b>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setStarredId(prev => (prev === c.id ? null : c.id));
-                      }}
-                      className="p-1 rounded hover:bg-gray-100"
-                    >
-                      <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
-                    </button>
-                  </div>
+                  <b>{i + 1}. {c.name}</b>
                   <div>{c.address}, {c.district}</div>
                   <div>Saat: {c.plannedTime}</div>
-                  <div>
-                    Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a>
-                  </div>
+                  <div>Tel: <a href={toTelHref(c.phone)} className="text-[#0099CB] underline">{c.phone}</a></div>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-2 flex items-center justify-center gap-2 w-full text-center px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+                    className="mt-2 flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600"
                   >
                     <Navigation className="w-4 h-4" />
-                    <span>Navigasyonu Başlat</span>
+                    Navigasyonu Başlat
                   </a>
                 </div>
               </Popup>
             </Marker>
           ))}
 
-          {routeCoords.length > 0 && (
-            <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />
-          )}
+          {routeCoords.length > 0 && <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 7 }} />}
         </MapContainer>
       </div>
     </div>
@@ -256,7 +223,7 @@ const FullscreenBtn: React.FC = () => {
         if (!document.fullscreenElement && el) await el.requestFullscreen();
         else await document.exitFullscreen();
       }}
-      className="px-2 py-1 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1"
+      className="px-2 py-1 text-xs rounded-lg border bg-white hover:bg-gray-50 flex items-center gap-1"
     >
       {isFs ? <><Minimize2 className="w-3 h-3" /> Kapat</> : <><Maximize2 className="w-3 h-3" /> Tam Ekran</>}
     </button>
