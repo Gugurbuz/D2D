@@ -265,8 +265,8 @@ const Navigation: React.FC<Props> = ({
                   <Shield className="w-5 h-5" />
                 </Btn>
                 <Btn
-                  onClick={() => setCurrentScreen("systemSettings")}
-                  active={currentScreen === "systemSettings"}
+                  onClick={() => setCurrentScreen("systemManagement")}
+                  active={currentScreen === "systemManagement"}
                   label="Sistem Ayarları"
                 >
                   <Settings className="w-5 h-5" />
