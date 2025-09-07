@@ -144,13 +144,13 @@ export default function InvoiceOcrPage() {
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
 
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // YENİ
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const apiKey = "YAPAY_ZEKA_API_ANAHTARINIZI_BURAYA_GİRİN";
+  const apiKey = (process.env as any).VITE_GOOGLE_CLOUD_API_KEY;
 
   const summaryClampStyle: React.CSSProperties = {
     display: "-webkit-box",
@@ -167,7 +167,6 @@ export default function InvoiceOcrPage() {
     };
   }, []);
 
-  // YENİ: Tam ekran görsel modalı için de scroll kilidi
   useEffect(() => {
     const prev = {
       overflow: document.body.style.overflow,
@@ -328,8 +327,8 @@ export default function InvoiceOcrPage() {
     handleRemoveImage();
     setImagePreviewUrl(URL.createObjectURL(file));
 
-    if (!apiKey || apiKey === "YAPAY_ZEKA_API_ANAHTARINIZI_BURAYA_GİRİN") {
-      setError("Google Cloud API anahtarı eksik. Lütfen kodu düzenleyin.");
+    if (!apiKey) {
+      setError("Google Cloud API anahtarı eksik. Lütfen ortam değişkenlerini kontrol edin.");
       return;
     }
     setStatusOverlay({
@@ -875,7 +874,6 @@ export default function InvoiceOcrPage() {
         </div>
       )}
 
-      {/* YENİ: Tam Ekran Görsel Modalı */}
       {isImageModalOpen && imagePreviewUrl && (
         <div
           className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
@@ -968,4 +966,5 @@ export default function InvoiceOcrPage() {
     </div>
   );
 }
+
 
