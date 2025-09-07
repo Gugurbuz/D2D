@@ -135,30 +135,34 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   return (
     <div className="relative w-full">
-      {/* Sticky üst bar (sağa yaslı ve %33 genişlik) */}
-      <div className="sticky top-0 z-20 bg-white/80 py-1 px-3 w-1/4 ml-auto 
-                      flex items-center justify-between shadow-sm border-b rounded-bl-xl">
-        <div className="flex items-center gap-2 text-sm text-gray-900 font-medium">
-         
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-xs text-gray-700">
-            {fmtKm(routeKm)}
-          </div>
-          <button
-            onClick={handleOptimize}
-            disabled={loading}
-            className={`px-2 py-1 text-xs rounded-lg font-semibold ${
-              loading
-                ? "bg-gray-300 text-gray-600"
-                : "bg-[#0099CB] text-white hover:opacity-90"
-            }`}
-          >
-            {loading ? "..." : "Rota Oluştur"}
-          </button>
-          <FullscreenBtn />
-        </div>
-      </div>
+     {/* Sticky üst bar */}
+<div className="sticky top-0 z-20 bg-white/80 py-2 px-3 
+                w-full md:w-1/3 md:ml-auto 
+                flex items-center justify-between 
+                shadow-sm border-b rounded-bl-xl">
+
+  <div className="flex items-center gap-2 text-sm text-gray-900 font-medium">
+    <RouteIcon className="w-4 h-4 text-[#0099CB]" />
+    Rota
+  </div>
+
+  <div className="flex items-center gap-2">
+    <div className="text-xs text-gray-700">{fmtKm(routeKm)}</div>
+    <button
+      onClick={handleOptimize}
+      disabled={loading}
+      className={`px-2 py-1 text-xs rounded-lg font-semibold ${
+        loading
+          ? "bg-gray-300 text-gray-600"
+          : "bg-[#0099CB] text-white hover:opacity-90"
+      }`}
+    >
+      {loading ? "..." : "Optimize"}
+    </button>
+    <FullscreenBtn />
+  </div>
+</div>
+
 
       {/* Harita */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
