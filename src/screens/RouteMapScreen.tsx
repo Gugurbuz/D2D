@@ -1,6 +1,81 @@
 L.divIcon({
     className: "number-marker",
     html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;">${n}</div>`,
+import React, { useState, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import L, { LatLng } from 'leaflet';
+import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
+
+// Types
+interface Customer {
+  id: string;
+  name: string;
+  address: string;
+  district: string;
+  phone: string;
+  lat: number;
+  lng: number;
+  plannedTime: string;
+}
+
+interface SalesRep {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+interface Props {
+  customers: Customer[];
+  salesRep: SalesRep;
+}
+
+// Default data
+const defaultSalesRep: SalesRep = {
+  id: "rep1",
+  name: "Satış Temsilcisi",
+  lat: 39.9334,
+  lng: 32.8597
+};
+
+const anadoluCustomers: Customer[] = [
+  {
+    id: "1",
+    name: "Ahmet Yılmaz",
+    address: "Kızılay Mahallesi, Atatürk Bulvarı No:15",
+    district: "Çankaya",
+    phone: "+90 532 123 4567",
+    lat: 39.9208,
+    lng: 32.8541,
+    plannedTime: "09:00"
+  },
+  {
+    id: "2", 
+    name: "Fatma Demir",
+    address: "Bahçelievler Mahallesi, 7. Cadde No:23",
+    district: "Çankaya",
+    phone: "+90 533 987 6543",
+    lat: 39.9100,
+    lng: 32.8400,
+    plannedTime: "10:30"
+  }
+];
+
+// Icons
+const repIcon = L.divIcon({
+  className: "rep-marker",
+  html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;background:#FF6B00;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏢</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
+
+function numberIcon(n: number, opts: { highlight?: boolean; starred?: boolean } = {}) {
+  const bg = opts.starred ? "#F5B301" : opts.highlight ? "#FF6B00" : "#0099CB";
+  return L.divIcon({
+    className: "number-marker",
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;">${n}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 28],
     popupAnchor: [0, -28],
