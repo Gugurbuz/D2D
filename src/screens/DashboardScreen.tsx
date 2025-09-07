@@ -48,37 +48,45 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   // --- Zaman bazlı selamlama ---
   const hour = time.getHours();
   let greeting = "Hoş geldin";
+
   if (hour >= 6 && hour < 12) greeting = "🌅 Günaydın";
-  else if (hour >= 12 && hour < 17) greeting = "☀️ Hoş geldin";
-  else if (hour >= 17 && hour < 21) greeting = "🌆 İyi akşamlar";
+  else if (hour >= 12 && hour < 18) greeting = "☀️ Hoş geldin";
+  else if (hour >= 18 && hour < 22) greeting = "🌆 İyi akşamlar";
   else greeting = "🌙 İyi geceler";
 
   // --- Motivasyon mesajları ---
   const motivationalMessages = {
-    high: [
-      "🎉 Harikasın, hedefinin çoğunu tamamladın!",
-      "🏆 Bugün mükemmel gidiyorsun, az kaldı!",
-      "🌟 Performansın zirvede, devam et!"
-    ],
-    medium: [
-      "🚀 Güzel gidiyorsun, biraz daha gayretle hedefe ulaşabilirsin.",
-      "⚡ İyi ilerliyorsun, motivasyonu koru!",
-      "🌱 Hedefin için sağlam adımlar atıyorsun."
-    ],
-    low: [
-      "💡 Başlamak için harika bir zaman, ilk adımı at!",
-      "🔥 Günün daha başındasın, çok fırsat seni bekliyor.",
-      "🕒 Hedefe ulaşmak için daha çok zamanın var, devam et!"
-    ],
-    conversionHigh: [
-      "🥇 Satış dönüşüm oranında harikasın!",
-      "💎 Ziyaretlerin satışa dönüşüyor, tebrikler!",
-      "🌟 Mükemmel satış performansı yakaladın!"
-    ],
-    conversionLow: [
-      "🤝 Satış şansını artırmak için müşterilerle güven inşa et.",
-      "💡 Daha çok teklif yaparak dönüşümü artırabilirsin.",
-      "🛠️ Küçük dokunuşlarla satış performansın yükselebilir."
+    workday: {
+      high: [
+        "🎉 Harikasın, hedefinin çoğunu tamamladın!",
+        "🏆 Bugün mükemmel gidiyorsun, az kaldı!",
+        "🌟 Performansın zirvede, devam et!"
+      ],
+      medium: [
+        "🚀 Güzel gidiyorsun, biraz daha gayretle hedefe ulaşabilirsin.",
+        "⚡ İyi ilerliyorsun, motivasyonu koru!",
+        "🌱 Hedefin için sağlam adımlar atıyorsun."
+      ],
+      low: [
+        "💡 Başlamak için harika bir zaman, ilk adımı at!",
+        "🔥 Günün daha başındasın, çok fırsat seni bekliyor.",
+        "🕒 Hedefe ulaşmak için daha çok zamanın var, devam et!"
+      ],
+      conversionHigh: [
+        "🥇 Satış dönüşüm oranında harikasın!",
+        "💎 Ziyaretlerin satışa dönüşüyor, tebrikler!",
+        "🌟 Mükemmel satış performansı yakaladın!"
+      ],
+      conversionLow: [
+        "🤝 Satış şansını artırmak için müşterilerle güven inşa et.",
+        "💡 Daha çok teklif yaparak dönüşümü artırabilirsin.",
+        "🛠️ Küçük dokunuşlarla satış performansın yükselebilir."
+      ]
+    },
+    night: [
+      "🌙 Bugün elinden geleni yaptın, şimdi dinlenme zamanı.",
+      "🛌 Güzel bir uyku, yarınki performansına güç katacak.",
+      "✨ Bugünü değerlendir, yarın için yeni stratejiler hazırla."
     ]
   };
 
@@ -86,20 +94,27 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  // Dinamik motivasyon seçimi (oranlara göre)
+  // Dinamik motivasyon seçimi
   let motivation = "";
-  if (completionRate >= 80) {
-    motivation = randomPick(motivationalMessages.high);
-  } else if (completionRate >= 40) {
-    motivation = randomPick(motivationalMessages.medium);
-  } else {
-    motivation = randomPick(motivationalMessages.low);
-  }
 
-  if (conversionRate >= 30) {
-    motivation += " " + randomPick(motivationalMessages.conversionHigh);
-  } else if (conversionRate > 0) {
-    motivation += " " + randomPick(motivationalMessages.conversionLow);
+  if (hour >= 6 && hour < 18) {
+    // Çalışma zamanı motivasyonları
+    if (completionRate >= 80) {
+      motivation = randomPick(motivationalMessages.workday.high);
+    } else if (completionRate >= 40) {
+      motivation = randomPick(motivationalMessages.workday.medium);
+    } else {
+      motivation = randomPick(motivationalMessages.workday.low);
+    }
+
+    if (conversionRate >= 30) {
+      motivation += " " + randomPick(motivationalMessages.workday.conversionHigh);
+    } else if (conversionRate > 0) {
+      motivation += " " + randomPick(motivationalMessages.workday.conversionLow);
+    }
+  } else {
+    // Gece mesajları
+    motivation = randomPick(motivationalMessages.night);
   }
 
   return (
@@ -127,21 +142,16 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
         </div>
 
-    {/* Alt: duyuru barı */}
-      {/* --- DEĞİŞİKLİK BU SATIRDA --- */}
-      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-[1px] rounded-b-2xl">
-        {/* İkon sabit kalıyor */}
-        <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
-
-        {/* Yazı için maskeleme alanı */}
-        <div className="flex-1 overflow-hidden">
-          {/* Kayan yazı bu yeni alanın içinde kalacak */}
-          <div className="animate-marquee whitespace-nowrap text-sm">
-            ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
+        {/* Alt: duyuru barı */}
+        <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-[1px] rounded-b-2xl">
+          <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
+          <div className="flex-1 overflow-hidden">
+            <div className="animate-marquee whitespace-nowrap text-sm">
+              ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
