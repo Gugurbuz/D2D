@@ -92,7 +92,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-24 h-16 mx-auto mb-4 flex items-center justify-center">
+          <div className="w-240 h-16 mx-auto mb-4 flex items-center justify-center">
             <img
               src="https://ehqotgebdywdmwxbwbjl.supabase.co/storage/v1/object/sign/Logo/animatedlogo.gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82YTJkNThmMC1kMzNhLTRiY2MtODMxMy03ZjE2NmIwN2NjMDUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMb2dvL2FuaW1hdGVkbG9nby5naWYiLCJpYXQiOjE3NTcyNTg2MjksImV4cCI6MTc4ODc5NDYyOX0.koXgeDJTbKj3OOnoY01Bcnx_GpXxlG0dJJyJ48VdKr4"
               alt="Enerjisa Logo"
