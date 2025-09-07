@@ -127,14 +127,14 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
         </div>
 
-        {/* Alt: duyuru barı */}
-        <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-1 overflow-hidden rounded-b-2xl">
-          <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
-          <div className="animate-marquee whitespace-nowrap text-sm">
-            ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
-          </div>
+      {/* Alt: duyuru barı */}
+      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-0.5 overflow-hidden rounded-b-2xl">
+        <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
+        <div className="animate-marquee whitespace-nowrap text-xs">
+          ⚡ Yeni kampanya başladı! | 🎯 Hedeflerini gün sonunda tamamlamayı unutma! | 🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!
         </div>
       </div>
+    </div>
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
