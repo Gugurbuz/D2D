@@ -227,7 +227,7 @@ function App() {
         return <InvoiceOcrPage />;
       case 'userManagement':
         return <UserManagementScreen />;
-      case 'systemSettings':
+      case 'userManagement':
         return <SystemManagementScreen  />;
       case 'tariffs':
         return <TariffsScreen />;
