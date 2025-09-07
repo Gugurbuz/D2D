@@ -106,8 +106,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       {/* Sticky üst bar */}
       <div className="sticky top-0 z-20 bg-white/65 py-2 flex items-center justify-between shadow-sm border-b">
         <div className="flex items-center gap-2 text-gray-900 font-semibold">
-          <RouteIcon className="w-5 h-5 text-[#0099CB]" />
-          Rota Haritası
+        
         </div>
         <div className="flex items-center gap-3">
           <div className="text-sm text-gray-700">
