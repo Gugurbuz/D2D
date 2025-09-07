@@ -16,7 +16,7 @@ import InvoiceOcrPage from './screens/InvoiceOcrPage';
 import RoleSelectScreen from './screens/RoleSelectScreen';
 
 import UserManagementScreen from './screens/UserManagementScreen';
-import SystemSettingsScreen from './screens/SystemSettingsScreen';
+import SystemManagementScreen from './screens/SystemManagementScreen';
 import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
 import SystemReportsScreen from './screens/SystemReportsScreen';
