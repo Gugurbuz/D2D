@@ -48,45 +48,55 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   // --- Zaman bazlı selamlama ---
   const hour = time.getHours();
   let greeting = "Hoş geldin";
-
   if (hour >= 6 && hour < 12) greeting = "🌅 Günaydın";
-  else if (hour >= 12 && hour < 18) greeting = "☀️ Hoş geldin";
-  else if (hour >= 18 && hour < 22) greeting = "🌆 İyi akşamlar";
+  else if (hour >= 12 && hour < 17) greeting = "☀️ Hoş geldin";
+  else if (hour >= 17 && hour < 21) greeting = "🌆 İyi akşamlar";
   else greeting = "🌙 İyi geceler";
+
+  // --- Ziyaret mesajı (mesai saatine göre) ---
+  let visitMessage = "";
+  if (hour >= 6 && hour < 18) {
+    // Mesai içi → bugünkü ziyaretler
+    visitMessage = `Bugün ${todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀`;
+  } else {
+    // Mesai dışı → yarınki ziyaretler
+    const tomorrow = new Date();
+    tomorrow.setDate(time.getDate() + 1);
+    const tomorrowDate = tomorrow.toISOString().split("T")[0];
+    const tomorrowsVisits = customers.filter(c => c.visitDate === tomorrowDate);
+
+    visitMessage =
+      tomorrowsVisits.length > 0
+        ? `🌙 Mesai bitti. Yarın ${tomorrowsVisits.length} ziyaretin planlı. Dinlenme zamanı!`
+        : "🌙 Mesai bitti. Yarın için programında ziyaret görünmüyor. Enerjini topla!";
+  }
 
   // --- Motivasyon mesajları ---
   const motivationalMessages = {
-    workday: {
-      high: [
-        "🎉 Harikasın, hedefinin çoğunu tamamladın!",
-        "🏆 Bugün mükemmel gidiyorsun, az kaldı!",
-        "🌟 Performansın zirvede, devam et!"
-      ],
-      medium: [
-        "🚀 Güzel gidiyorsun, biraz daha gayretle hedefe ulaşabilirsin.",
-        "⚡ İyi ilerliyorsun, motivasyonu koru!",
-        "🌱 Hedefin için sağlam adımlar atıyorsun."
-      ],
-      low: [
-        "💡 Başlamak için harika bir zaman, ilk adımı at!",
-        "🔥 Günün daha başındasın, çok fırsat seni bekliyor.",
-        "🕒 Hedefe ulaşmak için daha çok zamanın var, devam et!"
-      ],
-      conversionHigh: [
-        "🥇 Satış dönüşüm oranında harikasın!",
-        "💎 Ziyaretlerin satışa dönüşüyor, tebrikler!",
-        "🌟 Mükemmel satış performansı yakaladın!"
-      ],
-      conversionLow: [
-        "🤝 Satış şansını artırmak için müşterilerle güven inşa et.",
-        "💡 Daha çok teklif yaparak dönüşümü artırabilirsin.",
-        "🛠️ Küçük dokunuşlarla satış performansın yükselebilir."
-      ]
-    },
-    night: [
-      "🌙 Bugün elinden geleni yaptın, şimdi dinlenme zamanı.",
-      "🛌 Güzel bir uyku, yarınki performansına güç katacak.",
-      "✨ Bugünü değerlendir, yarın için yeni stratejiler hazırla."
+    high: [
+      "🎉 Harikasın, hedefinin çoğunu tamamladın!",
+      "🏆 Bugün mükemmel gidiyorsun, az kaldı!",
+      "🌟 Performansın zirvede, devam et!"
+    ],
+    medium: [
+      "🚀 Güzel gidiyorsun, biraz daha gayretle hedefe ulaşabilirsin.",
+      "⚡ İyi ilerliyorsun, motivasyonu koru!",
+      "🌱 Hedefin için sağlam adımlar atıyorsun."
+    ],
+    low: [
+      "💡 Başlamak için harika bir zaman, ilk adımı at!",
+      "🔥 Günün daha başındasın, çok fırsat seni bekliyor.",
+      "🕒 Hedefe ulaşmak için daha çok zamanın var, devam et!"
+    ],
+    conversionHigh: [
+      "🥇 Satış dönüşüm oranında harikasın!",
+      "💎 Ziyaretlerin satışa dönüşüyor, tebrikler!",
+      "🌟 Mükemmel satış performansı yakaladın!"
+    ],
+    conversionLow: [
+      "🤝 Satış şansını artırmak için müşterilerle güven inşa et.",
+      "💡 Daha çok teklif yaparak dönüşümü artırabilirsin.",
+      "🛠️ Küçük dokunuşlarla satış performansın yükselebilir."
     ]
   };
 
@@ -94,27 +104,20 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  // Dinamik motivasyon seçimi
+  // Dinamik motivasyon seçimi (oranlara göre)
   let motivation = "";
-
-  if (hour >= 6 && hour < 18) {
-    // Çalışma zamanı motivasyonları
-    if (completionRate >= 80) {
-      motivation = randomPick(motivationalMessages.workday.high);
-    } else if (completionRate >= 40) {
-      motivation = randomPick(motivationalMessages.workday.medium);
-    } else {
-      motivation = randomPick(motivationalMessages.workday.low);
-    }
-
-    if (conversionRate >= 30) {
-      motivation += " " + randomPick(motivationalMessages.workday.conversionHigh);
-    } else if (conversionRate > 0) {
-      motivation += " " + randomPick(motivationalMessages.workday.conversionLow);
-    }
+  if (completionRate >= 80) {
+    motivation = randomPick(motivationalMessages.high);
+  } else if (completionRate >= 40) {
+    motivation = randomPick(motivationalMessages.medium);
   } else {
-    // Gece mesajları
-    motivation = randomPick(motivationalMessages.night);
+    motivation = randomPick(motivationalMessages.low);
+  }
+
+  if (conversionRate >= 30) {
+    motivation += " " + randomPick(motivationalMessages.conversionHigh);
+  } else if (conversionRate > 0) {
+    motivation += " " + randomPick(motivationalMessages.conversionLow);
   }
 
   return (
@@ -125,7 +128,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
         <div>
           <h1 className="text-2xl font-bold mb-1">{greeting}, Ahmet!</h1>
           <p className="text-base font-medium text-blue-100 mb-1">
-            Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
+            {visitMessage}
           </p>
           <p className="text-base font-medium text-blue-100">
             {motivation}
