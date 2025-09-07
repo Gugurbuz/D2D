@@ -8,21 +8,20 @@ html, body, #root {
   overflow-x: hidden;
 }
 
-* { 
-  min-width: 0; 
+* {
+  min-width: 0;
 }
 
-img, video, canvas { 
-  max-width: 100%; 
-  height: auto; 
+img, video, canvas {
+  max-width: 100%;
+  height: auto;
 }
 
-.no-scrollbar::-webkit-scrollbar { 
-  display: none; 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-.no-scrollbar { 
-  /* boş bırakıldı */
+.no-scrollbar {
 }
 
 .nav-scroll {
@@ -44,12 +43,12 @@ img, video, canvas {
   background-color: #f8f8f8;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease-in-out;
 }
 
 .leaflet-draw-toolbar a:hover {
-  background-color: #e8e8e8; 
+  background-color: #e8e8e8;
   border-color: #bbb;
 }
 
