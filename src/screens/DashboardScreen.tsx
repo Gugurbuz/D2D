@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   Target, 
   CheckCircle, 
@@ -10,8 +10,8 @@ import {
   Award,
   Megaphone
 } from 'lucide-react';
-import Marquee from "react-fast-marquee";
 import VisitCard from '../components/VisitCard';
+import Marquee from "react-fast-marquee";
 import type { Customer, SalesRep } from '../types';
 
 type Props = {
@@ -23,76 +23,118 @@ type Props = {
 };
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
-  const today = new Date().toISOString().split('T')[0];
-
-  // Saat & Tarih
   const [time, setTime] = useState(new Date());
+  const [showAnnouncements, setShowAnnouncements] = useState(false);
+
+  // Duyurular örnek (normalde backend'den gelebilir)
+  const announcements = [
+    "⚡ Yeni kampanya başladı! Elektrik tarifelerinde indirim.",
+    "📊 Haftalık toplantı yarın saat 09:00’da.",
+    "🚀 Bu ay en çok satış yapan temsilciye ödül var!"
+  ];
+
+  // Zaman güncelle
   useEffect(() => {
     const interval = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Duyurular
-  const announcements = [
-    "📢 Yeni tarife kampanyası başladı!",
-    "⚡ Sistem bakımı bu gece 02:00-04:00 arası yapılacak.",
-    "🎯 Günlük hedefinize ulaşmayı unutmayın!"
-  ];
-  const [showAnnouncements, setShowAnnouncements] = useState(false);
-
+  // Bugünün tarihi
+  const today = new Date().toISOString().split('T')[0];
+  
   // Bugünkü ziyaretler
-  const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
-  const completedVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Tamamlandı'), [todaysVisits]);
-  const pendingVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Planlandı'), [todaysVisits]);
+  const todaysVisits = useMemo(() => {
+    return customers.filter(c => c.visitDate === today);
+  }, [customers, today]);
 
+  // Tamamlanan ziyaretler
+  const completedVisits = useMemo(() => {
+    return todaysVisits.filter(c => c.status === 'Tamamlandı');
+  }, [todaysVisits]);
+
+  // Bekleyen ziyaretler
+  const pendingVisits = useMemo(() => {
+    return todaysVisits.filter(c => c.status === 'Planlandı');
+  }, [todaysVisits]);
+
+  // Atanan rep ismi bulma fonksiyonu
   const getAssignedName = (customerId: string) => {
     const repId = assignments[customerId];
     return repId ? allReps.find((r) => r.id === repId)?.name || repId : null;
   };
 
-  const handleVisitDetail = (customer: Customer) => {
-    onSelectCustomer(customer);
-    setCurrentScreen('visitDetail');
-  };
-
-  const handleStartVisit = (customer: Customer) => {
-    onSelectCustomer(customer);
-    setCurrentScreen('visitFlow');
-  };
-
+  // Günlük hedef ve dönüşüm
   const dailyTarget = 20;
   const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
+  const conversionRate = completedVisits.length > 0 
+    ? Math.round((completedVisits.filter(c => c.contractSigned).length / completedVisits.length) * 100) 
+    : 0;
 
-  const weeklyStats = useMemo(() => {
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); 
-    weekStart.setHours(0, 0, 0, 0);
-    
-    const weeklyVisits = customers.filter(c => {
-      const visitDate = new Date(c.visitDate);
-      return visitDate >= weekStart;
-    });
-    
-    const weeklyCompleted = weeklyVisits.filter(c => c.status === 'Tamamlandı');
-    
-    return {
-      total: weeklyVisits.length,
-      completed: weeklyCompleted.length,
-      rate: weeklyVisits.length > 0 ? Math.round((weeklyCompleted.length / weeklyVisits.length) * 100) : 0
-    };
-  }, [customers]);
+  // Dinamik selamlama
+  const hour = time.getHours();
+  let greeting = "Hoş geldin";
+  if (hour >= 6 && hour < 12) greeting = "🌅 Günaydın";
+  else if (hour >= 12 && hour < 17) greeting = "☀️ Hoş geldin";
+  else if (hour >= 17 && hour < 21) greeting = "🌆 İyi akşamlar";
+  else greeting = "🌙 İyi geceler";
+
+  // Motivasyon mesajları
+  const motivationalMessages = {
+    high: [
+      "🎉 Harikasın, hedefinin çoğunu tamamladın!",
+      "🏆 Bugün mükemmel gidiyorsun, az kaldı!",
+      "🌟 Performansın zirvede, devam et!"
+    ],
+    medium: [
+      "🚀 Güzel gidiyorsun, biraz daha gayretle hedefe ulaşabilirsin.",
+      "⚡ İyi ilerliyorsun, motivasyonu koru!",
+      "🌱 Hedefin için sağlam adımlar atıyorsun."
+    ],
+    low: [
+      "💡 Başlamak için harika bir zaman, ilk adımı at!",
+      "🔥 Günün daha başındasın, çok fırsat seni bekliyor.",
+      "🕒 Hedefe ulaşmak için daha çok zamanın var, devam et!"
+    ],
+    conversionHigh: [
+      "🥇 Satış dönüşüm oranında harikasın!",
+      "💎 Ziyaretlerin satışa dönüşüyor, tebrikler!",
+      "🌟 Mükemmel satış performansı yakaladın!"
+    ],
+    conversionLow: [
+      "🤝 Satış şansını artırmak için müşterilerle güven inşa et.",
+      "💡 Daha çok teklif yaparak dönüşümü artırabilirsin.",
+      "🛠️ Küçük dokunuşlarla satış performansın yükselebilir."
+    ]
+  };
+
+  // Motivasyon seçimi
+  let motivation = "";
+  if (completionRate >= 80) {
+    motivation = randomPick(motivationalMessages.high);
+  } else if (completionRate >= 40) {
+    motivation = randomPick(motivationalMessages.medium);
+  } else {
+    motivation = randomPick(motivationalMessages.low);
+  }
+
+  if (conversionRate >= 30) {
+    motivation += " " + randomPick(motivationalMessages.conversionHigh);
+  } else if (conversionRate > 0) {
+    motivation += " " + randomPick(motivationalMessages.conversionLow);
+  }
 
   return (
     <div className="space-y-6">
-      {/* Hoş geldin + Saat + Tarih */}
+      {/* Hoş geldin mesajı + saat + tarih + duyurular */}
       <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white">
         <div className="flex justify-between items-start">
           {/* Sol taraf */}
           <div>
-            <h1 className="text-2xl font-bold mb-2">Hoş geldin, Ahmet!</h1>
+            <h1 className="text-2xl font-bold mb-2">{greeting}, Ahmet!</h1>
             <p className="text-blue-100">
               Bugün {todaysVisits.length} ziyaretin var. Başarılı bir gün geçir! 🚀
             </p>
+            <p className="mt-2 text-yellow-200 text-sm">{motivation}</p>
           </div>
 
           {/* Sağ taraf */}
@@ -128,10 +170,37 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 
       {/* KPI Kartları */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Günlük Hedef" value={`${completedVisits.length}/${dailyTarget}`} subtitle={`%${completionRate} tamamlandı`} icon={<Target className="w-6 h-6" />} color="bg-[#0099CB]" />
-        <KPICard title="Tamamlanan" value={completedVisits.length.toString()} subtitle="Bugün" icon={<CheckCircle className="w-6 h-6" />} color="bg-green-500" />
-        <KPICard title="Bekleyen" value={pendingVisits.length.toString()} subtitle="Ziyaret" icon={<Clock className="w-6 h-6" />} color="bg-yellow-500" />
-        <KPICard title="Haftalık" value={`%${weeklyStats.rate}`} subtitle={`${weeklyStats.completed}/${weeklyStats.total} tamamlandı`} icon={<TrendingUp className="w-6 h-6" />} color="bg-purple-500" />
+        <KPICard
+          title="Günlük Hedef"
+          value={`${completedVisits.length}/${dailyTarget}`}
+          subtitle={`%${completionRate} tamamlandı`}
+          icon={<Target className="w-6 h-6" />}
+          color="bg-[#0099CB]"
+        />
+        
+        <KPICard
+          title="Tamamlanan"
+          value={completedVisits.length.toString()}
+          subtitle="Bugün"
+          icon={<CheckCircle className="w-6 h-6" />}
+          color="bg-green-500"
+        />
+        
+        <KPICard
+          title="Bekleyen"
+          value={pendingVisits.length.toString()}
+          subtitle="Ziyaret"
+          icon={<Clock className="w-6 h-6" />}
+          color="bg-yellow-500"
+        />
+        
+        <KPICard
+          title="Dönüşüm"
+          value={`%${conversionRate}`}
+          subtitle="Satış oranı"
+          icon={<TrendingUp className="w-6 h-6" />}
+          color="bg-purple-500"
+        />
       </div>
 
       {/* Bugünkü Program */}
@@ -153,8 +222,14 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
                 key={customer.id}
                 customer={customer}
                 assignedName={getAssignedName(customer.id)}
-                onDetail={() => handleVisitDetail(customer)}
-                onStart={() => handleStartVisit(customer)}
+                onDetail={() => {
+                  onSelectCustomer(customer);
+                  setCurrentScreen('visitDetail');
+                }}
+                onStart={() => {
+                  onSelectCustomer(customer);
+                  setCurrentScreen('visitFlow');
+                }}
               />
             ))}
             
@@ -171,60 +246,27 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
           </div>
         )}
       </div>
-
-      {/* Hızlı Aksiyonlar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Award className="w-5 h-5 text-[#F9C800]" />
-          <h2 className="text-lg font-semibold">Hızlı Aksiyonlar</h2>
-        </div>
-        
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-          <ActionButton title="Rota Haritası" subtitle="Bugünkü rotanı gör" icon={<MapPin className="w-5 h-5" />} onClick={() => setCurrentScreen('route')} />
-          <ActionButton title="Ziyaret Listesi" subtitle="Tüm ziyaretleri listele" icon={<Users className="w-5 h-5" />} onClick={() => setCurrentScreen('visits')} />
-          <ActionButton title="Raporlar" subtitle="Performans analizi" icon={<TrendingUp className="w-5 h-5" />} onClick={() => setCurrentScreen('reports')} />
-        </div>
-      </div>
-
-      {/* Popup: Duyurular */}
-      {showAnnouncements && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full">
-            <h2 className="text-lg font-bold mb-4">Duyurular</h2>
-            <ul className="space-y-2 text-gray-700">
-              {announcements.map((a, idx) => (
-                <li key={idx}>- {a}</li>
-              ))}
-            </ul>
-            <button
-              onClick={() => setShowAnnouncements(false)}
-              className="mt-4 px-4 py-2 bg-[#0099CB] text-white rounded-lg hover:bg-[#0088b8]"
-            >
-              Kapat
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-/* ------------------------
-   Reusable Components
------------------------- */
+// Yardımcı: random mesaj seç
+function randomPick(arr: string[]) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
 
-interface KPICardProps {
+const KPICard: React.FC<{
   title: string;
   value: string;
   subtitle: string;
   icon: React.ReactNode;
   color: string;
-}
-
-const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, color }) => (
+}> = ({ title, value, subtitle, icon, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
     <div className="flex items-center justify-between mb-2">
-      <div className={`p-2 rounded-lg ${color} text-white`}>{icon}</div>
+      <div className={`p-2 rounded-lg ${color} text-white`}>
+        {icon}
+      </div>
     </div>
     <div className="space-y-1">
       <p className="text-sm text-gray-600">{title}</p>
@@ -232,28 +274,6 @@ const KPICard: React.FC<KPICardProps> = ({ title, value, subtitle, icon, color }
       <p className="text-xs text-gray-500">{subtitle}</p>
     </div>
   </div>
-);
-
-interface ActionButtonProps {
-  title: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  onClick: () => void;
-}
-
-const ActionButton: React.FC<ActionButtonProps> = ({ title, subtitle, icon, onClick }) => (
-  <button
-    onClick={onClick}
-    className="p-4 text-left border border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-colors"
-  >
-    <div className="flex items-center gap-3">
-      <div className="text-[#0099CB]">{icon}</div>
-      <div>
-        <div className="font-medium text-gray-900">{title}</div>
-        <div className="text-xs text-gray-600">{subtitle}</div>
-      </div>
-    </div>
-  </button>
 );
 
 export default DashboardScreen;
