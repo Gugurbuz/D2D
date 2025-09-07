@@ -232,12 +232,13 @@ export default function InvoiceOcrPage() {
 
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
+  const apiKey = (process.env as any).VITE_GOOGLE_CLOUD_API_KEY;
 
   const summaryClampStyle: React.CSSProperties = {
     display: "-webkit-box",
@@ -259,7 +260,7 @@ export default function InvoiceOcrPage() {
       overflow: document.body.style.overflow,
       height: document.body.style.height,
     };
-    if (cameraOn || isSummaryModalOpen || isImageModalOpen) {
+    if (cameraOn || isSummaryModalOpen || isImageModalOpen || isDetailsModalOpen) {
       document.body.style.overflow = "hidden";
       document.body.style.height = "100vh";
     }
@@ -267,7 +268,7 @@ export default function InvoiceOcrPage() {
       document.body.style.overflow = prev.overflow;
       document.body.style.height = prev.height;
     };
-  }, [cameraOn, isSummaryModalOpen, isImageModalOpen]);
+  }, [cameraOn, isSummaryModalOpen, isImageModalOpen, isDetailsModalOpen]);
 
   useEffect(() => {
     if (!videoRef.current || !stream) return;
@@ -693,7 +694,7 @@ export default function InvoiceOcrPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-start text-gray-400 text-sm border rounded-xl">
+                  <div className="h-24 bg-gray-50 flex flex-col items-center justify-center text-gray-400 text-sm border rounded-xl">
                     <FileImage className="w-8 h-8 mb-2" />
                     <span>Önizleme için fatura yükleyin</span>
                   </div>
@@ -715,6 +716,17 @@ export default function InvoiceOcrPage() {
                     <div className="mt-2 text-xs text-gray-500">
                       Tamamını görmek için dokunun
                     </div>
+                  </button>
+                )}
+                 {hasAnyAIData && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDetailsModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700"
+                    aria-label="Tüm fatura detaylarını göster"
+                  >
+                    <ListTree className="w-4 h-4" />
+                    Detayları Göster
                   </button>
                 )}
               </div>
@@ -896,271 +908,6 @@ export default function InvoiceOcrPage() {
                     />
                   </div>
                 </div>
-
-                {/* Detayları Göster */}
-                {hasAnyAIData && (
-                  <div className="pt-2">
-                    <details>
-                      <summary className="cursor-pointer text-sm text-gray-600 select-none flex items-center gap-2">
-                        <ListTree className="w-4 h-4" />
-                        Detayları Göster
-                      </summary>
-
-                      <div className="mt-3 space-y-3">
-                        {/* Özet tablo (invoiceData) */}
-                        <SectionCard
-                          title={
-                            <span className="inline-flex items-center gap-2">
-                              <ReceiptText className="w-4 h-4" />
-                              Özet Alanlar (invoiceData)
-                            </span>
-                          }
-                        >
-                          <div className="bg-gray-50 p-3 rounded-lg border">
-                            <table className="w-full text-sm">
-                              <thead>
-                                <tr className="bg-gray-100">
-                                  <th className="text-left px-3 py-2 w-56">Alan</th>
-                                  <th className="text-left px-3 py-2">Değer</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {detailRows.map((r, i) => (
-                                  <tr key={i} className="border-t even:bg-white">
-                                    <td className="px-3 py-2 font-medium text-gray-700">
-                                      {r.label}
-                                    </td>
-                                    <td className="px-3 py-2 text-gray-800 break-words">
-                                      {String(r.value)}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </SectionCard>
-
-                        {/* allDetails bölümleri */}
-                        {allDetails && (
-                          <>
-                            {has(allDetails.parties) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <Home className="w-4 h-4" />
-                                    Taraflar
-                                  </span>
-                                }
-                              >
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <KV label="Tedarikçi Adı" value={allDetails.parties?.supplierName} />
-                                    <KV label="Tedarikçi VKN" value={allDetails.parties?.supplierTaxNo} />
-                                    <KV label="Müşteri Adı" value={allDetails.parties?.customerName} />
-                                    <KV label="Müşteri Adresi" value={allDetails.parties?.customerAddress} />
-                                  </tbody>
-                                </table>
-                              </SectionCard>
-                            )}
-
-                            {has(allDetails.identifiers) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <FileBadge2 className="w-4 h-4" />
-                                    Kimlikler
-                                  </span>
-                                }
-                              >
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <KV label="Fatura No" value={allDetails.identifiers?.invoiceNumber} />
-                                    <KV label="Belge No" value={allDetails.identifiers?.billNumber} />
-                                    <KV label="Abone No" value={allDetails.identifiers?.subscriberNumber} />
-                                    <KV label="Tesisat No" value={allDetails.identifiers?.installationNumber} />
-                                    <KV label="Sayaç No" value={allDetails.identifiers?.meterNumber} />
-                                  </tbody>
-                                </table>
-                              </SectionCard>
-                            )}
-
-                            {has(allDetails.period) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <CalendarClock className="w-4 h-4" />
-                                    Dönem Bilgileri
-                                  </span>
-                                }
-                              >
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <KV label="Başlangıç" value={allDetails.period?.startDate} />
-                                    <KV label="Bitiş" value={allDetails.period?.endDate} />
-                                    <KV label="Düzenleme Tarihi" value={allDetails.period?.issueDate} />
-                                    <KV label="Son Ödeme" value={allDetails.period?.dueDate} />
-                                    <KV label="Gün Sayısı" value={allDetails.period?.days} />
-                                  </tbody>
-                                </table>
-                              </SectionCard>
-                            )}
-
-                            {has(allDetails.readings) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <Gauge className="w-4 h-4" />
-                                    Okumalar
-                                  </span>
-                                }
-                              >
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <KV label="Önceki Endeks" value={allDetails.readings?.prevReading} />
-                                    <KV label="Güncel Endeks" value={allDetails.readings?.currReading} />
-                                    <KV label="Çarpan" value={allDetails.readings?.multiplier} />
-                                    <KV label="Aktif (kWh)" value={allDetails.readings?.active_kWh} />
-                                    <KV label="Reaktif (kvarh)" value={allDetails.readings?.reactive_kvarh} />
-                                    <KV label="Endüktif (kvarh)" value={allDetails.readings?.inductive_kvarh} />
-                                    <KV label="Kapasitif (kvarh)" value={allDetails.readings?.capacitive_kvarh} />
-                                  </tbody>
-                                </table>
-                              </SectionCard>
-                            )}
-
-                            {(has(allDetails.pricing) ||
-                              (tiers && tiers.length) ||
-                              (taxes && taxes.length)) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <Coins className="w-4 h-4" />
-                                    Fiyatlandırma
-                                  </span>
-                                }
-                              >
-                                <div className="space-y-3">
-                                  <table className="w-full text-sm">
-                                    <tbody>
-                                      <KV label="Para Birimi" value={allDetails.pricing?.currency} />
-                                      <KV label="Enerji Ara Toplam (KDV Hariç)" value={allDetails.pricing?.energySubtotalExclTax} />
-                                      <KV label="Dağıtım (KDV Hariç)" value={allDetails.pricing?.distributionExclTax} />
-                                      <KV label="Diğer Ücretler (KDV Hariç)" value={allDetails.pricing?.otherFeesExclTax} />
-                                      <KV label="Toplam (KDV Hariç)" value={allDetails.pricing?.totalExclTax} />
-                                      <KV label="Toplam (KDV Dahil)" value={allDetails.pricing?.totalInclTax} />
-                                    </tbody>
-                                  </table>
-
-                                  {/* Kademeler */}
-                                  {tiers && tiers.length > 0 && (
-                                    <div className="bg-gray-50 p-3 rounded-lg border">
-                                      <div className="font-semibold text-gray-800 mb-2">Kademeli Tablolar</div>
-                                      <table className="w-full text-sm">
-                                        <thead>
-                                          <tr className="bg-gray-100">
-                                            <th className="text-left px-3 py-2">Kademe</th>
-                                            <th className="text-left px-3 py-2">kWh</th>
-                                            <th className="text-left px-3 py-2">Birim Fiyat</th>
-                                            <th className="text-left px-3 py-2">Tutar (KDV Hariç)</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {tiers.map((t, i) => (
-                                            <tr key={i} className="border-t">
-                                              <td className="px-3 py-2">{t.label || "-"}</td>
-                                              <td className="px-3 py-2">{t.kWh || "-"}</td>
-                                              <td className="px-3 py-2">{t.unitPrice || "-"}</td>
-                                              <td className="px-3 py-2">{t.amountExclTax || "-"}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  )}
-
-                                  {/* Vergiler */}
-                                  {taxes && taxes.length > 0 && (
-                                    <div className="bg-gray-50 p-3 rounded-lg border">
-                                      <div className="font-semibold text-gray-800 mb-2">Vergiler</div>
-                                      <table className="w-full text-sm">
-                                        <thead>
-                                          <tr className="bg-gray-100">
-                                            <th className="text-left px-3 py-2">Ad</th>
-                                            <th className="text-left px-3 py-2">Oran</th>
-                                            <th className="text-left px-3 py-2">Tutar</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {taxes.map((t, i) => (
-                                            <tr key={i} className="border-t">
-                                              <td className="px-3 py-2">{t.label || "-"}</td>
-                                              <td className="px-3 py-2">{t.rate || "-"}</td>
-                                              <td className="px-3 py-2">{t.amount || "-"}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  )}
-                                </div>
-                              </SectionCard>
-                            )}
-
-                            {has(allDetails.payment) && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <Banknote className="w-4 h-4" />
-                                    Ödeme
-                                  </span>
-                                }
-                              >
-                                <table className="w-full text-sm">
-                                  <tbody>
-                                    <KV label="IBAN" value={allDetails.payment?.iban} />
-                                    <KV label="Kanallar" value={allDetails.payment?.paymentChannels} />
-                                  </tbody>
-                                </table>
-                              </SectionCard>
-                            )}
-
-                            {(allDetails.notes && allDetails.notes.trim() !== "") && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <Info className="w-4 h-4" />
-                                    Notlar
-                                  </span>
-                                }
-                              >
-                                <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                                  {allDetails.notes}
-                                </div>
-                              </SectionCard>
-                            )}
-
-                            {allDetails.anomalies && allDetails.anomalies.length > 0 && (
-                              <SectionCard
-                                title={
-                                  <span className="inline-flex items-center gap-2">
-                                    <AlertTriangle className="w-4 h-4" />
-                                    Anomaliler
-                                  </span>
-                                }
-                              >
-                                <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
-                                  {allDetails.anomalies.map((a, i) => (
-                                    <li key={i}>{a}</li>
-                                  ))}
-                                </ul>
-                              </SectionCard>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </details>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1217,6 +964,290 @@ export default function InvoiceOcrPage() {
                   {summary}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Detaylar Modal */}
+      {isDetailsModalOpen && (
+        <div
+          className="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Fatura Detayları"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsDetailsModalOpen(false)}
+          />
+          <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-lg max-h-[85vh] flex flex-col">
+            <div className="p-5 border-b flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <ListTree className="w-5 h-5" />
+                Fatura Detayları
+              </h3>
+              <button
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-100"
+                aria-label="Kapat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto bg-gray-50">
+                <div className="space-y-3">
+                  {/* Özet tablo (invoiceData) */}
+                  <SectionCard
+                    title={
+                      <span className="inline-flex items-center gap-2">
+                        <ReceiptText className="w-4 h-4" />
+                        Özet Alanlar (invoiceData)
+                      </span>
+                    }
+                  >
+                    <div className="bg-gray-50 p-3 rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="text-left px-3 py-2 w-56">Alan</th>
+                            <th className="text-left px-3 py-2">Değer</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {detailRows.map((r, i) => (
+                            <tr key={i} className="border-t even:bg-white">
+                              <td className="px-3 py-2 font-medium text-gray-700">
+                                {r.label}
+                              </td>
+                              <td className="px-3 py-2 text-gray-800 break-words">
+                                {String(r.value)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+
+                  {/* allDetails bölümleri */}
+                  {allDetails && (
+                    <>
+                      {has(allDetails.parties) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <Home className="w-4 h-4" />
+                              Taraflar
+                            </span>
+                          }
+                        >
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <KV label="Tedarikçi Adı" value={allDetails.parties?.supplierName} />
+                              <KV label="Tedarikçi VKN" value={allDetails.parties?.supplierTaxNo} />
+                              <KV label="Müşteri Adı" value={allDetails.parties?.customerName} />
+                              <KV label="Müşteri Adresi" value={allDetails.parties?.customerAddress} />
+                            </tbody>
+                          </table>
+                        </SectionCard>
+                      )}
+
+                      {has(allDetails.identifiers) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <FileBadge2 className="w-4 h-4" />
+                              Kimlikler
+                            </span>
+                          }
+                        >
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <KV label="Fatura No" value={allDetails.identifiers?.invoiceNumber} />
+                              <KV label="Belge No" value={allDetails.identifiers?.billNumber} />
+                              <KV label="Abone No" value={allDetails.identifiers?.subscriberNumber} />
+                              <KV label="Tesisat No" value={allDetails.identifiers?.installationNumber} />
+                              <KV label="Sayaç No" value={allDetails.identifiers?.meterNumber} />
+                            </tbody>
+                          </table>
+                        </SectionCard>
+                      )}
+
+                      {has(allDetails.period) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <CalendarClock className="w-4 h-4" />
+                              Dönem Bilgileri
+                            </span>
+                          }
+                        >
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <KV label="Başlangıç" value={allDetails.period?.startDate} />
+                              <KV label="Bitiş" value={allDetails.period?.endDate} />
+                              <KV label="Düzenleme Tarihi" value={allDetails.period?.issueDate} />
+                              <KV label="Son Ödeme" value={allDetails.period?.dueDate} />
+                              <KV label="Gün Sayısı" value={allDetails.period?.days} />
+                            </tbody>
+                          </table>
+                        </SectionCard>
+                      )}
+
+                      {has(allDetails.readings) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <Gauge className="w-4 h-4" />
+                              Okumalar
+                            </span>
+                          }
+                        >
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <KV label="Önceki Endeks" value={allDetails.readings?.prevReading} />
+                              <KV label="Güncel Endeks" value={allDetails.readings?.currReading} />
+                              <KV label="Çarpan" value={allDetails.readings?.multiplier} />
+                              <KV label="Aktif (kWh)" value={allDetails.readings?.active_kWh} />
+                              <KV label="Reaktif (kvarh)" value={allDetails.readings?.reactive_kvarh} />
+                              <KV label="Endüktif (kvarh)" value={allDetails.readings?.inductive_kvarh} />
+                              <KV label="Kapasitif (kvarh)" value={allDetails.readings?.capacitive_kvarh} />
+                            </tbody>
+                          </table>
+                        </SectionCard>
+                      )}
+
+                      {(has(allDetails.pricing) ||
+                        (tiers && tiers.length) ||
+                        (taxes && taxes.length)) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <Coins className="w-4 h-4" />
+                              Fiyatlandırma
+                            </span>
+                          }
+                        >
+                          <div className="space-y-3">
+                            <table className="w-full text-sm">
+                              <tbody>
+                                <KV label="Para Birimi" value={allDetails.pricing?.currency} />
+                                <KV label="Enerji Ara Toplam (KDV Hariç)" value={allDetails.pricing?.energySubtotalExclTax} />
+                                <KV label="Dağıtım (KDV Hariç)" value={allDetails.pricing?.distributionExclTax} />
+                                <KV label="Diğer Ücretler (KDV Hariç)" value={allDetails.pricing?.otherFeesExclTax} />
+                                <KV label="Toplam (KDV Hariç)" value={allDetails.pricing?.totalExclTax} />
+                                <KV label="Toplam (KDV Dahil)" value={allDetails.pricing?.totalInclTax} />
+                              </tbody>
+                            </table>
+
+                            {/* Kademeler */}
+                            {tiers && tiers.length > 0 && (
+                              <div className="bg-gray-50 p-3 rounded-lg border">
+                                <div className="font-semibold text-gray-800 mb-2">Kademeli Tablolar</div>
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-gray-100">
+                                      <th className="text-left px-3 py-2">Kademe</th>
+                                      <th className="text-left px-3 py-2">kWh</th>
+                                      <th className="text-left px-3 py-2">Birim Fiyat</th>
+                                      <th className="text-left px-3 py-2">Tutar (KDV Hariç)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {tiers.map((t, i) => (
+                                      <tr key={i} className="border-t">
+                                        <td className="px-3 py-2">{t.label || "-"}</td>
+                                        <td className="px-3 py-2">{t.kWh || "-"}</td>
+                                        <td className="px-3 py-2">{t.unitPrice || "-"}</td>
+                                        <td className="px-3 py-2">{t.amountExclTax || "-"}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+
+                            {/* Vergiler */}
+                            {taxes && taxes.length > 0 && (
+                              <div className="bg-gray-50 p-3 rounded-lg border">
+                                <div className="font-semibold text-gray-800 mb-2">Vergiler</div>
+                                <table className="w-full text-sm">
+                                  <thead>
+                                    <tr className="bg-gray-100">
+                                      <th className="text-left px-3 py-2">Ad</th>
+                                      <th className="text-left px-3 py-2">Oran</th>
+                                      <th className="text-left px-3 py-2">Tutar</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {taxes.map((t, i) => (
+                                      <tr key={i} className="border-t">
+                                        <td className="px-3 py-2">{t.label || "-"}</td>
+                                        <td className="px-3 py-2">{t.rate || "-"}</td>
+                                        <td className="px-3 py-2">{t.amount || "-"}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        </SectionCard>
+                      )}
+
+                      {has(allDetails.payment) && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <Banknote className="w-4 h-4" />
+                              Ödeme
+                            </span>
+                          }
+                        >
+                          <table className="w-full text-sm">
+                            <tbody>
+                              <KV label="IBAN" value={allDetails.payment?.iban} />
+                              <KV label="Kanallar" value={allDetails.payment?.paymentChannels} />
+                            </tbody>
+                          </table>
+                        </SectionCard>
+                      )}
+
+                      {(allDetails.notes && allDetails.notes.trim() !== "") && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <Info className="w-4 h-4" />
+                              Notlar
+                            </span>
+                          }
+                        >
+                          <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                            {allDetails.notes}
+                          </div>
+                        </SectionCard>
+                      )}
+
+                      {allDetails.anomalies && allDetails.anomalies.length > 0 && (
+                        <SectionCard
+                          title={
+                            <span className="inline-flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              Anomaliler
+                            </span>
+                          }
+                        >
+                          <ul className="list-disc pl-5 text-sm text-gray-800 space-y-1">
+                            {allDetails.anomalies.map((a, i) => (
+                              <li key={i}>{a}</li>
+                            ))}
+                          </ul>
+                        </SectionCard>
+                      )}
+                    </>
+                  )}
+                </div>
             </div>
           </div>
         </div>
@@ -1316,3 +1347,6 @@ export default function InvoiceOcrPage() {
     </div>
   );
 }
+
+
+
