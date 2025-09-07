@@ -128,11 +128,12 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
         </div>
 
     {/* Alt: duyuru barı */}
-      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-1 rounded-b-2xl">
+      {/* --- DEĞİŞİKLİK BU SATIRDA --- */}
+      <div className="absolute bottom-0 left-0 w-full bg-black/20 text-white flex items-center gap-2 px-3 py-[1px] rounded-b-2xl">
         {/* İkon sabit kalıyor */}
         <Megaphone className="w-4 h-4 shrink-0 text-yellow-300" />
 
-        {/* YENİ: Yazı için maskeleme alanı */}
+        {/* Yazı için maskeleme alanı */}
         <div className="flex-1 overflow-hidden">
           {/* Kayan yazı bu yeni alanın içinde kalacak */}
           <div className="animate-marquee whitespace-nowrap text-sm">
