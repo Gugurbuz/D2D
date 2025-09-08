@@ -1,4 +1,6 @@
 // Figma export utilities
+import html2canvas from 'html2canvas';
+
 export interface ScreenCapture {
   id: string;
   name: string;
@@ -31,27 +33,19 @@ export class FigmaExporter {
       throw new Error(`Element not found: ${elementSelector}`);
     }
 
-    // Create canvas for high-quality capture
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Canvas context not available');
-    }
-
-    // Get element dimensions
-    const rect = element.getBoundingClientRect();
-    const scale = window.devicePixelRatio || 1;
-    
-    canvas.width = rect.width * scale;
-    canvas.height = rect.height * scale;
-    ctx.scale(scale, scale);
-
-    // Capture using html2canvas-like approach
-    const dataUrl = await this.elementToDataUrl(element, {
-      width: rect.width,
-      height: rect.height,
-      scale: scale
+    // Use html2canvas for reliable screen capture
+    const canvas = await html2canvas(element, {
+      scale: window.devicePixelRatio || 1,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      removeContainer: true,
+      imageTimeout: 0,
+      logging: false
     });
+
+    const dataUrl = canvas.toDataURL('image/png', 0.95);
+    const rect = element.getBoundingClientRect();
 
     const capture: ScreenCapture = {
       id: `screen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -67,58 +61,6 @@ export class FigmaExporter {
 
     this.captures.push(capture);
     return capture;
-  }
-
-  private async elementToDataUrl(
-    element: HTMLElement, 
-    options: { width: number; height: number; scale: number }
-  ): Promise<string> {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas not available');
-
-    canvas.width = options.width * options.scale;
-    canvas.height = options.height * options.scale;
-    ctx.scale(options.scale, options.scale);
-
-    // Fill background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, options.width, options.height);
-
-    // Create SVG representation
-    const svgData = this.elementToSvg(element, options.width, options.height);
-    const img = new Image();
-    
-    return new Promise((resolve, reject) => {
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png', 0.95));
-      };
-      img.onerror = reject;
-      img.src = `data:image/svg+xml;base64,${btoa(svgData)}`;
-    });
-  }
-
-  private elementToSvg(element: HTMLElement, width: number, height: number): string {
-    const styles = window.getComputedStyle(element);
-    const backgroundColor = styles.backgroundColor || '#ffffff';
-    
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-        <foreignObject width="100%" height="100%">
-          <div xmlns="http://www.w3.org/1999/xhtml" style="
-            width: ${width}px;
-            height: ${height}px;
-            background: ${backgroundColor};
-            font-family: ${styles.fontFamily};
-            font-size: ${styles.fontSize};
-            color: ${styles.color};
-          ">
-            ${element.outerHTML}
-          </div>
-        </foreignObject>
-      </svg>
-    `;
   }
 
   getAllCaptures(): ScreenCapture[] {
