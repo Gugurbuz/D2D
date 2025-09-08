@@ -238,7 +238,7 @@ export default function InvoiceOcrPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const apiKey = process.env.VITE_GOOGLE_CLOUD_API_KEY;
+  const apiKey = (process.env as any).VITE_GOOGLE_CLOUD_API_KEY;
 
   const summaryClampStyle: React.CSSProperties = {
     display: "-webkit-box",
