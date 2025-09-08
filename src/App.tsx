@@ -193,10 +193,17 @@ function App() {
             onCompleteVisit={() => setCurrentScreen('visits')}
           />
         ) : null;
+
+      // GENEL RAPORLAR: Admin için devre dışı, otomatik systemReports'a yönlenir
       case 'reports':
+        if (role === 'admin') {
+          return <SystemReportsScreen />;
+        }
         return <ReportsScreen customers={customers} />;
+
       case 'systemReports':
         return <SystemReportsScreen />;
+
       case 'assignments':
         return (
           <AssignmentScreen
@@ -228,7 +235,7 @@ function App() {
       case 'userManagement':
         return <UserManagementScreen />;
       case 'systemManagement':
-        return <SystemManagementScreen  />;
+        return <SystemManagementScreen />;
       case 'tariffs':
         return <TariffsScreen />;
       case 'fieldOpsMap':
