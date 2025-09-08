@@ -1,11 +1,19 @@
+// src/screens/RouteMapScreen.tsx  (veya RouteMap.tsx)
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L, { LatLng } from 'leaflet';
 import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+
+// === ADIM 2: CSS (Routing + Locate) ===
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
 
+// === ADIM 3-4: JS pluginlerini side-effect olarak yükle ===
+// (tipler olmadığı için ts-ignore bırakıyoruz)
+import 'leaflet-routing-machine'; // @ts-ignore
+import 'leaflet.locatecontrol';   // @ts-ignore
 
 /* =======================
    TILE STYLES (Switchable)
@@ -156,6 +164,96 @@ const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, cu
   return null;
 };
 
+/* ==== ADIM 3: RoutingMachine (turn-by-turn panel) ==== */
+const RoutingMachine: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => {
+  const map = useMap();
+  const controlRef = useRef<L.Routing.Control | null>(null);
+
+  useEffect(() => {
+    if (!map) return;
+
+    const waypoints = [
+      L.latLng(rep.lat, rep.lng),
+      ...customers.map(c => L.latLng(c.lat, c.lng)),
+    ];
+
+    // Önce mevcut kontrolü kaldır
+    if (controlRef.current) {
+      map.removeControl(controlRef.current);
+      controlRef.current = null;
+    }
+
+    // @ts-ignore: L.Routing tipi plugin’den geliyor
+    const ctrl = L.Routing.control({
+      waypoints,
+      position: 'topleft', // sağdaki kendi panelinle çakışmasın diye (topleft)
+      router: new (L.Routing as any).OSRMv1({
+        serviceUrl: 'https://router.project-osrm.org/route/v1',
+        profile: 'driving',
+      }),
+      lineOptions: {
+        styles: [{ color: '#0099CB', weight: 6 }],
+        extendToWaypoints: true,
+        missingRouteTolerance: 10,
+      },
+      show: false,            // panel kapalı başlasın
+      collapsible: true,      // aç/kapa
+      addWaypoints: false,
+      routeWhileDragging: false,
+      showAlternatives: false,
+      fitSelectedRoutes: true,
+      altLineOptions: { styles: [{ opacity: 0 }] },
+      createMarker: function(i, wp) {
+        // İstersen burada özel ikon döndürebilirsin
+        return L.marker(wp.latLng);
+      },
+    });
+
+    ctrl.addTo(map);
+    controlRef.current = ctrl;
+
+    return () => {
+      if (controlRef.current) {
+        map.removeControl(controlRef.current);
+        controlRef.current = null;
+      }
+    };
+  }, [map, rep, customers]);
+
+  return null;
+};
+
+/* ==== ADIM 4: LocateControl (konumu bul / takip) ==== */
+const LocateControl: React.FC = () => {
+  const map = useMap();
+  const controlRef = useRef<any>(null);
+
+  useEffect(() => {
+    // @ts-ignore
+    const lc = (L.control as any).locate({
+      position: 'topleft',
+      strings: { title: 'Konumumu bul' },
+      flyTo: true,
+      keepCurrentZoomLevel: false,
+      setView: 'untilPan',
+      cacheLocation: true,
+      drawCircle: true,
+      showCompass: true,
+    });
+    lc.addTo(map);
+    controlRef.current = lc;
+
+    return () => {
+      if (controlRef.current) {
+        map.removeControl(controlRef.current);
+        controlRef.current = null;
+      }
+    };
+  }, [map]);
+
+  return null;
+};
+
 /* ==== Ana Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
@@ -169,7 +267,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
 
-  // Map style state (default: Google Maps)
   const [mapStyle, setMapStyle] = useState<StyleKey>(
     ((import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Google Maps") as StyleKey
   );
@@ -193,14 +290,13 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       setLoading(true);
 
       if (!starredId) {
-        // normal OSRM trip
         const coords = [[rep.lng, rep.lat], ...baseCustomers.map(c => [c.lng, c.lat])]
           .map(([lng, lat]) => `${lng},${lat}`).join(";");
         const data = await osrmTrip(coords);
         const sortedCustomers = data.waypoints
           .map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index }))
           .sort((a, b) => a.order - b.order)
-          .slice(1) // rep'i çıkar
+          .slice(1)
           .map((x: any) => baseCustomers[x.idx - 1]);
 
         setOrderedCustomers(sortedCustomers);
@@ -209,18 +305,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
         );
         setRouteKm(data.trips[0].distance / 1000);
       } else {
-        // yıldızlı müşteri ilk durak
         const star = baseCustomers.find(c => c.id === starredId)!;
         const others = baseCustomers.filter(c => c.id !== starredId);
 
-        // rep -> star
         const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
         const route1Coords = dataRoute.routes[0].geometry.coordinates.map(
           ([lng, lat]: [number, number]) => [lat, lng]
         );
         const route1Km = dataRoute.routes[0].distance / 1000;
 
-        // star -> diğerleri
         const coords2 = [[star.lng, star.lat], ...others.map(c => [c.lng, c.lat])]
           .map(([lng, lat]) => `${lng},${lat}`).join(";");
         const dataTrip2 = await osrmTrip(coords2);
@@ -300,6 +393,12 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             }}
           />
 
+          {/* ADIM 4: Konumu bul / takip */}
+          <LocateControl />
+
+          {/* ADIM 3: Leaflet Routing Machine (panel + turn-by-turn) */}
+          <RoutingMachine rep={rep} customers={orderedCustomers} />
+
           <FitBounds rep={rep} customers={orderedCustomers} />
 
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
@@ -345,6 +444,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             </Marker>
           ))}
 
+          {/* Not: LRM kendi çizgiyi çizer. İstersen bu Polyline'ı kaldırabilirsin. */}
           {routeCoords.length > 0 && (
             <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 6 }} />
           )}
