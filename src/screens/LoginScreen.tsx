@@ -99,8 +99,8 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               className="max-w-full max-h-full object-contain"
             />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2"></h1>
-          <p className="text-gray-600">D2D Satış Uygulaması</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">D2D Satış Uygulaması</h1>
+          <p className="text-gray-600"> </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
