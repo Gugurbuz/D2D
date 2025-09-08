@@ -201,7 +201,7 @@ const Navigation: React.FC<Props> = ({
                   active={currentScreen === "invoiceOcr"}
                   label="Bölge Dışı Ziyaret"
                 >
-                  <MapPinPlus   className="w-5 h-5" />
+                  <MapPinPlus className="w-5 h-5" />
                 </Btn>
               </>
             )}
@@ -235,21 +235,14 @@ const Navigation: React.FC<Props> = ({
                   active={currentScreen === "invoiceOcr"}
                   label="Bölgedışı Ziyaret"
                 >
-                  <MapPinPlus   className="w-5 h-5" />
+                  <MapPinPlus className="w-5 h-5" />
                 </Btn>
               </>
             )}
 
-            {/* Admin */}
+            {/* Admin (GENEL RAPORLAR KALDIRILDI) */}
             {role === "admin" && (
               <>
-                <Btn
-                  onClick={() => setCurrentScreen("reports")}
-                  active={currentScreen === "reports"}
-                  label="Raporlar"
-                >
-                  <BarChart3 className="w-5 h-5" />
-                </Btn>
                 <Btn
                   onClick={() => setCurrentScreen("systemReports")}
                   active={currentScreen === "systemReports"}
@@ -267,7 +260,7 @@ const Navigation: React.FC<Props> = ({
                 <Btn
                   onClick={() => setCurrentScreen("systemManagement")}
                   active={currentScreen === "systemManagement"}
-                  label="Sistem Ayarları"
+                  label="Sistem Yönetimi"
                 >
                   <Settings className="w-5 h-5" />
                 </Btn>
@@ -414,4 +407,4 @@ const Navigation: React.FC<Props> = ({
   );
 };
 
-export default Navigation;  
+export default Navigation;
