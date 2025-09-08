@@ -14,6 +14,7 @@ import {
   Settings,
   Shield,
   MapPinPlus,
+  Figma,
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from "../data/messages";
@@ -22,6 +23,7 @@ import {
   AppNotification,
   mockNotifications as defaultNotifications,
 } from "../data/notifications";
+import FigmaExportModal from "./FigmaExportModal";
 
 type Props = {
   agentName: string;
@@ -44,6 +46,7 @@ const Navigation: React.FC<Props> = ({
   const notifUnread = notifItems.filter((n) => n?.unread).length;
 
   const [messageMenuOpen, setMessageMenuOpen] = useState(false);
+  const [figmaModalOpen, setFigmaModalOpen] = useState(false);
   const messageUnreadCount = mockConversations.reduce(
     (total, conversation) => {
       const msgs = Array.isArray(conversation?.messages)
@@ -313,6 +316,18 @@ const Navigation: React.FC<Props> = ({
               )}
             </Btn>
 
+            {/* Figma Export */}
+            <Btn
+              onClick={() => {
+                setNotifOpen(false);
+                setMessageMenuOpen(false);
+                setFigmaModalOpen(true);
+              }}
+              active={false}
+              label="Figma'ya Aktar"
+            >
+              <Figma className="w-5 h-5" />
+            </Btn>
             {/* Bildirimler */}
             <div className="relative shrink-0" ref={notifAnchorRef}>
               <button
@@ -403,6 +418,13 @@ const Navigation: React.FC<Props> = ({
           </div>
         </div>
       </div>
+
+      {/* Figma Export Modal */}
+      <FigmaExportModal
+        isOpen={figmaModalOpen}
+        onClose={() => setFigmaModalOpen(false)}
+        currentScreen={currentScreen}
+      />
     </header>
   );
 };
