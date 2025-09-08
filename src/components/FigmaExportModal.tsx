@@ -365,7 +365,7 @@ const FigmaExportModal: React.FC<Props> = ({ isOpen, onClose, currentScreen }) =
               <div className="text-xs text-gray-500 space-y-1">
                 <p>• JSON metadata dosyası indirilecek</p>
                 <p>• PNG dosyaları ayrı ayrı indirilecek</p>
-                <p>• Figma'da File > Import ile kullanın</p>
+                <p>• Figma'da File {'>'} Import ile kullanın</p>
               </div>
             </div>
           </div>
