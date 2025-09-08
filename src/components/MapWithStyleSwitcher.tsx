@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { MapContainer, TileLayer } from "react-leaflet";
 
-// Tüm stiller burada
 const TILE_STYLES = {
   "Carto Light": {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
@@ -45,7 +44,11 @@ const TILE_STYLES = {
 type StyleKey = keyof typeof TILE_STYLES;
 
 export default function MapWithStyleSwitcher() {
-  const [style, setStyle] = useState<StyleKey>("Carto Light");
+  // default style env’den alınır, yoksa "Carto Light"
+  const defaultStyle =
+    (import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Carto Light";
+
+  const [style, setStyle] = useState<StyleKey>(defaultStyle);
   const tile = TILE_STYLES[style];
 
   return (
