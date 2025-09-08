@@ -216,10 +216,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
-       <TileLayer
-  url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
-  attribution='&copy; OSM &copy; CARTO'
-  subdomains={["a","b","c","d"]}
+      <TileLayer
+  url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"
+  attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="https://www.openstreetmap.org">OSM</a>'
 />
 
 
