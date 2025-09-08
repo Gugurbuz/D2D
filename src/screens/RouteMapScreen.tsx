@@ -1,60 +1,8 @@
-// src/screens/RouteMapScreen.tsx  (veya RouteMap.tsx)
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L, { LatLng } from 'leaflet';
 import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-
-// CSS
-import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
-import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
-
-// JS plugin (routing) statik
-import 'leaflet-routing-machine';
-
-/* =======================
-   TILE STYLES
-   ======================= */
-const TILE_STYLES = {
-  "Google Maps": {
-    url: `https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
-    subdomains: ["0","1","2","3"],
-    attribution: "&copy; Google",
-  },
-  "Google Satellite": {
-    url: `https://mts{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
-    subdomains: ["0","1","2","3"],
-    attribution: "&copy; Google",
-  },
-  "Google Hybrid": {
-    url: `https://mts{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
-    subdomains: ["0","1","2","3"],
-    attribution: "&copy; Google",
-  },
-  "Google Terrain": {
-    url: `https://mts{s}.google.com/vt/lyrs=t&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
-    subdomains: ["0","1","2","3"],
-    attribution: "&copy; Google",
-  },
-  "Carto Light": {
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    subdomains: ["a","b","c","d"],
-    attribution: "&copy; OSM &copy; CARTO",
-  },
-  "Carto Dark": {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    subdomains: ["a","b","c","d"],
-    attribution: "&copy; OSM &copy; CARTO",
-  },
-  "Carto Voyager": {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    subdomains: ["a","b","c","d"],
-    attribution: "&copy; OSM &copy; CARTO",
-  },
-} as const;
-
-type StyleKey = keyof typeof TILE_STYLES;
 
 // Types
 interface Customer {
@@ -100,7 +48,7 @@ const anadoluCustomers: Customer[] = [
     plannedTime: "09:00"
   },
   {
-    id: "2",
+    id: "2", 
     name: "Fatma Demir",
     address: "Bahçelievler Mahallesi, 7. Cadde No:23",
     district: "Çankaya",
@@ -131,97 +79,34 @@ function numberIcon(n: number, opts: { highlight?: boolean; starred?: boolean } 
   });
 }
 
-/* ==== RoutingMachine ==== */
-const RoutingMachine: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => {
+/* ==== Yardımcılar ==== */
+async function osrmTrip(coords: string) {
+  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM trip error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
+  return data;
+}
+
+async function osrmRoute(from: LatLng, to: LatLng) {
+  const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM route error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("Route not found");
+  return data;
+}
+
+/* ==== FitBounds Bileşeni ==== */
+const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => {
   const map = useMap();
-  const controlRef = useRef<L.Routing.Control | null>(null);
-
   useEffect(() => {
-    if (!map) return;
-
-    const waypoints = [
-      L.latLng(rep.lat, rep.lng),
-      ...customers.map(c => L.latLng(c.lat, c.lng)),
-    ];
-
-    if (controlRef.current) {
-      map.removeControl(controlRef.current);
-      controlRef.current = null;
-    }
-
-    // @ts-ignore
-    const ctrl = L.Routing.control({
-      waypoints,
-      position: 'topleft',
-      router: new (L.Routing as any).OSRMv1({
-        serviceUrl: 'https://router.project-osrm.org/route/v1',
-        profile: 'driving',
-      }),
-      lineOptions: {
-        styles: [{ color: '#0099CB', weight: 6 }],
-      },
-      show: false,
-      collapsible: true,
-      addWaypoints: false,
-      routeWhileDragging: false,
-      showAlternatives: false,
-      fitSelectedRoutes: true,
-    });
-
-    ctrl.addTo(map);
-    controlRef.current = ctrl;
-
-    return () => {
-      if (controlRef.current) {
-        map.removeControl(controlRef.current);
-        controlRef.current = null;
-      }
-    };
-  }, [map, rep, customers]);
-
-  return null;
-};
-
-/* ==== Güvenli LocateControl ==== */
-const LocateControl: React.FC = () => {
-  const map = useMap();
-  const controlRef = useRef<any>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        await import('leaflet.locatecontrol/dist/L.Control.Locate.min.js');
-        if (!mounted) return;
-
-        // @ts-ignore
-        const lc = (L.control as any).locate({
-          position: 'topleft',
-          strings: { title: 'Konumumu bul' },
-          flyTo: true,
-          setView: 'untilPan',
-          cacheLocation: true,
-          drawCircle: true,
-          showCompass: true,
-        });
-        lc.addTo(map);
-        controlRef.current = lc;
-      } catch (e) {
-        console.error('LocateControl yüklenemedi:', e);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-      try {
-        if (controlRef.current) {
-          map.removeControl(controlRef.current);
-          controlRef.current = null;
-        }
-      } catch { /* ignore */ }
-    };
-  }, [map]);
-
+    const points: LatLng[] = [[rep.lat, rep.lng], ...customers.map(c => [c.lat, c.lng])];
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }, [rep, customers, map]);
   return null;
 };
 
@@ -230,7 +115,12 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
-  const [mapStyle, setMapStyle] = useState<StyleKey>("Google Maps");
+  const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
+  const [routeKm, setRouteKm] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [starredId, setStarredId] = useState<string | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
@@ -238,68 +128,181 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
   const highlightCustomer = (c: Customer) => {
+    setSelectedId(c.id);
     const m = markerRefs.current[c.id];
     if (m) m.openPopup();
-    if (mapRef.current) mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
+    if (mapRef.current) {
+      mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
+    }
   };
 
-  const tile = TILE_STYLES[mapStyle];
+  async function handleOptimize() {
+    try {
+      setLoading(true);
+
+      if (!starredId) {
+        // normal OSRM trip
+        const coords = [[rep.lng, rep.lat], ...baseCustomers.map(c => [c.lng, c.lat])]
+          .map(([lng, lat]) => `${lng},${lat}`).join(";");
+        const data = await osrmTrip(coords);
+        const sortedCustomers = data.waypoints
+          .map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index }))
+          .sort((a, b) => a.order - b.order)
+          .slice(1) // rep'i çıkar
+          .map((x: any) => baseCustomers[x.idx - 1]);
+
+        setOrderedCustomers(sortedCustomers);
+        setRouteCoords(data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
+        setRouteKm(data.trips[0].distance / 1000);
+      } else {
+        // yıldızlı müşteri ilk durak
+        const star = baseCustomers.find(c => c.id === starredId)!;
+        const others = baseCustomers.filter(c => c.id !== starredId);
+
+        // rep -> star
+        const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
+        const route1Coords = dataRoute.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const route1Km = dataRoute.routes[0].distance / 1000;
+
+        // star -> diğerleri
+        const coords2 = [[star.lng, star.lat], ...others.map(c => [c.lng, c.lat])]
+          .map(([lng, lat]) => `${lng},${lat}`).join(";");
+        const dataTrip2 = await osrmTrip(coords2);
+        const ordered2 = dataTrip2.waypoints
+          .map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index }))
+          .sort((a, b) => a.order - b.order)
+          .slice(1)
+          .map((x: any) => others[x.idx - 1]);
+
+        setOrderedCustomers([star, ...ordered2]);
+        const restCoords = dataTrip2.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        setRouteCoords([...route1Coords, ...restCoords]);
+        setRouteKm(route1Km + dataTrip2.trips[0].distance / 1000);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    handleOptimize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [starredId]);
 
   return (
     <div className="relative w-full h-full">
-      {/* Stil seçici */}
-      <div className="absolute top-2 right-2 z-[1000] bg-white/80 py-1 px-2 rounded shadow">
-        <select
-          value={mapStyle}
-          onChange={(e) => setMapStyle(e.target.value as StyleKey)}
-          className="px-2 py-1 text-xs border rounded"
+      {/* Sticky üst bar */}
+      <div className="absolute top-2 right-2 z-[1000] bg-white/80 py-1 px-2 rounded shadow flex items-center gap-2">
+        <div className="text-xs text-gray-700">Toplam: {routeKm ? routeKm.toFixed(1) + " km" : "—"}</div>
+        <button
+          onClick={handleOptimize}
+          disabled={loading}
+          className={`px-2 py-1 text-xs rounded-lg font-semibold ${
+            loading ? "bg-gray-300 text-gray-600" : "bg-[#0099CB] text-white hover:opacity-90"
+          }`}
         >
-          {Object.keys(TILE_STYLES).map((k) => (
-            <option key={k} value={k}>{k}</option>
-          ))}
-        </select>
+          {loading ? "..." : "Rota Oluştur"}
+        </button>
+        <FullscreenBtn />
       </div>
 
-      <MapContainer
-        center={[rep.lat, rep.lng]}
-        zoom={13}
-        style={{ height: "100%", width: "100%" }}
-        whenCreated={(m) => (mapRef.current = m)}
-      >
-        <TileLayer
-          url={tile.url}
-          attribution={tile.attribution}
-          // @ts-ignore
-          subdomains={tile.subdomains}
-        />
+      {/* Harita */}
+      <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
+        <MapContainer
+          center={[rep.lat, rep.lng]}
+          zoom={13}
+          style={{ height: "100%", width: "100%" }}
+          whenCreated={(m) => (mapRef.current = m)}
+        >
+          <TileLayer
+            url={`https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`}
+            attribution='&copy; <a href="https://maps.google.com/">Google</a>'
+            subdomains={["0","1","2","3"]}
+          />
 
-        {/* Locate + Routing */}
-        <LocateControl />
-        <RoutingMachine rep={rep} customers={orderedCustomers} />
+          <FitBounds rep={rep} customers={orderedCustomers} />
 
-        <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
-          <Popup><b>{rep.name}</b></Popup>
-        </Marker>
-
-        {orderedCustomers.map((c, i) => (
-          <Marker
-            key={c.id}
-            position={[c.lat, c.lng]}
-            icon={numberIcon(i + 1)}
-            ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
-            eventHandlers={{ click: () => highlightCustomer(c) }}
-          >
-            <Popup>
-              <div>
-                <b>{i + 1}. {c.name}</b>
-                <div>{c.address}</div>
-                <div>Tel: <a href={toTelHref(c.phone)}>{c.phone}</a></div>
-              </div>
-            </Popup>
+          <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
+            <Popup><b>{rep.name}</b></Popup>
           </Marker>
-        ))}
-      </MapContainer>
+
+          {orderedCustomers.map((c, i) => (
+            <Marker
+              key={c.id}
+              position={[c.lat, c.lng]}
+              icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })}
+              ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }}
+              eventHandlers={{ click: () => highlightCustomer(c) }}
+            >
+              <Popup>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <b>{i + 1}. {c.name}</b>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setStarredId(prev => prev === c.id ? null : c.id);
+                      }}
+                      className="p-1 rounded hover:bg-gray-100"
+                    >
+                      <Star className={`w-4 h-4 ${starredId === c.id ? "text-[#F5B301] fill-[#F5B301]" : "text-gray-400"}`} />
+                    </button>
+                  </div>
+                  <div>{c.address}, {c.district}</div>
+                  <div>Saat: {c.plannedTime}</div>
+                  <div>Tel: <a className="text-[#0099CB] underline" href={toTelHref(c.phone)}>{c.phone}</a></div>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600"
+                  >
+                    <Navigation className="w-4 h-4" /> Navigasyonu Başlat
+                  </a>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+
+          {routeCoords.length > 0 && (
+            <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 6 }} />
+          )}
+        </MapContainer>
+      </div>
     </div>
+  );
+};
+
+/* ==== Fullscreen butonu ==== */
+const FullscreenBtn: React.FC = () => {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+  return (
+    <button
+      onClick={async () => {
+        const el = document.querySelector(".leaflet-container") as HTMLElement;
+        if (!document.fullscreenElement && el) await el.requestFullscreen();
+        else await document.exitFullscreen();
+      }}
+      className="px-2 py-1 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1"
+    >
+      {isFs ? (
+        <>
+          <Minimize2 className="w-3 h-3" /> Kapat
+        </>
+      ) : (
+        <>
+          <Maximize2 className="w-3 h-3" /> Tam Ekran
+        </>
+      )}
+    </button>
   );
 };
 
