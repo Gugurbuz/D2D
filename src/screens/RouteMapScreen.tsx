@@ -216,7 +216,12 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <<TileLayer
+  url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
+  subdomains={["a","b","c","d"]}
+/>
+
           <FitBounds rep={rep} customers={orderedCustomers} />
 
           <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
