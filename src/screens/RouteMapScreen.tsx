@@ -216,10 +216,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
-      <TileLayer
-  url="https://stamen-tiles.a.ssl.fastly.net/toner-lite/{z}/{x}/{y}.png"
+<TileLayer
+  url="https://stamen-tiles.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg"
   attribution='Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="https://www.openstreetmap.org">OSM</a>'
 />
+
 
 
           <FitBounds rep={rep} customers={orderedCustomers} />
