@@ -3,6 +3,9 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L, { LatLng } from 'leaflet';
 import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
+
 
 /* =======================
    TILE STYLES (Switchable)
