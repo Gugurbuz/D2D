@@ -4,6 +4,49 @@ import L, { LatLng } from 'leaflet';
 import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
+/* =======================
+   TILE STYLES (Switchable)
+   ======================= */
+const TILE_STYLES = {
+  "Google Maps": {
+    url: `https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
+    subdomains: ["0","1","2","3"],
+    attribution: "&copy; Google",
+  },
+  "Google Satellite": {
+    url: `https://mts{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
+    subdomains: ["0","1","2","3"],
+    attribution: "&copy; Google",
+  },
+  "Google Hybrid": {
+    url: `https://mts{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
+    subdomains: ["0","1","2","3"],
+    attribution: "&copy; Google",
+  },
+  "Google Terrain": {
+    url: `https://mts{s}.google.com/vt/lyrs=t&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
+    subdomains: ["0","1","2","3"],
+    attribution: "&copy; Google",
+  },
+  "Carto Light": {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    subdomains: ["a","b","c","d"],
+    attribution: "&copy; OSM &copy; CARTO",
+  },
+  "Carto Dark": {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    subdomains: ["a","b","c","d"],
+    attribution: "&copy; OSM &copy; CARTO",
+  },
+  "Carto Voyager": {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    subdomains: ["a","b","c","d"],
+    attribution: "&copy; OSM &copy; CARTO",
+  },
+} as const;
+
+type StyleKey = keyof typeof TILE_STYLES;
+
 // Types
 interface Customer {
   id: string;
@@ -48,7 +91,7 @@ const anadoluCustomers: Customer[] = [
     plannedTime: "09:00"
   },
   {
-    id: "2", 
+    id: "2",
     name: "Fatma Demir",
     address: "Bahçelievler Mahallesi, 7. Cadde No:23",
     district: "Çankaya",
@@ -79,7 +122,7 @@ function numberIcon(n: number, opts: { highlight?: boolean; starred?: boolean } 
   });
 }
 
-/* ==== Yardımcılar ==== */
+/* ==== OSRM yardımcıları ==== */
 async function osrmTrip(coords: string) {
   const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
   const res = await fetch(url);
@@ -99,7 +142,7 @@ async function osrmRoute(from: LatLng, to: LatLng) {
   return data;
 }
 
-/* ==== FitBounds Bileşeni ==== */
+/* ==== FitBounds ==== */
 const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => {
   const map = useMap();
   useEffect(() => {
@@ -114,6 +157,7 @@ const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, cu
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const rep = salesRep || defaultSalesRep;
   const baseCustomers = customers && customers.length ? customers : anadoluCustomers;
+
   const [orderedCustomers, setOrderedCustomers] = useState<Customer[]>(baseCustomers);
   const [routeCoords, setRouteCoords] = useState<LatLng[]>([]);
   const [routeKm, setRouteKm] = useState<number | null>(null);
@@ -121,6 +165,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+
+  // Map style state (default: Google Maps)
+  const [mapStyle, setMapStyle] = useState<StyleKey>(
+    ((import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Google Maps") as StyleKey
+  );
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
@@ -152,7 +201,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           .map((x: any) => baseCustomers[x.idx - 1]);
 
         setOrderedCustomers(sortedCustomers);
-        setRouteCoords(data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
+        setRouteCoords(
+          data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng])
+        );
         setRouteKm(data.trips[0].distance / 1000);
       } else {
         // yıldızlı müşteri ilk durak
@@ -161,7 +212,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
         // rep -> star
         const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
-        const route1Coords = dataRoute.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const route1Coords = dataRoute.routes[0].geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
         const route1Km = dataRoute.routes[0].distance / 1000;
 
         // star -> diğerleri
@@ -175,7 +228,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           .map((x: any) => others[x.idx - 1]);
 
         setOrderedCustomers([star, ...ordered2]);
-        const restCoords = dataTrip2.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const restCoords = dataTrip2.trips[0].geometry.coordinates.map(
+          ([lng, lat]: [number, number]) => [lat, lng]
+        );
         setRouteCoords([...route1Coords, ...restCoords]);
         setRouteKm(route1Km + dataTrip2.trips[0].distance / 1000);
       }
@@ -191,11 +246,27 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId]);
 
+  const tile = TILE_STYLES[mapStyle];
+
   return (
     <div className="relative w-full h-full">
       {/* Sticky üst bar */}
       <div className="absolute top-2 right-2 z-[1000] bg-white/80 py-1 px-2 rounded shadow flex items-center gap-2">
-        <div className="text-xs text-gray-700">Toplam: {routeKm ? routeKm.toFixed(1) + " km" : "—"}</div>
+        {/* Stil seçici */}
+        <select
+          value={mapStyle}
+          onChange={(e) => setMapStyle(e.target.value as StyleKey)}
+          className="px-2 py-1 text-xs border rounded"
+          title="Harita stili"
+        >
+          {Object.keys(TILE_STYLES).map((k) => (
+            <option key={k} value={k}>{k}</option>
+          ))}
+        </select>
+
+        <div className="text-xs text-gray-700">
+          Toplam: {routeKm ? routeKm.toFixed(1) + " km" : "—"}
+        </div>
         <button
           onClick={handleOptimize}
           disabled={loading}
@@ -216,14 +287,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
- <TileLayer
-    url={`https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`}
-    attribution='&copy; <a href="https://maps.google.com/">Google</a>'
-    subdomains={["0","1","2","3"]}
-  />
-
-
-
+          <TileLayer
+            url={tile.url}
+            attribution={tile.attribution}
+            // @ts-ignore
+            subdomains={tile.subdomains}
+            eventHandlers={{
+              tileerror: (e) => console.warn("Tile error:", e),
+            }}
+          />
 
           <FitBounds rep={rep} customers={orderedCustomers} />
 
