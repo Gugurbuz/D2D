@@ -14,6 +14,8 @@ import MessagesScreen from './screens/MessagesScreen';
 import ProfileScreens from './screens/ProfileScreens';
 import InvoiceOcrPage from './screens/InvoiceOcrPage';
 import RoleSelectScreen from './screens/RoleSelectScreen';
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
 
 import UserManagementScreen from './screens/UserManagementScreen';
 import SystemManagementScreen from './screens/SystemManagementScreen';
