@@ -216,12 +216,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ height: "100%", width: "100%" }}
           whenCreated={(m) => (mapRef.current = m)}
         >
-<TileLayer
-  url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
-  subdomains={["a","b","c","d"]}
-/>
-
+ <TileLayer
+    url={`https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`}
+    attribution='&copy; <a href="https://maps.google.com/">Google</a>'
+    subdomains={["0","1","2","3"]}
+  />
 
 
 
