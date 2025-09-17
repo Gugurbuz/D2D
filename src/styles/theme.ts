@@ -1,112 +1,70 @@
-// src/components/VisitCard.tsx
-import React from "react";
-import { Eye, Play, MapPin, UserCheck } from "lucide-react";
-import type { Customer } from "../types";
-import Button from "./Button";
-import { getStatusChipClasses, getPriorityChipClasses } from "../styles/theme";
+// src/styles/theme.ts
+// ... mevcut import / renkler ...
 
-function formatDate(dateStr?: string) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}.${month}.${year}`;
+// KPI kart renkleri (mevcutsa genişletiyoruz)
+export const kpiCardColors = {
+  target: {
+    border: "border-[#002D72]", // navy
+    bg: "bg-[#002D72]/10",
+    icon: "text-[#002D72]",
+    chip: { bg: "bg-[#002D72]/10", text: "text-[#002D72]", ring: "ring-[#002D72]/20" },
+  },
+  completed: {
+    border: "border-green-600",
+    bg: "bg-green-50",
+    icon: "text-green-600",
+    chip: { bg: "bg-green-50", text: "text-green-700", ring: "ring-green-200" },
+  },
+  pending: {
+    border: "border-amber-600",
+    bg: "bg-amber-50",
+    icon: "text-amber-600",
+    chip: { bg: "bg-amber-50", text: "text-amber-700", ring: "ring-amber-200" },
+  },
+  performance: {
+    border: "border-blue-600",
+    bg: "bg-blue-50",
+    icon: "text-blue-600",
+    chip: { bg: "bg-blue-50", text: "text-blue-700", ring: "ring-blue-200" },
+  },
+  // İsteğe bağlı: hata/iptal
+  rejected: {
+    border: "border-red-600",
+    bg: "bg-red-50",
+    icon: "text-red-600",
+    chip: { bg: "bg-red-50", text: "text-red-700", ring: "ring-red-200" },
+  },
+} as const;
+
+// Uygulamadaki statü -> KPI tipi eşlemesi
+const statusToKpiType: Record<string, keyof typeof kpiCardColors> = {
+  // TR statüler
+  "Bekliyor": "pending",
+  "Devam Ediyor": "performance",
+  "Tamamlandı": "completed",
+  "Reddedildi": "rejected",
+  "İptal": "rejected",
+  "Başladı": "performance",
+  // Fallback
+  "": "pending",
+};
+
+// VisitCard’daki statü chip’i için doğrudan sınıf üreticisi
+export function getStatusChipClasses(status?: string) {
+  const type = statusToKpiType[status ?? ""] ?? "pending";
+  const chip = kpiCardColors[type].chip;
+  return `${chip.bg} ${chip.text} ring-1 ${chip.ring}`;
 }
 
-type Props = {
-  customer: Customer;
-  assignedName: string | null;
-  onDetail: () => void;
-  onStart: () => void;
+// (Opsiyonel) Öncelik -> KPI tipi eşlemesi (ör: Yüksek/Orta/Düşük)
+const priorityToKpiType: Record<string, keyof typeof kpiCardColors> = {
+  "Yüksek": "rejected",     // daha dikkat çekici = kırmızımsı
+  "Orta": "performance",    // mavi
+  "Düşük": "pending",       // amber
 };
 
-const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart }) => {
-  const typeLabel = customer.tariff === "İş Yeri" ? "B2B – Sabit Fiyat" : "B2C – Endeks";
-
-  return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#002D72] dark:hover:border-[#F9C800] rounded-xl p-5 transition-all duration-200 hover:shadow-md">
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        {/* SOL TARAF */}
-        <div className="flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{customer.name}</div>
-            <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber ?? "-"}</div>
-            <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber ?? "-"}</div>
-          </div>
-
-          <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
-            <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
-          </div>
-
-          <div className="mt-2 flex flex-wrap gap-2">
-            {/* Statü: KPI paletiyle birebir uyumlu */}
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getStatusChipClasses(
-                customer.status
-              )}`}
-            >
-              {customer.status}
-            </span>
-
-            {/* Öncelik: Aynı paletten türetilmiş */}
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPriorityChipClasses(
-                customer.priority
-              )}`}
-            >
-              {customer.priority} Öncelik
-            </span>
-
-            {/* Tür etiketi: kurumsal navy tonu */}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#002D72]/10 text-[#002D72] ring-1 ring-[#002D72]/20">
-              {typeLabel}
-            </span>
-
-            {assignedName && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600">
-                <UserCheck className="w-3 h-3 mr-1" /> {assignedName}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* SAĞ TARAF */}
-        <div className="text-right space-y-2 flex flex-col items-end justify-between">
-          <div>
-            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex gap-2">
-              <span>{formatDate(customer.visitDate)}</span>
-              <span>{customer.plannedTime}</span>
-            </div>
-            <div className="text-xs text-gray-500">{customer.distance}</div>
-          </div>
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onDetail}
-              leftIcon={<Eye className="w-4 h-4" />}
-            >
-              Detay
-            </Button>
-
-            {customer.status === "Bekliyor" && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onStart}
-                leftIcon={<Play className="w-4 h-4" />}
-              >
-                Başlat
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default VisitCard;
+export function getPriorityChipClasses(priority?: string) {
+  const type = priorityToKpiType[priority ?? ""] ?? "pending";
+  const chip = kpiCardColors[type].chip;
+  return `${chip.bg} ${chip.text} ring-1 ${chip.ring}`;
+}
