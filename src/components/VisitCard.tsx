@@ -1,9 +1,9 @@
+// src/components/VisitCard.tsx
 import React from "react";
-import { Eye, Play, MapPin, UserCheck } from "lucide-react"; // StickyNote kaldırıldı
+import { Eye, Play, MapPin, UserCheck } from "lucide-react";
 import type { Customer } from "../types";
-import Chip from "./Chip";
 import Button from "./Button";
-import { getStatusColor, getPriorityColor } from "../styles/theme";
+import { getStatusChipClasses, getPriorityChipClasses } from "../styles/theme";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "-";
@@ -23,8 +23,6 @@ type Props = {
 };
 
 const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart }) => {
-  const statusColor = getStatusColor(customer.status);
-  const priorityColor = getPriorityColor(customer.priority);
   const typeLabel = customer.tariff === "İş Yeri" ? "B2B – Sabit Fiyat" : "B2C – Endeks";
 
   return (
@@ -43,9 +41,29 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
-            <Chip color={statusColor} variant="soft">{customer.status}</Chip>
-            <Chip color={priorityColor} variant="soft">{customer.priority} Öncelik</Chip>
-            <Chip color="navy" variant="soft">{typeLabel}</Chip>
+            {/* Statü: KPI paletiyle birebir uyumlu */}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getStatusChipClasses(
+                customer.status
+              )}`}
+            >
+              {customer.status}
+            </span>
+
+            {/* Öncelik: Aynı paletten türetilmiş */}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPriorityChipClasses(
+                customer.priority
+              )}`}
+            >
+              {customer.priority} Öncelik
+            </span>
+
+            {/* Tür etiketi: kurumsal navy tonu */}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#002D72]/10 text-[#002D72] ring-1 ring-[#002D72]/20">
+              {typeLabel}
+            </span>
+
             {assignedName && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600">
                 <UserCheck className="w-3 h-3 mr-1" /> {assignedName}
@@ -65,7 +83,6 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
 
           <div className="flex flex-wrap justify-end gap-2">
-            {/* Detay butonu */}
             <Button
               variant="primary"
               size="sm"
@@ -75,7 +92,6 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
               Detay
             </Button>
 
-            {/* Başlat butonu */}
             {customer.status === "Bekliyor" && (
               <Button
                 variant="secondary"
