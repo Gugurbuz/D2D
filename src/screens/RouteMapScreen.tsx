@@ -2,7 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
+import {
+  Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2,
+  Car, PersonStanding
+} from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 /* ============ ENERJISA RENKLERİ ============ */
@@ -79,7 +82,7 @@ const TILE_STYLES = {
 type StyleKey = keyof typeof TILE_STYLES;
 
 /* ============ TYPES ============ */
-type TravelMode = 'driving' | 'walking'; // araç vs yaya
+type TravelMode = 'driving' | 'walking';
 
 interface Customer {
   id: string;
@@ -252,7 +255,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
 
-  const [travelMode, setTravelMode] = useState<TravelMode>('driving'); // ⬅️ Araç/Yaya seçimi
+  const [travelMode, setTravelMode] = useState<TravelMode>('driving'); // ikonlarla değişiyor
   const [mapStyle, setMapStyle] = useState<StyleKey>('Carto Light');
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
@@ -339,8 +342,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   }, [starredId, travelMode]);
 
   const tile = TILE_STYLES[mapStyle];
-
   const gmapsTravel = travelMode === 'walking' ? 'walking' : 'driving';
+
+  // görsel fark: yaya rotası daha ince çizgi
+  const lineWeight = travelMode === 'walking' ? 4 : 6;
+  const lineShadow = travelMode === 'walking' ? 8 : 10;
 
   return (
     <div className="relative w-full h-full">
@@ -348,6 +354,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         {/* ÜST KONTROL PANELİ */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/85 backdrop-blur py-1.5 px-2.5 rounded-lg shadow-lg flex items-center gap-2">
+          {/* Harita stili */}
           <select
             value={mapStyle}
             onChange={(e) => setMapStyle(e.target.value as StyleKey)}
@@ -359,18 +366,36 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             ))}
           </select>
 
-          {/* Ulaşım modu */}
+          {/* Ulaşım modu: ikon butonları */}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-gray-600">Ulaşım:</span>
-            <select
-              value={travelMode}
-              onChange={(e) => setTravelMode(e.target.value as TravelMode)}
-              className="px-2 py-1 text-xs border rounded-md bg-white"
-              title="Ulaşım modu"
-            >
-              <option value="driving">Araç</option>
-              <option value="walking">Yaya</option>
-            </select>
+            <div className="flex rounded-md border bg-white/70 backdrop-blur p-0.5">
+              <button
+                onClick={() => setTravelMode('driving')}
+                aria-pressed={travelMode === 'driving'}
+                className={`p-1.5 text-xs rounded-sm transition-all ${
+                  travelMode === 'driving'
+                    ? 'bg-white shadow-md'
+                    : 'bg-transparent text-gray-500 hover:bg-white/50'
+                }`}
+                title="Araç Modu"
+              >
+                <Car className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => setTravelMode('walking')}  // OSRM profile: walking
+                aria-pressed={travelMode === 'walking'}
+                className={`p-1.5 text-xs rounded-sm transition-all ${
+                  travelMode === 'walking'
+                    ? 'bg-white shadow-md'
+                    : 'bg-transparent text-gray-500 hover:bg-white/50'
+                }`}
+                title="Yaya Modu"
+              >
+                <PersonStanding className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="text-xs text-gray-700 font-medium">
@@ -453,8 +478,8 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           {/* ROTA: çift çizgi */}
           {routeCoords.length > 0 && (
             <>
-              <Polyline positions={routeCoords} pathOptions={{ color: '#ffffff', weight: 10, opacity: 0.7 }} />
-              <Polyline positions={routeCoords} pathOptions={{ color: BRAND_YELLOW, weight: 6 }} />
+              <Polyline positions={routeCoords} pathOptions={{ color: '#ffffff', weight: lineShadow, opacity: 0.7 }} />
+              <Polyline positions={routeCoords} pathOptions={{ color: BRAND_YELLOW, weight: lineWeight }} />
             </>
           )}
         </MapContainer>
