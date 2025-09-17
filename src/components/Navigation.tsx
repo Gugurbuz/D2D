@@ -18,6 +18,7 @@ import {
 import { Role, Screen } from "../types";
 import { mockConversations } from "../data/messages";
 import { teamReps } from "../data/team";
+import { BRAND_COLORS } from "../styles/theme";
 import {
   AppNotification,
   mockNotifications as defaultNotifications,
