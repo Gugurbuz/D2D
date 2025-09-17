@@ -1,197 +1,112 @@
-// src/styles/theme.ts
+// src/components/VisitCard.tsx
+import React from "react";
+import { Eye, Play, MapPin, UserCheck } from "lucide-react";
+import type { Customer } from "../types";
+import Button from "./Button";
+import { getStatusChipClasses, getPriorityChipClasses } from "../styles/theme";
 
-/* ====================== MARKA PALETİ ====================== */
-/** Not: Primary renk artık açık mavi (#0099CB). Hover/gradient için navyDark (#007CA8) eklendi. */
-export const BRAND_COLORS = {
-  // Primary (Açık Mavi)
-  navy: '#0099CB',      // eski #002D72 yerine
-  navyDark: '#007CA8',  // hover/gradient için yardımcı ton
-  yellow: '#F9C800',
-  
-  // Sistem Renkleri
-  success: '#16A34A',
-  warning: '#D97706',
-  error:   '#DC2626',
-  neutral: '#6B7280',
-  
-  // Ek Renkler (sabit)
-  blue:  '#2563EB',
-  green: '#16A34A',
-  red:   '#DC2626',
-  amber: '#D97706',
-  gray:  '#6B7280',
-} as const;
+function formatDate(dateStr?: string) {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
+}
 
-/* ====================== RENK TONLARI ====================== */
-/** Açık mavi için tonlar: soft arka planlar ve ring (border) renkleri bu tablodan okunur. */
-export type ColorTone = {
-  50: string; 100: string; 200: string; 300: string; 400: string;
-  500: string; 600: string; 700: string; 800: string; 900: string; 950: string;
+type Props = {
+  customer: Customer;
+  assignedName: string | null;
+  onDetail: () => void;
+  onStart: () => void;
 };
 
-export const colorTones: Record<string, ColorTone> = {
-  // Primary (açık mavi)
-  navy: {
-    50:  '#E6F8FD',
-    100: '#D2F1FA',
-    200: '#A6E3F5',
-    300: '#7BD5F0',
-    400: '#4FC7EA',
-    500: '#0099CB', // primary
-    600: '#0087B3',
-    700: '#006F94',
-    800: '#005A78',
-    900: '#00465E',
-    950: '#003649',
-  },
-  yellow: {
-    50: '#FFFBEB', 100: '#FEF3C7', 200: '#FDE68A', 300: '#FCD34D', 400: '#FBBF24',
-    500: '#F9C800', 600: '#D69E00', 700: '#B37500', 800: '#92600F', 900: '#78350F', 950: '#451A03',
-  },
-  success: {
-    50: '#F0FDF4', 100: '#DCFCE7', 200: '#BBF7D0', 300: '#86EFAC', 400: '#4ADE80',
-    500: '#16A34A', 600: '#15803D', 700: '#166534', 800: '#14532D', 900: '#14532D', 950: '#052E16',
-  },
-  warning: {
-    50: '#FFFBEB', 100: '#FEF3C7', 200: '#FDE68A', 300: '#FCD34D', 400: '#FBBF24',
-    500: '#D97706', 600: '#C2410C', 700: '#9A3412', 800: '#7C2D12', 900: '#7C2D12', 950: '#431407',
-  },
-  error: {
-    50: '#FEF2F2', 100: '#FEE2E2', 200: '#FECACA', 300: '#FCA5A5', 400: '#F87171',
-    500: '#DC2626', 600: '#B91C1C', 700: '#991B1B', 800: '#7F1D1D', 900: '#7F1D1D', 950: '#450A0A',
-  },
-  neutral: {
-    50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB', 400: '#9CA3AF',
-    500: '#6B7280', 600: '#4B5563', 700: '#374151', 800: '#1F2937', 900: '#111827', 950: '#030712',
-  },
+const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart }) => {
+  const typeLabel = customer.tariff === "İş Yeri" ? "B2B – Sabit Fiyat" : "B2C – Endeks";
+
+  return (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#002D72] dark:hover:border-[#F9C800] rounded-xl p-5 transition-all duration-200 hover:shadow-md">
+      <div className="flex flex-col sm:flex-row justify-between gap-4">
+        {/* SOL TARAF */}
+        <div className="flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{customer.name}</div>
+            <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber ?? "-"}</div>
+            <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber ?? "-"}</div>
+          </div>
+
+          <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
+            <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-2">
+            {/* Statü: KPI paletiyle birebir uyumlu */}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getStatusChipClasses(
+                customer.status
+              )}`}
+            >
+              {customer.status}
+            </span>
+
+            {/* Öncelik: Aynı paletten türetilmiş */}
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPriorityChipClasses(
+                customer.priority
+              )}`}
+            >
+              {customer.priority} Öncelik
+            </span>
+
+            {/* Tür etiketi: kurumsal navy tonu */}
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#002D72]/10 text-[#002D72] ring-1 ring-[#002D72]/20">
+              {typeLabel}
+            </span>
+
+            {assignedName && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600">
+                <UserCheck className="w-3 h-3 mr-1" /> {assignedName}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* SAĞ TARAF */}
+        <div className="text-right space-y-2 flex flex-col items-end justify-between">
+          <div>
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex gap-2">
+              <span>{formatDate(customer.visitDate)}</span>
+              <span>{customer.plannedTime}</span>
+            </div>
+            <div className="text-xs text-gray-500">{customer.distance}</div>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onDetail}
+              leftIcon={<Eye className="w-4 h-4" />}
+            >
+              Detay
+            </Button>
+
+            {customer.status === "Bekliyor" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onStart}
+                leftIcon={<Play className="w-4 h-4" />}
+              >
+                Başlat
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
-/* ====================== BUTON VARYANTLARI ====================== */
-export type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'outline' | 'soft' | 'ghost';
-export type ButtonSize = 'sm' | 'md' | 'lg';
-
-export const buttonStyles = {
-  base: 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed',
-  
-  sizes: {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-6 py-3 text-base',
-  },
-  
-  variants: {
-    /** Primary artık açık mavi; hover’da navyDark */
-    primary: `bg-[${BRAND_COLORS.navy}] text-white hover:bg-[${BRAND_COLORS.navyDark}] focus:ring-[${BRAND_COLORS.navy}]`,
-    secondary: `bg-[${BRAND_COLORS.yellow}] text-[#111827] hover:bg-[#D69E00] focus:ring-[${BRAND_COLORS.yellow}]`,
-    danger: `bg-[${BRAND_COLORS.error}] text-white hover:bg-[#B91C1C] focus:ring-[${BRAND_COLORS.error}]`,
-    outline: `bg-transparent border border-[${BRAND_COLORS.navy}] text-[${BRAND_COLORS.navy}] hover:bg-[${colorTones.navy[50]}] focus:ring-[${BRAND_COLORS.navy}]`,
-    soft: `bg-[${colorTones.navy[50]}] text-[${BRAND_COLORS.navy}] hover:bg-[${colorTones.navy[100]}] focus:ring-[${BRAND_COLORS.navy}]`,
-    ghost: `bg-transparent text-[${BRAND_COLORS.neutral}] hover:bg-[${colorTones.neutral[100]}] focus:ring-[${BRAND_COLORS.neutral}]`,
-  },
-} as const;
-
-/* ====================== CHIP VARYANTLARI ====================== */
-export type ChipVariant = 'solid' | 'soft' | 'outline';
-export type ChipColor = 'navy' | 'yellow' | 'success' | 'warning' | 'error' | 'neutral';
-
-export const chipStyles = {
-  base: 'inline-flex items-center gap-1.5 rounded-full text-xs font-medium whitespace-nowrap px-2 py-1',
-  
-  variants: {
-    solid: {
-      navy:    `bg-[${BRAND_COLORS.navy}] text-white`,
-      yellow:  `bg-[${BRAND_COLORS.yellow}] text-[#111827]`,
-      success: `bg-[${BRAND_COLORS.success}] text-white`,
-      warning: `bg-[${BRAND_COLORS.warning}] text-white`,
-      error:   `bg-[${BRAND_COLORS.error}] text-white`,
-      neutral: `bg-[${BRAND_COLORS.neutral}] text-white`,
-    },
-    soft: {
-      navy:    `bg-[${colorTones.navy[50]}] text-[${BRAND_COLORS.navy}] border border-[${colorTones.navy[100]}]`,
-      yellow:  `bg-[${colorTones.yellow[50]}] text-[${BRAND_COLORS.warning}] border border-[${colorTones.yellow[100]}]`,
-      success: `bg-[${colorTones.success[50]}] text-[${BRAND_COLORS.success}] border border-[${colorTones.success[100]}]`,
-      warning: `bg-[${colorTones.warning[50]}] text-[${BRAND_COLORS.warning}] border border-[${colorTones.warning[100]}]`,
-      error:   `bg-[${colorTones.error[50]}] text-[${BRAND_COLORS.error}] border border-[${colorTones.error[100]}]`,
-      neutral: `bg-[${colorTones.neutral[50]}] text-[${BRAND_COLORS.neutral}] border border-[${colorTones.neutral[200]}]`,
-    },
-    outline: {
-      navy:    `bg-transparent text-[${BRAND_COLORS.navy}] border border-[${BRAND_COLORS.navy}]`,
-      yellow:  `bg-transparent text-[${BRAND_COLORS.warning}] border border-[${BRAND_COLORS.yellow}]`,
-      success: `bg-transparent text-[${BRAND_COLORS.success}] border border-[${BRAND_COLORS.success}]`,
-      warning: `bg-transparent text-[${BRAND_COLORS.warning}] border border-[${BRAND_COLORS.warning}]`,
-      error:   `bg-transparent text-[${BRAND_COLORS.error}] border border-[${BRAND_COLORS.error}]`,
-      neutral: `bg-transparent text-[${BRAND_COLORS.neutral}] border border-[${BRAND_COLORS.neutral}]`,
-    },
-  },
-} as const;
-
-/* ====================== DURUM RENK EŞLEMELERİ ====================== */
-/** Devam/Yolda gibi durumlar artık açık mavi (navy) ile eşleniyor. */
-export const statusColorMap = {
-  // Visit Status
-  'Planlandı':  'warning',
-  'Bekliyor':   'warning', 
-  'Yolda':      'navy',
-  'Devam':      'navy',
-  'Tamamlandı': 'success',
-  'İptal':      'error',
-  
-  // Priority
-  'Yüksek': 'error',
-  'Orta':   'warning',
-  'Düşük':  'success',
-  
-  // Filter labels
-  'Tümü':     'neutral',
-  'Bugün':    'navy',
-  'Yarın':    'warning',
-  'Bu Hafta': 'neutral',
-} as const;
-
-export const statusStyles = statusColorMap;
-
-/* ====================== YARDIMCI FONKSİYONLAR ====================== */
-export function getStatusColor(status: string): ChipColor {
-  return (statusColorMap as any)[status] || 'neutral';
-}
-
-export function getPriorityColor(priority: string): ChipColor {
-  return (statusColorMap as any)[priority] || 'neutral';
-}
-
-/** Chip/Button gibi bileşenlerde güvenli renk okuma (DEFAULT zorunlu). */
-export function getShade(color?: string): { DEFAULT: string; fg?: string; soft?: string; ring?: string } {
-  const colorKey = color as keyof typeof BRAND_COLORS;
-  if (colorKey && BRAND_COLORS[colorKey]) {
-    const baseColor = BRAND_COLORS[colorKey];
-    const tones = colorTones[colorKey as keyof typeof colorTones];
-    return {
-      DEFAULT: baseColor,
-      fg:  colorKey === 'yellow' ? '#111827' : '#ffffff',
-      soft: tones ? tones[100] : '#F3F4F6',
-      ring: tones ? tones[200] : '#E5E7EB',
-    };
-  }
-  // Fallback → neutral
-  return { DEFAULT: BRAND_COLORS.neutral, fg: '#ffffff', soft: '#F3F4F6', ring: '#E5E7EB' };
-}
-
-/* ====================== DARK MODE DESTEĞİ ====================== */
-export const darkModeClasses = {
-  background: 'dark:bg-gray-900',
-  surface:    'dark:bg-gray-800',
-  border:     'dark:border-gray-700',
-  text: {
-    primary:   'dark:text-gray-100',
-    secondary: 'dark:text-gray-300',
-    muted:     'dark:text-gray-400',
-  },
-} as const;
-
-/* ====================== KPI KART RENKLERİ ====================== */
-export const kpiCardColors = {
-  target:     { border: 'border-l-blue-500',    icon: 'text-blue-500',    bg: 'bg-blue-500' },
-  completed:  { border: 'border-l-emerald-500', icon: 'text-emerald-500', bg: 'bg-emerald-500' },
-  pending:    { border: 'border-l-amber-500',   icon: 'text-amber-500',   bg: 'bg-amber-500' },
-  performance:{ border: 'border-l-violet-500',  icon: 'text-violet-500',  bg: 'bg-violet-500' },
-} as const;
+export default VisitCard;
