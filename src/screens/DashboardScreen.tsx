@@ -93,7 +93,29 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
   const today = new Date().toISOString().split('T')[0];
   const time = new Date();
 
+  // --- Zaman ve Tarih Mantığı ---
+  const hour = time.getHours();
+  const day = time.getDay(); // 0: Pazar, 6: Cumartesi
+  const isWeekend = day === 0 || day === 6;
+  const isWorkingHours = hour >= 9 && hour < 18;
+
   const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
+  // YENİ: Yarının ziyaretlerini hesapla
+  const tomorrowsVisits = useMemo(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowDateString = tomorrow.toISOString().split('T')[0];
+    return customers.filter(c => c.visitDate === tomorrowDateString);
+  }, [customers]);
+
+  // GÜNCELLENDİ: Hangi programın gösterileceğine ve başlığına karar ver
+  const isShowingTomorrow = !isWeekend && !isWorkingHours;
+  const visitsToShow = isShowingTomorrow ? tomorrowsVisits : todaysVisits;
+  const programTitle = isShowingTomorrow ? "Yarınki Program" : "Bugünkü Program";
+  const noVisitMessage = isShowingTomorrow
+    ? "Yarın için planlanmış ziyaret yok."
+    : "Bugün için planlanmış ziyaret yok.";
+
   const completedVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Tamamlandı'), [todaysVisits]);
   const pendingVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Planlandı'), [todaysVisits]);
   const dailyTarget = 20;
@@ -105,7 +127,6 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     return { target: weeklyTarget, completed: weeklyCompleted, rate: rate };
   }, [completedVisits.length, dailyTarget]);
 
-  // YENİ: Genişletilmiş ve rastgele seçilen mesajlar
   const headerMessage = useMemo(() => {
     const getRandom = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -138,14 +159,9 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
     };
     const weekend = [ "Bugün dinlenme günü. Haftanın yorgunluğunu at, iyi hafta sonları! 🏖️", "Hafta sonunun tadını çıkar, enerji toplama zamanı! ☀️", "İyi tatiller! Pazartesi görüşmek üzere. 👋" ];
 
-    const hour = time.getHours();
-    const day = time.getDay(); // 0: Pazar, 6: Cumartesi
-
-    if (day === 0 || day === 6) {
+    if (isWeekend) {
         return `Merhaba Ahmet! ${getRandom(weekend)}`;
     }
-
-    const isWorkingHours = hour >= 9 && hour < 18;
 
     if (isWorkingHours) {
         let greeting = "";
@@ -174,7 +190,7 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
         }
         return `İyi geceler, Ahmet! ${getRandom(outOfHours.eveningRest)}`;
     }
-}, [time, todaysVisits.length, completionRate]);
+}, [time, todaysVisits.length, completionRate, isWorkingHours, isWeekend, hour]);
 
 
   return (
@@ -212,17 +228,17 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-4">
           <Calendar className="w-5 h-5" style={{ color: BRAND_COLORS.navy }} />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Bugünkü Program</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{programTitle}</h2>
         </div>
         
-        {todaysVisits.length === 0 ? (
+        {visitsToShow.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>Bugün için planlanmış ziyaret yok.</p>
+            <p>{noVisitMessage}</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {todaysVisits.slice(0, 5).map((customer) => (
+            {visitsToShow.slice(0, 5).map((customer) => (
               <VisitCard
                 key={customer.id}
                 customer={customer}
@@ -232,10 +248,10 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
                 primaryAction={customer.status === 'Planlandı' ? 'start' : 'detail'}
               />
             ))}
-            {todaysVisits.length > 5 && (
+            {visitsToShow.length > 5 && (
               <div className="text-center pt-4">
                 <Button variant="soft" onClick={() => setCurrentScreen('visits')}>
-                  Tüm Ziyaretleri Gör (+{todaysVisits.length - 5})
+                  Tüm Ziyaretleri Gör (+{visitsToShow.length - 5})
                 </Button>
               </div>
             )}
@@ -247,3 +263,4 @@ const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, set
 };
 
 export default DashboardScreen;
+
