@@ -1,118 +1,68 @@
 // src/styles/theme.ts
 
 /* ====================== MARKA PALETİ ====================== */
+/** Not: Primary renk artık açık mavi (#0099CB). Hover/gradient için navyDark (#007CA8) eklendi. */
 export const BRAND_COLORS = {
-  // Enerjisa Marka Renkleri
-  navy: '#002D72',
+  // Primary (Açık Mavi)
+  navy: '#0099CB',      // eski #002D72 yerine
+  navyDark: '#007CA8',  // hover/gradient için yardımcı ton
   yellow: '#F9C800',
   
   // Sistem Renkleri
   success: '#16A34A',
-  warning: '#D97706', 
-  error: '#DC2626',
+  warning: '#D97706',
+  error:   '#DC2626',
   neutral: '#6B7280',
   
-  // Ek Renkler
-  blue: '#2563EB',
+  // Ek Renkler (sabit)
+  blue:  '#2563EB',
   green: '#16A34A',
-  red: '#DC2626',
+  red:   '#DC2626',
   amber: '#D97706',
-  gray: '#6B7280',
+  gray:  '#6B7280',
 } as const;
 
 /* ====================== RENK TONLARI ====================== */
+/** Açık mavi için tonlar: soft arka planlar ve ring (border) renkleri bu tablodan okunur. */
 export type ColorTone = {
-  50: string;
-  100: string;
-  200: string;
-  300: string;
-  400: string;
-  500: string;
-  600: string;
-  700: string;
-  800: string;
-  900: string;
-  950: string;
+  50: string; 100: string; 200: string; 300: string; 400: string;
+  500: string; 600: string; 700: string; 800: string; 900: string; 950: string;
 };
 
 export const colorTones: Record<string, ColorTone> = {
+  // Primary (açık mavi)
   navy: {
-    50: '#EBF2FF',
-    100: '#DBEAFE',
-    200: '#BFDBFE',
-    300: '#93C5FD',
-    400: '#60A5FA',
-    500: '#002D72',
-    600: '#002461',
-    700: '#001B50',
-    800: '#00123F',
-    900: '#000A2E',
-    950: '#00051D',
+    50:  '#E6F8FD',
+    100: '#D2F1FA',
+    200: '#A6E3F5',
+    300: '#7BD5F0',
+    400: '#4FC7EA',
+    500: '#0099CB', // primary
+    600: '#0087B3',
+    700: '#006F94',
+    800: '#005A78',
+    900: '#00465E',
+    950: '#003649',
   },
   yellow: {
-    50: '#FFFBEB',
-    100: '#FEF3C7',
-    200: '#FDE68A',
-    300: '#FCD34D',
-    400: '#FBBF24',
-    500: '#F9C800',
-    600: '#D69E00',
-    700: '#B37500',
-    800: '#92600F',
-    900: '#78350F',
-    950: '#451A03',
+    50: '#FFFBEB', 100: '#FEF3C7', 200: '#FDE68A', 300: '#FCD34D', 400: '#FBBF24',
+    500: '#F9C800', 600: '#D69E00', 700: '#B37500', 800: '#92600F', 900: '#78350F', 950: '#451A03',
   },
   success: {
-    50: '#F0FDF4',
-    100: '#DCFCE7',
-    200: '#BBF7D0',
-    300: '#86EFAC',
-    400: '#4ADE80',
-    500: '#16A34A',
-    600: '#15803D',
-    700: '#166534',
-    800: '#14532D',
-    900: '#14532D',
-    950: '#052E16',
+    50: '#F0FDF4', 100: '#DCFCE7', 200: '#BBF7D0', 300: '#86EFAC', 400: '#4ADE80',
+    500: '#16A34A', 600: '#15803D', 700: '#166534', 800: '#14532D', 900: '#14532D', 950: '#052E16',
   },
   warning: {
-    50: '#FFFBEB',
-    100: '#FEF3C7',
-    200: '#FDE68A',
-    300: '#FCD34D',
-    400: '#FBBF24',
-    500: '#D97706',
-    600: '#C2410C',
-    700: '#9A3412',
-    800: '#7C2D12',
-    900: '#7C2D12',
-    950: '#431407',
+    50: '#FFFBEB', 100: '#FEF3C7', 200: '#FDE68A', 300: '#FCD34D', 400: '#FBBF24',
+    500: '#D97706', 600: '#C2410C', 700: '#9A3412', 800: '#7C2D12', 900: '#7C2D12', 950: '#431407',
   },
   error: {
-    50: '#FEF2F2',
-    100: '#FEE2E2',
-    200: '#FECACA',
-    300: '#FCA5A5',
-    400: '#F87171',
-    500: '#DC2626',
-    600: '#B91C1C',
-    700: '#991B1B',
-    800: '#7F1D1D',
-    900: '#7F1D1D',
-    950: '#450A0A',
+    50: '#FEF2F2', 100: '#FEE2E2', 200: '#FECACA', 300: '#FCA5A5', 400: '#F87171',
+    500: '#DC2626', 600: '#B91C1C', 700: '#991B1B', 800: '#7F1D1D', 900: '#7F1D1D', 950: '#450A0A',
   },
   neutral: {
-    50: '#F9FAFB',
-    100: '#F3F4F6',
-    200: '#E5E7EB',
-    300: '#D1D5DB',
-    400: '#9CA3AF',
-    500: '#6B7280',
-    600: '#4B5563',
-    700: '#374151',
-    800: '#1F2937',
-    900: '#111827',
-    950: '#030712',
+    50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB', 400: '#9CA3AF',
+    500: '#6B7280', 600: '#4B5563', 700: '#374151', 800: '#1F2937', 900: '#111827', 950: '#030712',
   },
 };
 
@@ -130,12 +80,13 @@ export const buttonStyles = {
   },
   
   variants: {
-    primary: `bg-[${BRAND_COLORS.navy}] text-white hover:bg-[#001B50] focus:ring-[${BRAND_COLORS.navy}]`,
-    secondary: `bg-[${BRAND_COLORS.yellow}] text-[${BRAND_COLORS.navy}] hover:bg-[#D69E00] focus:ring-[${BRAND_COLORS.yellow}]`,
+    /** Primary artık açık mavi; hover’da navyDark */
+    primary: `bg-[${BRAND_COLORS.navy}] text-white hover:bg-[${BRAND_COLORS.navyDark}] focus:ring-[${BRAND_COLORS.navy}]`,
+    secondary: `bg-[${BRAND_COLORS.yellow}] text-[#111827] hover:bg-[#D69E00] focus:ring-[${BRAND_COLORS.yellow}]`,
     danger: `bg-[${BRAND_COLORS.error}] text-white hover:bg-[#B91C1C] focus:ring-[${BRAND_COLORS.error}]`,
-    outline: `bg-transparent border border-[${BRAND_COLORS.navy}] text-[${BRAND_COLORS.navy}] hover:bg-[${BRAND_COLORS.navy}] hover:text-white focus:ring-[${BRAND_COLORS.navy}]`,
-    soft: `bg-[#EBF2FF] text-[${BRAND_COLORS.navy}] hover:bg-[#DBEAFE] focus:ring-[${BRAND_COLORS.navy}]`,
-    ghost: `bg-transparent text-[${BRAND_COLORS.neutral}] hover:bg-[#F3F4F6] focus:ring-[${BRAND_COLORS.neutral}]`,
+    outline: `bg-transparent border border-[${BRAND_COLORS.navy}] text-[${BRAND_COLORS.navy}] hover:bg-[${colorTones.navy[50]}] focus:ring-[${BRAND_COLORS.navy}]`,
+    soft: `bg-[${colorTones.navy[50]}] text-[${BRAND_COLORS.navy}] hover:bg-[${colorTones.navy[100]}] focus:ring-[${BRAND_COLORS.navy}]`,
+    ghost: `bg-transparent text-[${BRAND_COLORS.neutral}] hover:bg-[${colorTones.neutral[100]}] focus:ring-[${BRAND_COLORS.neutral}]`,
   },
 } as const;
 
@@ -148,51 +99,52 @@ export const chipStyles = {
   
   variants: {
     solid: {
-      navy: `bg-[${BRAND_COLORS.navy}] text-white`,
-      yellow: `bg-[${BRAND_COLORS.yellow}] text-[${BRAND_COLORS.navy}]`,
+      navy:    `bg-[${BRAND_COLORS.navy}] text-white`,
+      yellow:  `bg-[${BRAND_COLORS.yellow}] text-[#111827]`,
       success: `bg-[${BRAND_COLORS.success}] text-white`,
       warning: `bg-[${BRAND_COLORS.warning}] text-white`,
-      error: `bg-[${BRAND_COLORS.error}] text-white`,
+      error:   `bg-[${BRAND_COLORS.error}] text-white`,
       neutral: `bg-[${BRAND_COLORS.neutral}] text-white`,
     },
     soft: {
-      navy: `bg-[#EBF2FF] text-[${BRAND_COLORS.navy}] border border-[#DBEAFE]`,
-      yellow: `bg-[#FFFBEB] text-[${BRAND_COLORS.warning}] border border-[#FEF3C7]`,
-      success: `bg-[#F0FDF4] text-[${BRAND_COLORS.success}] border border-[#DCFCE7]`,
-      warning: `bg-[#FFFBEB] text-[${BRAND_COLORS.warning}] border border-[#FEF3C7]`,
-      error: `bg-[#FEF2F2] text-[${BRAND_COLORS.error}] border border-[#FEE2E2]`,
-      neutral: `bg-[#F9FAFB] text-[${BRAND_COLORS.neutral}] border border-[#E5E7EB]`,
+      navy:    `bg-[${colorTones.navy[50]}] text-[${BRAND_COLORS.navy}] border border-[${colorTones.navy[100]}]`,
+      yellow:  `bg-[${colorTones.yellow[50]}] text-[${BRAND_COLORS.warning}] border border-[${colorTones.yellow[100]}]`,
+      success: `bg-[${colorTones.success[50]}] text-[${BRAND_COLORS.success}] border border-[${colorTones.success[100]}]`,
+      warning: `bg-[${colorTones.warning[50]}] text-[${BRAND_COLORS.warning}] border border-[${colorTones.warning[100]}]`,
+      error:   `bg-[${colorTones.error[50]}] text-[${BRAND_COLORS.error}] border border-[${colorTones.error[100]}]`,
+      neutral: `bg-[${colorTones.neutral[50]}] text-[${BRAND_COLORS.neutral}] border border-[${colorTones.neutral[200]}]`,
     },
     outline: {
-      navy: `bg-transparent text-[${BRAND_COLORS.navy}] border border-[${BRAND_COLORS.navy}]`,
-      yellow: `bg-transparent text-[${BRAND_COLORS.warning}] border border-[${BRAND_COLORS.yellow}]`,
+      navy:    `bg-transparent text-[${BRAND_COLORS.navy}] border border-[${BRAND_COLORS.navy}]`,
+      yellow:  `bg-transparent text-[${BRAND_COLORS.warning}] border border-[${BRAND_COLORS.yellow}]`,
       success: `bg-transparent text-[${BRAND_COLORS.success}] border border-[${BRAND_COLORS.success}]`,
       warning: `bg-transparent text-[${BRAND_COLORS.warning}] border border-[${BRAND_COLORS.warning}]`,
-      error: `bg-transparent text-[${BRAND_COLORS.error}] border border-[${BRAND_COLORS.error}]`,
+      error:   `bg-transparent text-[${BRAND_COLORS.error}] border border-[${BRAND_COLORS.error}]`,
       neutral: `bg-transparent text-[${BRAND_COLORS.neutral}] border border-[${BRAND_COLORS.neutral}]`,
     },
   },
 } as const;
 
-/* ====================== DURUM RENK EŞLEMELERI ====================== */
+/* ====================== DURUM RENK EŞLEMELERİ ====================== */
+/** Devam/Yolda gibi durumlar artık açık mavi (navy) ile eşleniyor. */
 export const statusColorMap = {
   // Visit Status
-  'Planlandı': 'warning',
-  'Bekliyor': 'warning', 
-  'Yolda': 'navy',
-  'Devam': 'navy',
+  'Planlandı':  'warning',
+  'Bekliyor':   'warning', 
+  'Yolda':      'navy',
+  'Devam':      'navy',
   'Tamamlandı': 'success',
-  'İptal': 'error',
+  'İptal':      'error',
   
   // Priority
   'Yüksek': 'error',
-  'Orta': 'warning',
-  'Düşük': 'success',
+  'Orta':   'warning',
+  'Düşük':  'success',
   
   // Filter labels
-  'Tümü': 'neutral',
-  'Bugün': 'navy',
-  'Yarın': 'warning',
+  'Tümü':     'neutral',
+  'Bugün':    'navy',
+  'Yarın':    'warning',
   'Bu Hafta': 'neutral',
 } as const;
 
@@ -207,45 +159,39 @@ export function getPriorityColor(priority: string): ChipColor {
   return (statusColorMap as any)[priority] || 'neutral';
 }
 
+/** Chip/Button gibi bileşenlerde güvenli renk okuma (DEFAULT zorunlu). */
 export function getShade(color?: string): { DEFAULT: string; fg?: string; soft?: string; ring?: string } {
   const colorKey = color as keyof typeof BRAND_COLORS;
   if (colorKey && BRAND_COLORS[colorKey]) {
     const baseColor = BRAND_COLORS[colorKey];
-    const tones = colorTones[colorKey];
-    
+    const tones = colorTones[colorKey as keyof typeof colorTones];
     return {
       DEFAULT: baseColor,
-      fg: colorKey === 'yellow' ? BRAND_COLORS.navy : '#ffffff',
+      fg:  colorKey === 'yellow' ? '#111827' : '#ffffff',
       soft: tones ? tones[100] : '#F3F4F6',
       ring: tones ? tones[200] : '#E5E7EB',
     };
   }
-  
-  // Fallback to neutral
-  return {
-    DEFAULT: BRAND_COLORS.neutral,
-    fg: '#ffffff',
-    soft: '#F3F4F6',
-    ring: '#E5E7EB',
-  };
+  // Fallback → neutral
+  return { DEFAULT: BRAND_COLORS.neutral, fg: '#ffffff', soft: '#F3F4F6', ring: '#E5E7EB' };
 }
 
-/* ====================== DARK MODE DESTEĞI ====================== */
+/* ====================== DARK MODE DESTEĞİ ====================== */
 export const darkModeClasses = {
   background: 'dark:bg-gray-900',
-  surface: 'dark:bg-gray-800',
-  border: 'dark:border-gray-700',
+  surface:    'dark:bg-gray-800',
+  border:     'dark:border-gray-700',
   text: {
-    primary: 'dark:text-gray-100',
+    primary:   'dark:text-gray-100',
     secondary: 'dark:text-gray-300',
-    muted: 'dark:text-gray-400',
+    muted:     'dark:text-gray-400',
   },
 } as const;
 
-/* ====================== KPI KART RENKLERI ====================== */
+/* ====================== KPI KART RENKLERİ ====================== */
 export const kpiCardColors = {
-  target: { border: 'border-l-blue-500', icon: 'text-blue-500', bg: 'bg-blue-500' },
-  completed: { border: 'border-l-emerald-500', icon: 'text-emerald-500', bg: 'bg-emerald-500' },
-  pending: { border: 'border-l-amber-500', icon: 'text-amber-500', bg: 'bg-amber-500' },
-  performance: { border: 'border-l-violet-500', icon: 'text-violet-500', bg: 'bg-violet-500' },
+  target:     { border: 'border-l-blue-500',    icon: 'text-blue-500',    bg: 'bg-blue-500' },
+  completed:  { border: 'border-l-emerald-500', icon: 'text-emerald-500', bg: 'bg-emerald-500' },
+  pending:    { border: 'border-l-amber-500',   icon: 'text-amber-500',   bg: 'bg-amber-500' },
+  performance:{ border: 'border-l-violet-500',  icon: 'text-violet-500',  bg: 'bg-violet-500' },
 } as const;
