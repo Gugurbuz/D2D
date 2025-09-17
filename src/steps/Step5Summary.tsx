@@ -1,93 +1,94 @@
 // src/steps/Step5Summary.tsx
 import React from "react";
-import { CalendarPlus, Save } from "lucide-react";
-import type { PodResult } from "./Step2PodCheck";
-import type { Step3Data } from "./Step3Customer";
-import type { Step4Data } from "./Step4Competitor";
-
-export type SummaryInput = {
-  fromStep1?: { customerName?: string; address?: string; tariff?: string; annual?: string };
-  step2: PodResult;
-  step3: Step3Data;
-  step4: Step4Data;
-};
+import { Step4Data } from "./Step4Competitor";
+import { Step3Data } from "./Step3Customer";
+import { PodResult } from "./Step2PodCheck";
 
 export default function Step5Summary({
   data,
   onBack,
   onSave,
-  onSaveAndPlan
+  onSaveAndPlan,
 }: {
-  data: SummaryInput;
+  data: {
+    fromStep1: { customerName?: string; address?: string; tariff?: string; annual?: string } | null;
+    step2: PodResult;
+    step3: Step3Data;
+    step4?: Step4Data;
+  };
   onBack: () => void;
   onSave: () => Promise<void> | void;
   onSaveAndPlan: () => Promise<void> | void;
 }) {
+  const { fromStep1, step2, step3, step4 } = data;
+
   return (
-    <div className="p-4 space-y-4">
-      <h3 className="text-lg font-semibold">Özet</h3>
+    <div className="bg-white rounded-2xl border shadow-sm p-4">
+      <h2 className="text-lg font-semibold mb-4">Adım 5 — Özet</h2>
 
-      <div className="grid md:grid-cols-2 gap-3 text-sm">
-        <Card title="Temel Bilgiler">
-          <Row k="Müşteri Adı" v={data.fromStep1?.customerName}/>
-          <Row k="Adres" v={data.fromStep1?.address}/>
-          <Row k="Tarife" v={data.fromStep1?.tariff}/>
-          <Row k="Yıllık Tüketim" v={data.fromStep1?.annual}/>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold text-gray-700 mb-1">Müşteri (Adım 1)</div>
+          <ul className="space-y-1">
+            <li>Adı: <b>{fromStep1?.customerName || "-"}</b></li>
+            <li>Adres: <span>{fromStep1?.address || "-"}</span></li>
+            <li>Tarife: <b>{fromStep1?.tariff || "-"}</b></li>
+            <li>Yıllık Tük.: <b>{fromStep1?.annual || "-"}</b></li>
+          </ul>
+        </div>
 
-        <Card title="POD Sorgu">
-          <Row k="POD" v={data.step2.pod}/>
-          <Row k="Bulundu" v={data.step2.found ? "Evet" : "Hayır"}/>
-          <Row k="Müşteri Tipi" v={data.step2.customerType}/>
-        </Card>
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold text-gray-700 mb-1">POD (Adım 2)</div>
+          <ul className="space-y-1">
+            <li>POD: <b>{step2.pod}</b></li>
+            <li>Bulundu: <b>{step2.found ? "Evet" : "Hayır"}</b></li>
+            <li>Müşteri Tipi: <b>{step2.customerType}</b></li>
+          </ul>
+        </div>
 
-        {data.step3.type === "Kurumsal" ? (
-          <Card title="Yetkili">
-            <Row k="Ad Soyad" v={`${data.step3.authorized.name} ${data.step3.authorized.surname}`}/>
-            <Row k="Telefon" v={data.step3.authorized.phone}/>
-            <Row k="E-posta" v={data.step3.authorized.email}/>
-          </Card>
-        ) : (
-          <Card title="Bireysel İzinler">
-            <Row k="KVKK" v={data.step3.consents.kvkk ? "Onaylı" : "Onaysız"}/>
-            <Row k="Pazarlama" v={data.step3.consents.marketing ? "Onaylı" : "Onaysız"}/>
-            <Row k="Telefon" v={data.step3.phone}/>
-            <Row k="SMS" v={data.step3.smsVerified ? "Doğrulandı" : "Bekliyor"}/>
-          </Card>
-        )}
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold text-gray-700 mb-1">Müşteri Detayları (Adım 3)</div>
+          {step3.customerType === "Kurumsal" ? (
+            <ul className="space-y-1">
+              <li>Yetkili: <b>{step3.contactName || "-"}</b></li>
+              <li>Telefon: <span>{step3.contactPhone || "-"}</span></li>
+              <li>E-posta: <span>{step3.contactEmail || "-"}</span></li>
+            </ul>
+          ) : (
+            <ul className="space-y-1">
+              <li>KVKK: <b>{step3.kvkkOk ? "Onaylı" : "Onaysız"}</b></li>
+              <li>Pazarlama: <b>{step3.marketingOk ? "İzinli" : "Yok"}</b></li>
+              <li>SMS Kod: <span>{step3.smsCode || "-"}</span></li>
+            </ul>
+          )}
+        </div>
 
-        <Card title="Rakip/Tedarik">
-          <Row k="Rakip Şirket" v={data.step4.supplier}/>
-          <Row k="Aylık Ortalama ₺" v={data.step4.avgBillTRY?.toString()}/>
-          <Row k="Rakip Fiyat/Oran" v={data.step4.rivalRate}/>
-          <Row k="Taahhüt" v={data.step4.commitment}/>
-          <Row k="Teminat" v={data.step4.collateral}/>
-          <Row k="Sözleşme Bitiş" v={data.step4.contractEnd}/>
-        </Card>
+        <div className="border rounded-lg p-3">
+          <div className="font-semibold text-gray-700 mb-1">Rakip (Adım 4)</div>
+          <ul className="space-y-1">
+            <li>Şirket: <b>{step4?.rivalCompany || "-"}</b></li>
+            <li>Ort. Fatura: <span>{step4?.avgBill || "-"}</span></li>
+            <li>Sözleşme Bitiş: <span>{step4?.contractEnd || "-"}</span></li>
+            <li>Fiyat/Oran: <span>{step4?.rivalRate || "-"}</span></li>
+            <li>Taahhüt: <b>{step4?.commitment || "-"}</b></li>
+            <li>Teminat: <b>{step4?.deposit || "-"}</b></li>
+          </ul>
+        </div>
       </div>
 
-      <div className="flex gap-2 pt-2 justify-end">
-        <button onClick={onBack} className="px-4 py-2 rounded-lg border">Geri</button>
-        <button onClick={()=>onSave()} className="px-4 py-2 rounded-lg bg-blue-600 text-white inline-flex items-center gap-2">
-          <Save className="w-4 h-4"/> Kaydet
+      <div className="flex flex-col sm:flex-row gap-2 justify-between mt-4">
+        <button onClick={onBack} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+          Geri
         </button>
-        <button onClick={()=>onSaveAndPlan()} className="px-4 py-2 rounded-lg bg-emerald-600 text-white inline-flex items-center gap-2">
-          <CalendarPlus className="w-4 h-4"/> Kaydet ve Ziyaret Planla
-        </button>
+        <div className="flex gap-2">
+          <button onClick={onSave} className="px-5 py-2 rounded-lg bg-blue-600 text-white">
+            Kaydet
+          </button>
+          <button onClick={onSaveAndPlan} className="px-5 py-2 rounded-lg bg-emerald-600 text-white">
+            Kaydet ve Ziyaret Planla
+          </button>
+        </div>
       </div>
     </div>
   );
-}
-
-function Card({title, children}:{title:string; children:React.ReactNode}) {
-  return (
-    <div className="border rounded-xl p-3">
-      <div className="font-semibold mb-2">{title}</div>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-function Row({k, v}:{k:string; v:any}) {
-  if (v === undefined || v === "" || v === null) return null;
-  return <div className="flex justify-between gap-3"><span className="text-gray-600">{k}</span><span className="font-medium">{String(v)}</span></div>;
 }
