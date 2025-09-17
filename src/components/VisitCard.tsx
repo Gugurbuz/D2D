@@ -1,9 +1,12 @@
-// src/components/VisitCard.tsx
 import React from "react";
 import { Eye, Play, MapPin, UserCheck } from "lucide-react";
 import type { Customer } from "../types";
 import Button from "./Button";
-import { getStatusChipClasses, getPriorityChipClasses } from "../styles/theme";
+import { 
+  getStatusChipClassesFromKPI, 
+  getPriorityChipClassesFromKPI, 
+  colorTones, BRAND_COLORS 
+} from "../styles/theme";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "-";
@@ -26,9 +29,9 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
   const typeLabel = customer.tariff === "İş Yeri" ? "B2B – Sabit Fiyat" : "B2C – Endeks";
 
   return (
-    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#002D72] dark:hover:border-[#F9C800] rounded-xl p-5 transition-all duration-200 hover:shadow-md">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[var(--brand-navy,#0099CB)] rounded-xl p-5 transition-all duration-200 hover:shadow-md">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        {/* SOL TARAF */}
+        {/* SOL */}
         <div className="flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{customer.name}</div>
@@ -41,26 +44,20 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
-            {/* Statü: KPI paletiyle birebir uyumlu */}
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getStatusChipClasses(
-                customer.status
-              )}`}
-            >
+            {/* Statü: KPI renkleri */}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getStatusChipClassesFromKPI(customer.status)}`}>
               {customer.status}
             </span>
 
-            {/* Öncelik: Aynı paletten türetilmiş */}
-            <span
-              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPriorityChipClasses(
-                customer.priority
-              )}`}
-            >
+            {/* Öncelik: KPI renkleri */}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs ${getPriorityChipClassesFromKPI(customer.priority)}`}>
               {customer.priority} Öncelik
             </span>
 
-            {/* Tür etiketi: kurumsal navy tonu */}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#002D72]/10 text-[#002D72] ring-1 ring-[#002D72]/20">
+            {/* Tür etiketi: markanın yeni primary'si (açık mavi) */}
+            <span 
+              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs 
+                          bg-[${colorTones.navy[50]}] text-[${BRAND_COLORS.navy}] ring-1 ring-[${colorTones.navy[200]}]`}>
               {typeLabel}
             </span>
 
@@ -72,7 +69,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
         </div>
 
-        {/* SAĞ TARAF */}
+        {/* SAĞ */}
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex gap-2">
@@ -83,22 +80,12 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
           </div>
 
           <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onDetail}
-              leftIcon={<Eye className="w-4 h-4" />}
-            >
+            <Button variant="primary" size="sm" onClick={onDetail} leftIcon={<Eye className="w-4 h-4" />}>
               Detay
             </Button>
 
             {customer.status === "Bekliyor" && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={onStart}
-                leftIcon={<Play className="w-4 h-4" />}
-              >
+              <Button variant="secondary" size="sm" onClick={onStart} leftIcon={<Play className="w-4 h-4" />}>
                 Başlat
               </Button>
             )}
