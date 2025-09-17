@@ -658,7 +658,7 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
             className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: BRAND_COLORS.navy }}
           >
-            Müzakere Sonucuna Git <ChevronRight className="w-4 h-4" />
+            Devam Et <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
