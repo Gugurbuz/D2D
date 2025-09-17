@@ -32,6 +32,33 @@ import {
 
 export default function InvoiceOcrPage(/* ...props */) {
   const navigate = useNavigate(); 
+   type FromStep1Payload = {
+    customerName?: string;
+    address?: string;
+    tariff?: string;
+    annual?: string;
+  };
+
+   function buildFromStep1(): FromStep1Payload {
+    return {
+      customerName: data.customer?.name,
+      address: data.customer?.address,
+      tariff: data.tariff,
+      annual: data.annualConsumption,
+    };
+  }
+
+  function goNextStep() {
+    const payload = buildFromStep1();
+    try {
+      localStorage.setItem("outOfRegion_fromStep1", JSON.stringify(payload)); // yedek
+    } catch {}
+    // ⬇️ TAM SAYFA RELOAD YOK
+    navigate("/out-of-region-wizard", { state: { fromStep1: payload } });
+  }
+
+  // footer’daki buton zaten goNextStep çağırıyor
+  // ...
 
 /* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
