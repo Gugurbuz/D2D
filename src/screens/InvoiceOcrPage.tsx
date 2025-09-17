@@ -1,7 +1,5 @@
 // src/screens/InvoiceOcrPage.tsx
 import React, { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom"; 
-import { FromStep1Payload } from "../types";
 import {
   Camera,
   Upload,
@@ -28,38 +26,8 @@ import {
   Banknote,
   Info,
   AlertTriangle,
-  ArrowRightCircle,
 } from "lucide-react";
-
-export default function InvoiceOcrPage(/* ...props */) {
-  const navigate = useNavigate(); 
-   type FromStep1Payload = {
-    customerName?: string;
-    address?: string;
-    tariff?: string;
-    annual?: string;
-  };
-
-   function buildFromStep1(): FromStep1Payload {
-    return {
-      customerName: data.customer?.name,
-      address: data.customer?.address,
-      tariff: data.tariff,
-      annual: data.annualConsumption,
-    };
-  }
-
-  function goNextStep() {
-    const payload = buildFromStep1();
-    try {
-      localStorage.setItem("outOfRegion_fromStep1", JSON.stringify(payload)); // yedek
-    } catch {}
-    // ⬇️ TAM SAYFA RELOAD YOK
-    navigate("/out-of-region-wizard", { state: { fromStep1: payload } });
-  }
-
-  // footer’daki buton zaten goNextStep çağırıyor
-  // ...
+import { useNavigate } from "react-router-dom";
 
 /* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
@@ -242,13 +210,21 @@ const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode
     <div className="p-3">{children}</div>
   </div>
 );
-/* ====== Bileşen ====== */
-export default function InvoiceOcrPage({
-  /** İstersen parent buradan yakalayıp kendi router’ına yönlendirebilir. */
-  onContinue,
-}: {
-  onContinue?: (fromStep1: FromStep1Payload) => void;
-}) {
+
+/* ====== Adım-1'den taşınacak küçük payload tipi ====== */
+type FromStep1Payload = {
+  customerName?: string;
+  address?: string;
+  tariff?: string;
+  annual?: string;
+};
+
+/* ===================================================== */
+/* ==================== Bileşen ======================== */
+/* ===================================================== */
+export default function InvoiceOcrPage() {
+  const navigate = useNavigate();
+
   const [summary, setSummary] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
   const [allDetails, setAllDetails] = useState<AllDetails | null>(null);
@@ -270,7 +246,7 @@ export default function InvoiceOcrPage({
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
 
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // ✅ yeni modal
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -440,7 +416,6 @@ export default function InvoiceOcrPage({
     handleRemoveImage();
     setImagePreviewUrl(URL.createObjectURL(file));
 
-    const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
     if (!apiKey) {
       setError("Google Cloud API anahtarı eksik. Lütfen ortam değişkenlerini kontrol edin.");
       return;
@@ -642,7 +617,7 @@ export default function InvoiceOcrPage({
     (t) => (t?.label ?? t?.rate ?? t?.amount) && true
   );
 
-  /* ====== YENİ: Adım 2’ye taşıyacağımız özet ====== */
+  /* ===== Adım 2'ye geçiş ===== */
   function buildFromStep1(): FromStep1Payload {
     return {
       customerName: data.customer?.name,
@@ -652,22 +627,12 @@ export default function InvoiceOcrPage({
     };
   }
 
-  /* ====== YENİ: Devam Et (Adım 2) ====== */
   function goNextStep() {
     const payload = buildFromStep1();
-
-    // Önce prop ile parent’a teslim et
-    if (onContinue) {
-      onContinue(payload);
-      return;
-    }
-
-    // Fallback: localStorage + route
     try {
       localStorage.setItem("outOfRegion_fromStep1", JSON.stringify(payload));
     } catch {}
-    // Route belirtemiyorsan burada projenin rotasına göre değiştir
-    window.location.href = "/out-of-region-wizard";
+    navigate("/out-of-region-wizard", { state: { fromStep1: payload } });
   }
 
   return (
@@ -678,7 +643,7 @@ export default function InvoiceOcrPage({
         <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
           <h1 className="text-xl font-semibold tracking-wide text-gray-800">
-            Bölge Dışı Ziyaret — Adım 1: Fatura / Yükleme
+            Bölge Dışı Ziyaret
           </h1>
         </div>
       </header>
@@ -932,26 +897,21 @@ export default function InvoiceOcrPage({
                     />
                   </div>
                 </div>
-
-                {/* ❌ Eski <details> bloğu kaldırıldı */}
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* ====== YENİ: Adım 2’ye geçiş butonu ====== */}
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm border-t border-gray-200">
-        <div className="p-3 flex flex-col sm:flex-row gap-2 justify-end">
+        <div className="p-3 flex justify-end">
           <button
-            type="button"
             disabled={!hasAnyAIData || isLoading}
             onClick={goNextStep}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
-            title={!hasAnyAIData ? "Önce fatura yükle/okut" : "POD Doğrulamaya geç"}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
           >
-            <ArrowRightCircle className="w-5 h-5" />
-            Devam Et (Adım 2)
+            <Save className="w-5 h-5" />
+            Kaydet ve Devam Et
           </button>
         </div>
       </footer>
