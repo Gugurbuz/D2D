@@ -171,23 +171,44 @@ function numberIcon(
   });
 }
 
-/* ============ OSRM HELPERS ============ */
-async function osrmTrip(profile: TravelMode, coords: string) {
-  const url = `https://router.project-osrm.org/trip/v1/${profile}/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
-  const res = await fetch(url);
+/* ============ OSRM HELPERS (PUBLIC) ============ */
+const OSRM_BASE = 'https://router.project-osrm.org';
+
+const cacheTrip = new Map<string, any>();
+const cacheRoute = new Map<string, any>();
+const tripKey = (profile: TravelMode, coords: string) => `${profile}|TRIP|${coords}`;
+const routeKey = (profile: TravelMode, coords: string) => `${profile}|ROUTE|${coords}`;
+
+async function osrmTrip(profile: TravelMode, coords: string, signal?: AbortSignal) {
+  const k = tripKey(profile, coords);
+  if (cacheTrip.has(k)) return cacheTrip.get(k);
+
+  const url =
+    `${OSRM_BASE}/trip/v1/${profile}/${coords}` +
+    `?source=first&destination=any&roundtrip=false` +
+    `&overview=false&steps=false&annotations=false`;
+
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`OSRM trip error: ${res.status}`);
   const data = await res.json();
   if (data.code !== 'Ok' || !data.trips?.[0]) throw new Error('Trip not found');
+  cacheTrip.set(k, data);
   return data;
 }
 
-async function osrmRoute(profile: TravelMode, from: [number, number], to: [number, number]) {
-  const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
-  const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson`;
-  const res = await fetch(url);
+async function osrmRoute(profile: TravelMode, orderedCoords: string, signal?: AbortSignal) {
+  const k = routeKey(profile, orderedCoords);
+  if (cacheRoute.has(k)) return cacheRoute.get(k);
+
+  const url =
+    `${OSRM_BASE}/route/v1/${profile}/${orderedCoords}` +
+    `?overview=simplified&geometries=geojson&steps=false&annotations=false&skip_waypoints=true`;
+
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`OSRM route error: ${res.status}`);
   const data = await res.json();
   if (data.code !== 'Ok' || !data.routes?.[0]) throw new Error('Route not found');
+  cacheRoute.set(k, data);
   return data;
 }
 
@@ -255,11 +276,15 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
 
-  const [travelMode, setTravelMode] = useState<TravelMode>('driving'); // ikonlarla değişiyor
+  const [travelMode, setTravelMode] = useState<TravelMode>('driving');
   const [mapStyle, setMapStyle] = useState<StyleKey>('Carto Light');
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
+
+  // Abort + debounce
+  const inFlight = useRef<AbortController | null>(null);
+  const debounceRef = useRef<number | null>(null);
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, '')}`;
 
@@ -272,72 +297,82 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     }
   };
 
+  function scheduleOptimize() {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => { void handleOptimize(); }, 250);
+  }
+
   async function handleOptimize() {
     try {
       setLoading(true);
 
+      if (inFlight.current) inFlight.current.abort();
+      inFlight.current = new AbortController();
+
+      // 1) SIRALAMA — küçük payload
       if (!starredId) {
-        const coords = [[rep.lng, rep.lat], ...baseCustomers.map((c) => [c.lng, c.lat])]
-          .map(([lng, lat]) => `${lng},${lat}`)
-          .join(';');
+        // rep + hepsi
+        const coordsTrip = [[rep.lng, rep.lat], ...baseCustomers.map(c => [c.lng, c.lat])]
+          .map(([lng, lat]) => `${lng},${lat}`).join(';');
 
-        const data = await osrmTrip(travelMode, coords);
+        const trip = await osrmTrip(travelMode, coordsTrip, inFlight.current.signal);
 
-        const sortedCustomers = data.waypoints
+        const order = trip.waypoints
           .map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index }))
-          .sort((a: any, b: any) => a.order - b.order)
-          .slice(1)
-          .map((x: any) => baseCustomers[x.idx - 1]);
+          .sort((a: any, b: any) => a.order - b.order);
 
+        const sortedCustomers = order.slice(1).map(x => baseCustomers[x.idx - 1]); // first = rep
         setOrderedCustomers(sortedCustomers);
-        setRouteCoords(
-          data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng])
-        );
-        setRouteKm(data.trips[0].distance / 1000);
-        setRouteSec(data.trips[0].duration);
+
+        // 2) TEK ROUTE — geometri+mesafe+süre
+        const orderedCoords = [[rep.lng, rep.lat], ...sortedCustomers.map(c => [c.lng, c.lat])]
+          .map(([lng, lat]) => `${lng},${lat}`).join(';');
+
+        const route = await osrmRoute(travelMode, orderedCoords, inFlight.current.signal);
+        const r0 = route.routes[0];
+        setRouteKm(r0.distance / 1000);
+        setRouteSec(r0.duration);
+        setRouteCoords(r0.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
       } else {
-        const star = baseCustomers.find((c) => c.id === starredId)!;
-        const others = baseCustomers.filter((c) => c.id !== starredId);
+        // yıldızlı ilk durak: rep -> star -> optimize(others)
+        const star = baseCustomers.find(c => c.id === starredId)!;
+        const others = baseCustomers.filter(c => c.id !== starredId);
 
-        // Rep -> Star
-        const dataRoute = await osrmRoute(travelMode, [rep.lat, rep.lng], [star.lat, star.lng]);
-        const route1Coords = dataRoute.routes[0].geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng]
-        );
-        const route1Km = dataRoute.routes[0].distance / 1000;
-        const route1Sec = dataRoute.routes[0].duration;
+        // star + others için trip → star sonrası sıralama
+        const coordsTrip = [[star.lng, star.lat], ...others.map(c => [c.lng, c.lat])]
+          .map(([lng, lat]) => `${lng},${lat}`).join(';');
 
-        // Star -> Others (optimize)
-        const coords2 = [[star.lng, star.lat], ...others.map((c) => [c.lng, c.lat])]
-          .map(([lng, lat]) => `${lng},${lat}`)
-          .join(';');
+        const trip2 = await osrmTrip(travelMode, coordsTrip, inFlight.current.signal);
 
-        const dataTrip2 = await osrmTrip(travelMode, coords2);
-        const ordered2 = dataTrip2.waypoints
+        const order2 = trip2.waypoints
           .map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index }))
-          .sort((a: any, b: any) => a.order - b.order)
-          .slice(1)
-          .map((x: any) => others[x.idx - 1]);
+          .sort((a: any, b: any) => a.order - b.order);
 
-        setOrderedCustomers([star, ...ordered2]);
+        const orderedAfterStar = order2.slice(1).map(x => others[x.idx - 1]);
+        const finalCustomers = [star, ...orderedAfterStar];
+        setOrderedCustomers(finalCustomers);
 
-        const restCoords = dataTrip2.trips[0].geometry.coordinates.map(
-          ([lng, lat]: [number, number]) => [lat, lng]
-        );
+        // tek route: rep -> star -> orderedAfterStar
+        const orderedCoords =
+          [[rep.lng, rep.lat], [star.lng, star.lat], ...orderedAfterStar.map(c => [c.lng, c.lat])]
+            .map(([lng, lat]) => `${lng},${lat}`).join(';');
 
-        setRouteCoords([...route1Coords, ...restCoords]);
-        setRouteKm(route1Km + dataTrip2.trips[0].distance / 1000);
-        setRouteSec(route1Sec + dataTrip2.trips[0].duration);
+        const route = await osrmRoute(travelMode, orderedCoords, inFlight.current.signal);
+        const r0 = route.routes[0];
+        setRouteKm(r0.distance / 1000);
+        setRouteSec(r0.duration);
+        setRouteCoords(r0.geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error(e);
     } finally {
       setLoading(false);
     }
   }
 
+  // ilk yük + değişimler
   useEffect(() => {
-    handleOptimize();
+    scheduleOptimize();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starredId, travelMode]);
 
@@ -384,7 +419,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               </button>
 
               <button
-                onClick={() => setTravelMode('walking')}  // OSRM profile: walking
+                onClick={() => setTravelMode('walking')}
                 aria-pressed={travelMode === 'walking'}
                 className={`p-1.5 text-xs rounded-sm transition-all ${
                   travelMode === 'walking'
@@ -416,7 +451,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
         <MapContainer
           center={[rep.lat, rep.lng]}
-          zoom={13}
+          zoom={travelMode === 'walking' ? 14 : 13}
           style={{ height: '100%', width: '100%' }}
           whenCreated={(m) => (mapRef.current = m)}
         >
