@@ -620,17 +620,26 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           </div>
         </div>
 
-        {/* LOADING OVERLAY */}
-        {loading && (
-          <div className="absolute inset-0 bg-white/40 flex items-center justify-center z-[2000]">
-            <div className="rounded bg-white shadow px-4 py-2 text-sm font-semibold text-gray-700">
-              Rota Hesaplanıyor…
-            </div>
-          </div>
-        )}
+   {/* LOADING OVERLAY */}
+{loading && (
+  <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center z-[2000]">
+    <div className="rounded-2xl bg-white/95 border border-gray-100 shadow-xl px-6 py-5 flex flex-col items-center gap-3">
+      <EnerjisaSwivelLogo size={64} />
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-semibold text-gray-800">Rota hesaplanıyor…</span>
+        <img
+          src={REP_LOGO_URL}
+          alt="Enerjisa"
+          width={18}
+          height={18}
+          className="rounded-full"
+          style={{ border: `2px solid ${BRAND_YELLOW}`, background: "#fff" }}
+        />
       </div>
+      <p className="text-[11px] text-gray-500">Noktalar optimize ediliyor, lütfen bekleyin.</p>
     </div>
-  );
-};
+  </div>
+)}
+
 
 export default RouteMap;
