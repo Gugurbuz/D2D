@@ -15,7 +15,7 @@ type Props = {
   customers: Customer[];
   assignments: Record<string, string | undefined>;
   setAssignments: React.Dispatch<React.SetStateAction<Record<string, string | undefined>>>;
-  allReps: Rep[]; // Rep tipinizde avatarUrl?: string varsa avatar gösterilir
+  allReps: Rep[];
   setCurrentScreen: (s: Screen) => void;
 };
 
@@ -32,7 +32,7 @@ const AssignmentScreen: React.FC<Props> = ({
   const [localSelected, setLocalSelected] = useState<Record<string, boolean>>({});
   const [selectedRep, setSelectedRep] = useState<string>(allReps[0]?.id || '');
   const [activeTab, setActiveTab] = useState<TabKey>('all');
-  const [repFilter, setRepFilter] = useState<string>(''); // "byRep" sekmesi için
+  const [repFilter, setRepFilter] = useState<string>('');
   const [selectMenuOpen, setSelectMenuOpen] = useState(false);
 
   const selectedIds = useMemo(
@@ -43,7 +43,22 @@ const AssignmentScreen: React.FC<Props> = ({
   const repName = useCallback((rid?: string) => allReps.find(r => r.id === rid)?.name || '—', [allReps]);
   const repObj  = useCallback((rid?: string) => allReps.find(r => r.id === rid), [allReps]);
 
-  // Filtre zinciri: arama -> sekme -> rep görünümü
+  // --- Row click selection helpers ---
+  const isInteractive = (el: HTMLElement) => {
+    const tag = el.tagName.toLowerCase();
+    return (
+      tag === 'input' || tag === 'button' || tag === 'a' ||
+      tag === 'select' || tag === 'textarea' || tag === 'label'
+    );
+  };
+
+  const handleRowClick = (e: React.MouseEvent, id: string) => {
+    if (isInteractive(e.target as HTMLElement)) return;
+    setLocalSelected(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+  // -----------------------------------
+
+  // Filter chain
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
@@ -74,9 +89,7 @@ const AssignmentScreen: React.FC<Props> = ({
     setLocalSelected(next);
   };
 
-  const clearSelection = () => {
-    setLocalSelected({});
-  };
+  const clearSelection = () => setLocalSelected({});
 
   const assignIdsToRep = (ids: string[], repId: string) => {
     if (!repId || ids.length === 0) return;
@@ -91,20 +104,14 @@ const AssignmentScreen: React.FC<Props> = ({
     if (!selectedRep) { toast.error('Lütfen bir satış uzmanı seçiniz.'); return; }
     if (selectedIds.length === 0) { toast('Seçili müşteri yok.', { icon: 'ℹ️' }); return; }
     assignIdsToRep(selectedIds, selectedRep);
-    const name = repName(selectedRep);
-    toast.success(`${selectedIds.length} müşteri ${name} adına atandı.`);
-    // Görsel geri bildirim için seçimleri temizlemek genelde hoş
+    toast.success(`${selectedIds.length} müşteri ${repName(selectedRep)} adına atandı.`);
     clearSelection();
   };
 
-  // Drag & Drop: seçili müşteri IDs -> rep kartına bırak
+  // Drag & Drop: selected rows -> rep card
   const onRowDragStart = (e: React.DragEvent<HTMLTableRowElement>, startId: string) => {
-    // Eğer satır seçili değilse, tekli drag için o satırı baz al
-    const ids = selectedIds.length > 0
-      ? selectedIds
-      : [startId];
+    const ids = selectedIds.length > 0 ? selectedIds : [startId];
     e.dataTransfer.setData('text/plain', JSON.stringify(ids));
-    // küçük bir görsel ipucu
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -117,7 +124,7 @@ const AssignmentScreen: React.FC<Props> = ({
       toast.success(`${ids.length} müşteri ${repName(repId)} adına atandı.`);
       clearSelection();
     } catch {
-      // yut
+      /* no-op */
     }
   };
 
@@ -349,14 +356,16 @@ const AssignmentScreen: React.FC<Props> = ({
                     return (
                       <tr
                         key={c.id}
-                        className={`${rowSelected} hover:bg-gray-50 transition-colors`}
+                        className={`${rowSelected} hover:bg-gray-50 transition-colors cursor-pointer`}
                         draggable
                         onDragStart={(e) => onRowDragStart(e, c.id)}
+                        onClick={(e) => handleRowClick(e, c.id)}
                       >
                         <td className="px-4 py-3">
                           <input
                             type="checkbox"
                             checked={checked}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(e) =>
                               setLocalSelected(prev => ({ ...prev, [c.id]: e.target.checked }))
                             }
