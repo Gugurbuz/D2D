@@ -1,5 +1,6 @@
 // src/screens/OutOfRegionVisitWizard.tsx
 import React, { useState } from "react";
+import { FromStep1Payload } from "../types";
 import Step2PodCheck, { PodResult } from "../steps/Step2PodCheck";
 import Step3Customer, { Step3Data } from "../steps/Step3Customer";
 import Step4Competitor, { Step4Data } from "../steps/Step4Competitor";
@@ -8,7 +9,7 @@ import Step5Summary from "../steps/Step5Summary";
 export default function OutOfRegionVisitWizard({
   fromStep1
 }: {
-  fromStep1?: { customerName?: string; address?: string; tariff?: string; annual?: string };
+  fromStep1?: FromStep1Payload;
 }) {
   const [idx, setIdx] = useState(2); // 1: OCR sayfan, burada 2’den başlıyoruz
   const [s2, setS2] = useState<PodResult | null>(null);

@@ -1,6 +1,7 @@
 // src/screens/InvoiceOcrPage.tsx
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom"; 
+import { FromStep1Payload } from "../types";
 import {
   Camera,
   Upload,
@@ -241,15 +242,6 @@ const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode
     <div className="p-3">{children}</div>
   </div>
 );
-
-/* ====== YENİ: Adım 2’ye aktarılacak payload tipi ====== */
-type FromStep1Payload = {
-  customerName?: string;
-  address?: string;
-  tariff?: string;
-  annual?: string;
-};
-
 /* ====== Bileşen ====== */
 export default function InvoiceOcrPage({
   /** İstersen parent buradan yakalayıp kendi router’ına yönlendirebilir. */

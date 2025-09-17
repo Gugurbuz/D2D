@@ -149,6 +149,13 @@ export interface SolarLead {
   updated_at: string;
 }
 
+export interface FromStep1Payload {
+  customerName?: string;
+  address?: string;
+  tariff?: string;
+  annual?: string;
+}
+
 export interface VisitResult {
   result: 'contract_signed' | 'follow_up' | 'not_interested' | 'no_answer';
   notes: string;
