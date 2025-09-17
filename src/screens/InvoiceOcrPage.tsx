@@ -185,23 +185,50 @@ type InvoiceOcrPageProps = {
 const StatusOverlay = ({ status }: { status: StatusOverlayState }) => {
   if (!status.show) return null;
 
+  const isLoading = status.type === "loading";
+
   return (
     <div
       className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       aria-modal="true"
       role="dialog"
     >
-      <div className="flex flex-col items-center gap-4 rounded-xl bg-white p-8 shadow-2xl">
-        {status.type === "loading" ? (
-          <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
+      <div className="flex flex-col items-center gap-4 rounded-2xl bg-white p-8 shadow-2xl border border-gray-100">
+        {/* Enerjisa swivel logo */}
+        <EnerjisaSwivelLogo size={64} />
+
+        {/* durum ikonu */}
+        {isLoading ? (
+          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mt-1" />
         ) : (
-          <CheckCircle2 className="w-10 h-10 text-green-500" />
+          <CheckCircle2 className="w-8 h-8 text-green-500 mt-1" />
         )}
-        <p className="font-medium text-gray-700">{status.message}</p>
+
+        {/* mesaj + küçük inline logo (yanına) */}
+        <div className="mt-1 flex items-center gap-2">
+          <p className="font-medium text-gray-800">{status.message}</p>
+          {/* yanına minik logo */}
+          <img
+            src={ENERJISA_LOGO_URL}
+            alt="Enerjisa"
+            width={20}
+            height={20}
+            className="rounded-full"
+            style={{ border: `2px solid ${BRAND_YELLOW}`, background: "#fff" }}
+          />
+        </div>
+
+        {/* hafif bilgilendirici alt yazı */}
+        {isLoading && (
+          <p className="text-xs text-gray-500">
+            Lütfen bekleyin, veriler işleniyor…
+          </p>
+        )}
       </div>
     </div>
   );
 };
+
 
 /* ---------- küçük yardımcı renderlar ---------- */
 const KV = ({ label, value }: { label: string; value?: any }) => {
