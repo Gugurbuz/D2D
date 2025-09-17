@@ -22,7 +22,7 @@ import SystemManagementScreen from './screens/SystemManagementScreen';
 import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
 import SystemReportsScreen from './screens/SystemReportsScreen';
-import OutOfRegionVisitWizard from "./screens/OutOfRegionVisitWizard";
+import OutOfRegionVisitWizard from './screens/OutOfRegionVisitWizard';
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
@@ -233,8 +233,26 @@ function App() {
         return <MessagesScreen />;
       case 'profile':
         return <ProfileScreens role={role} />;
+
       case 'invoiceOcr':
-        return <InvoiceOcrPage />;
+        // ✅ OCR ekranı: Devam edince wizard'a geç
+        return (
+          <InvoiceOcrPage
+            onContinue={() => {
+              setCurrentScreen('outOfRegionWizard');
+            }}
+          />
+        );
+
+      case 'outOfRegionWizard':
+        // ✅ Adım 2 sihirbazı
+        return (
+          <OutOfRegionVisitWizard
+            onBack={() => setCurrentScreen('invoiceOcr')}
+            onFinish={() => setCurrentScreen('visits')}
+          />
+        );
+
       case 'userManagement':
         return <UserManagementScreen />;
       case 'systemManagement':
@@ -243,6 +261,7 @@ function App() {
         return <TariffsScreen />;
       case 'fieldOpsMap':
         return <FieldOpsMapScreen />;
+
       default:
         return (
           <DashboardScreen
