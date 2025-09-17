@@ -118,8 +118,8 @@ const Navigation: React.FC<Props> = ({
     <button
       ref={refProp}
       onClick={onClick}
-      className={`relative shrink-0 px-3 sm:px-4 py-2 rounded-lg transition-colors text-gray-600 flex items-center gap-2 ${
-        active ? "bg-[#F9C800] text-gray-900" : "hover:bg-gray-100"
+      className={`relative shrink-0 px-3 sm:px-4 py-2 rounded-lg transition-all duration-200 text-gray-600 dark:text-gray-300 flex items-center gap-2 ${
+        active ? "bg-[#F9C800] text-[#002D72] shadow-sm" : "hover:bg-gray-100 dark:hover:bg-gray-700"
       }`}
       title={label}
       aria-label={label}
@@ -130,13 +130,13 @@ const Navigation: React.FC<Props> = ({
   );
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-20 border-b border-gray-200 px-3 sm:px-6">
+    <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-20 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-6">
       <div className="flex items-center justify-between h-16">
         {/* Profil Alanı */}
         <div
-          className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg p-1 -ml-1 ${
+          className={`flex items-center gap-3 min-w-0 cursor-pointer rounded-lg p-1 -ml-1 transition-all duration-200 ${
             currentScreen === "profile"
-              ? "ring-2 ring-[#0099CB] ring-offset-2"
+              ? "ring-2 ring-[#002D72] ring-offset-2"
               : "hover:bg-gray-100"
           }`}
           onClick={onProfileClick}
@@ -155,7 +155,7 @@ const Navigation: React.FC<Props> = ({
             <h2 className="font-semibold text-gray-900 truncate">
               {agentName || "Kullanıcı"}
             </h2>
-            <p className="text-sm text-gray-600 truncate">
+            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
               {role === "manager"
                 ? "Saha Yöneticisi"
                 : role === "sales_rep"
@@ -341,17 +341,18 @@ const Navigation: React.FC<Props> = ({
               {notifOpen && (
                 <div
                   ref={notifMenuRef}
-                  className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-xl shadow-lg animate-fade-in-down"
+                  className="fixed right-3 top-20 z-[9999] w-[320px] max-w-[90vw] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg animate-fade-in-down"
                 >
                   <div className="px-4 py-3 border-b flex items-center justify-between">
-                    <div className="font-semibold text-gray-900">Bildirimler</div>
+                    <div className="font-semibold text-gray-900 dark:text-gray-100">Bildirimler</div>
                     <button
                       onClick={() =>
                         setNotifItems((prev) =>
                           prev.map((n) => ({ ...n, unread: false }))
                         )
                       }
-                      className="text-xs text-[#0099CB] hover:underline"
+                      className="text-xs hover:underline"
+                      style={{ color: BRAND_COLORS.navy }}
                     >
                       Tümünü okundu işaretle
                     </button>
@@ -366,7 +367,7 @@ const Navigation: React.FC<Props> = ({
                         <div
                           key={n.id}
                           className={`px-4 py-3 border-b last:border-b-0 ${
-                            n.unread ? "bg-[#0099CB]/5" : ""
+                            n.unread ? "bg-[#002D72]/5 dark:bg-[#F9C800]/10" : ""
                           }`}
                         >
                           <div className="flex items-start gap-2">
@@ -380,11 +381,11 @@ const Navigation: React.FC<Props> = ({
                               }`}
                             />
                             <div className="min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">
+                              <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                                 {n.title}
                               </div>
                               {n.desc && (
-                                <div className="text-xs text-gray-600 truncate">
+                                <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
                                   {n.desc}
                                 </div>
                               )}
