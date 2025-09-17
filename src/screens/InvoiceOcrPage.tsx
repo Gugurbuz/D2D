@@ -27,7 +27,6 @@ import {
   Info,
   AlertTriangle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 /* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
@@ -167,6 +166,18 @@ const FieldLabel = ({
 
 type CamMode = "live" | "preview";
 
+/* ===== Adım-1'den taşınacak küçük payload ===== */
+export type FromStep1Payload = {
+  customerName?: string;
+  address?: string;
+  tariff?: string;
+  annual?: string;
+};
+
+type InvoiceOcrPageProps = {
+  onContinue?: (payload: FromStep1Payload) => void;
+};
+
 const StatusOverlay = ({ status }: { status: StatusOverlayState }) => {
   if (!status.show) return null;
 
@@ -211,20 +222,7 @@ const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode
   </div>
 );
 
-/* ====== Adım-1'den taşınacak küçük payload tipi ====== */
-type FromStep1Payload = {
-  customerName?: string;
-  address?: string;
-  tariff?: string;
-  annual?: string;
-};
-
-/* ===================================================== */
-/* ==================== Bileşen ======================== */
-/* ===================================================== */
-export default function InvoiceOcrPage() {
-  const navigate = useNavigate();
-
+export default function InvoiceOcrPage({ onContinue }: InvoiceOcrPageProps) {
   const [summary, setSummary] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
   const [allDetails, setAllDetails] = useState<AllDetails | null>(null);
@@ -246,7 +244,7 @@ export default function InvoiceOcrPage() {
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
 
   const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false); // ✅ yeni modal
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -632,7 +630,10 @@ export default function InvoiceOcrPage() {
     try {
       localStorage.setItem("outOfRegion_fromStep1", JSON.stringify(payload));
     } catch {}
-    navigate("/out-of-region-wizard", { state: { fromStep1: payload } });
+    setStatusOverlay({ show: true, type: "success", message: "Müşteri bilgileri kaydedildi!" });
+    setTimeout(() => {
+      if (onContinue) onContinue(payload);
+    }, 500);
   }
 
   return (
@@ -897,6 +898,8 @@ export default function InvoiceOcrPage() {
                     />
                   </div>
                 </div>
+
+                {/* ❌ Eski <details> bloğu kaldırıldı */}
               </div>
             </div>
           </div>
@@ -906,7 +909,7 @@ export default function InvoiceOcrPage() {
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm border-t border-gray-200">
         <div className="p-3 flex justify-end">
           <button
-            disabled={!hasAnyAIData || isLoading}
+            disabled={isLoading}
             onClick={goNextStep}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
           >
@@ -959,7 +962,7 @@ export default function InvoiceOcrPage() {
       )}
 
       {/* ✅ Detaylar Modal */}
-      {isDetailsModalOpen && hasAnyAIData && (
+      {isDetailsModalOpen && (detailRows.length > 0 || allDetails) && (
         <div
           className="fixed inset-0 z-[1150] flex items-center justify-center p-4"
           role="dialog"
