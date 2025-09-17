@@ -58,7 +58,7 @@ const AssignmentScreen: React.FC<Props> = ({
   };
   // -----------------------------------
 
-  // Filter chain
+  // Filter chain (atanmamış = status 'Bekliyor' **veya** assignment boş)
   const filtered = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
 
@@ -73,7 +73,7 @@ const AssignmentScreen: React.FC<Props> = ({
     }
 
     if (activeTab === 'unassigned') {
-      base = base.filter(c => !assignments[c.id]);
+      base = base.filter(c => c.status === 'Bekliyor' || !assignments[c.id]);
     } else if (activeTab === 'byRep' && repFilter) {
       base = base.filter(c => assignments[c.id] === repFilter);
     }
@@ -83,7 +83,10 @@ const AssignmentScreen: React.FC<Props> = ({
   const toggleAll = (v: boolean, onlyUnassigned = false) => {
     const next: Record<string, boolean> = { ...localSelected };
     filtered.forEach((c) => {
-      if (onlyUnassigned && assignments[c.id]) return;
+      if (onlyUnassigned) {
+        // "Bekliyor" ya da assignments boş olanlar (atanmamış tanımı)
+        if (!(c.status === 'Bekliyor' || !assignments[c.id])) return;
+      }
       next[c.id] = v;
     });
     setLocalSelected(next);
@@ -175,7 +178,7 @@ const AssignmentScreen: React.FC<Props> = ({
             className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-gray-50"
             onClick={() => { toggleAll(true, true); setSelectMenuOpen(false); }}
           >
-            Tüm Atanmamışları Seç
+            Tüm <b>Bekleyenleri</b> Seç
           </button>
           <button
             className="w-full text-left text-xs px-2 py-1.5 rounded-md hover:bg-gray-50"
@@ -242,7 +245,7 @@ const AssignmentScreen: React.FC<Props> = ({
             onClick={() => setActiveTab('unassigned')}
             className={`px-3 py-1.5 rounded-full text-sm border ${activeTab === 'unassigned' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white hover:bg-gray-50'}`}
           >
-            Atanmamış
+            Bekliyor
           </button>
 
           {/* Temsilciye göre görünüm */}
