@@ -230,8 +230,10 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [starredId, setStarredId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
 
+  const [mapStyle, setMapStyle] = useState<StyleKey>(
+    ((import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Google Maps") as StyleKey
+  );
  const [mapStyle, setMapStyle] = useState<StyleKey>("Carto Light");
-
   const markerRefs = useRef<Record<string, L.Marker>>({});
   const mapRef = useRef<L.Map | null>(null);
 
