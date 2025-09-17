@@ -2,12 +2,8 @@ import React from "react";
 import { Eye, Play, MapPin, UserCheck } from "lucide-react"; // StickyNote kaldırıldı
 import type { Customer } from "../types";
 import Chip from "./Chip";
-
-const getStatusTone = (status: Customer["status"]) =>
-  status === "Tamamlandı" ? "green" : status === "Yolda" ? "blue" : "yellow";
-
-const getPriorityTone = (priority: Customer["priority"]) =>
-  priority === "Yüksek" ? "red" : priority === "Orta" ? "yellow" : "green";
+import Button from "./Button";
+import { getStatusColor, getPriorityColor } from "../styles/theme";
 
 function formatDate(dateStr?: string) {
   if (!dateStr) return "-";
@@ -27,31 +23,31 @@ type Props = {
 };
 
 const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart }) => {
-  const statusTone = getStatusTone(customer.status);
-  const priorityTone = getPriorityTone(customer.priority);
+  const statusColor = getStatusColor(customer.status);
+  const priorityColor = getPriorityColor(customer.priority);
   const typeLabel = customer.tariff === "İş Yeri" ? "B2B – Sabit Fiyat" : "B2C – Endeks";
 
   return (
-    <div className="bg-white border border-gray-200 hover:border-cyan-600 rounded-xl p-5 transition-all duration-200 hover:shadow-md">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-[#002D72] dark:hover:border-[#F9C800] rounded-xl p-5 transition-all duration-200 hover:shadow-md">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* SOL TARAF */}
         <div className="flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <div className="text-lg font-semibold text-gray-900">{customer.name}</div>
+            <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">{customer.name}</div>
             <div className="text-xs text-gray-500">Müşteri No: {customer.customerNumber ?? "-"}</div>
             <div className="text-xs text-gray-500">Tesisat No: {customer.installationNumber ?? "-"}</div>
           </div>
 
-          <div className="text-sm text-gray-600 flex items-center gap-1">
+          <div className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-1">
             <MapPin className="w-4 h-4" /> {customer.address} – {customer.district}
           </div>
 
           <div className="mt-2 flex flex-wrap gap-2">
-            <Chip tone={statusTone}>{customer.status}</Chip>
-            <Chip tone={priorityTone}>{customer.priority} Öncelik</Chip>
-            <Chip tone="blue">{typeLabel}</Chip>
+            <Chip color={statusColor} variant="soft">{customer.status}</Chip>
+            <Chip color={priorityColor} variant="soft">{customer.priority} Öncelik</Chip>
+            <Chip color="navy" variant="soft">{typeLabel}</Chip>
             {assignedName && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 text-gray-800 border-gray-200">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs border bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-600">
                 <UserCheck className="w-3 h-3 mr-1" /> {assignedName}
               </span>
             )}
@@ -61,7 +57,7 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
         {/* SAĞ TARAF */}
         <div className="text-right space-y-2 flex flex-col items-end justify-between">
           <div>
-            <div className="text-sm font-medium text-gray-900 flex gap-2">
+            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex gap-2">
               <span>{formatDate(customer.visitDate)}</span>
               <span>{customer.plannedTime}</span>
             </div>
@@ -70,25 +66,25 @@ const VisitCard: React.FC<Props> = ({ customer, assignedName, onDetail, onStart 
 
           <div className="flex flex-wrap justify-end gap-2">
             {/* Detay butonu */}
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={onDetail}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-700 text-white text-xs transition"
-              aria-label="Ziyaret detayını gör"
-              title="Detay"
+              leftIcon={<Eye className="w-4 h-4" />}
             >
-              <Eye className="w-4 h-4" /> Detay
-            </button>
+              Detay
+            </Button>
 
             {/* Başlat butonu */}
             {customer.status === "Bekliyor" && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onStart}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-yellow-400 hover:bg-yellow-500 text-gray-900 text-xs transition"
-                aria-label="Ziyareti başlat"
-                title="Başlat"
+                leftIcon={<Play className="w-4 h-4" />}
               >
-                <Play className="w-4 h-4" /> Başlat
-              </button>
+                Başlat
+              </Button>
             )}
           </div>
         </div>
