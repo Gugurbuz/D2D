@@ -253,6 +253,36 @@ const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode
   </div>
 );
 
+const EnerjisaSwivelLogo: React.FC<{ size?: number }> = ({ size = 56 }) => {
+  return (
+    <>
+      {/* keyframes'i local <style> ile enjekte ediyoruz */}
+      <style>{`
+        @keyframes swivel {
+          0%   { transform: rotateY(0deg);    }
+          50%  { transform: rotateY(180deg) scale(1.05); }
+          100% { transform: rotateY(360deg);  }
+        }
+      `}</style>
+      <img
+        src={ENERJISA_LOGO_URL}
+        alt="Enerjisa"
+        width={size}
+        height={size}
+        className="rounded-full shadow-md"
+        style={{
+          animation: "swivel 1.8s ease-in-out infinite",
+          // marka hissi: hafif sarı kontur ve gölge
+          boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
+          border: `3px solid ${BRAND_YELLOW}`,
+          background: "#fff",
+        }}
+      />
+    </>
+  );
+};
+
+
 export default function InvoiceOcrPage({ onContinue }: InvoiceOcrPageProps) {
   const [summary, setSummary] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
