@@ -1180,7 +1180,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
             )}
           </div>
         </div>
-      </fieldset>
+      </div>
 
       <div className="mt-6 flex justify-between">
         <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 rounded-lg bg-white border hover:bg-gray-50 transition-colors">
