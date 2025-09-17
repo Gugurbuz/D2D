@@ -1,18 +1,35 @@
-import React from "react";
+// src/components/Chip.tsx
+import React from 'react';
+import { themeColors, statusStyles } from '../styles/theme';
+import { SortAsc, SortDesc } from 'lucide-react';
 
-type Tone = "blue" | "yellow" | "green" | "red" | "gray";
+type ChipProps = {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  sortDirection?: 'asc' | 'desc' | null;
+};
 
-export const Chip: React.FC<{ tone?: Tone; children: React.ReactNode }> = ({ tone = "gray", children }) => {
-  const tones: Record<Tone, string> = {
-    blue: "bg-blue-100 text-blue-800",
-    yellow: "bg-yellow-100 text-yellow-800",
-    green: "bg-green-100 text-green-800",
-    red: "bg-red-100 text-red-800",
-    gray: "bg-gray-100 text-gray-800",
-  };
+export const Chip = ({ label, isActive, onClick, sortDirection }: ChipProps) => {
+  // Gelen label'a göre tema rengini bul (örn: "Planlandı" -> "warning")
+  const statusKey = statusStyles[label] || 'neutral';
+  const colors = themeColors[statusKey];
+
+  // Aktif ve pasif durumlar için stilleri belirle
+  const baseClasses = "flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border text-sm font-medium transition whitespace-nowrap cursor-pointer";
+  
+  const activeClasses = `bg-[${colors.DEFAULT}] text-[${colors.text}] border-[${colors.dark}] shadow-sm`;
+  const inactiveClasses = `bg-[${colors.light}] text-[${colors.text}] border-[${colors.light}] hover:border-[${colors.DEFAULT}] hover:bg-white`;
+
   return (
-    <span className={`text-xs px-2 py-1 rounded-full ${tones[tone]} font-medium`}>
-      {children}
-    </span>
+    <button
+      onClick={onClick}
+      className={`${baseClasses} ${isActive ? activeClasses : inactiveClasses}`}
+    >
+      {label}
+      {isActive && sortDirection && (
+        sortDirection === 'asc' ? <SortAsc size={16} /> : <SortDesc size={16} />
+      )}
+    </button>
   );
 };
