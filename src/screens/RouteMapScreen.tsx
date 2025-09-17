@@ -620,7 +620,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           </div>
         </div>
 
-   {/* LOADING OVERLAY */}
+    {/* LOADING OVERLAY */}
 {loading && (
   <div className="absolute inset-0 bg-white/50 backdrop-blur-[2px] flex items-center justify-center z-[2000]">
     <div className="rounded-2xl bg-white/95 border border-gray-100 shadow-xl px-6 py-5 flex flex-col items-center gap-3">
@@ -641,5 +641,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   </div>
 )}
 
+      </div>
+    </div>
+  );
+};
 
 export default RouteMap;
