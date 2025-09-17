@@ -10,10 +10,9 @@ import {
   Bell,
   BellDot,
   MessageSquare,
-  ScanLine,
+  MapPinPlus,
   Settings,
   Shield,
-  MapPinPlus,
 } from "lucide-react";
 import { Role, Screen } from "../types";
 import { mockConversations } from "../data/messages";
@@ -45,23 +44,18 @@ const Navigation: React.FC<Props> = ({
   const notifUnread = notifItems.filter((n) => n?.unread).length;
 
   const [messageMenuOpen, setMessageMenuOpen] = useState(false);
-  const messageUnreadCount = mockConversations.reduce(
-    (total, conversation) => {
-      const msgs = Array.isArray(conversation?.messages)
-        ? conversation.messages
-        : [];
-      return (
-        total +
-        msgs.filter((msg) => msg?.senderId !== "you" && !msg?.read).length
-      );
-    },
-    0
-  );
+  const messageUnreadCount = mockConversations.reduce((total, conversation) => {
+    const msgs = Array.isArray(conversation?.messages)
+      ? conversation.messages
+      : [];
+    return total + msgs.filter((m) => m?.senderId !== "you" && !m?.read).length;
+  }, 0);
 
   const repsMap = useMemo(
     () => new Map(teamReps.map((rep) => [rep.id, rep])),
     []
   );
+
   const notifAnchorRef = useRef<HTMLDivElement | null>(null);
   const notifMenuRef = useRef<HTMLDivElement | null>(null);
   const messageAnchorRef = useRef<HTMLButtonElement | null>(null);
@@ -70,6 +64,8 @@ const Navigation: React.FC<Props> = ({
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
+
+      // Bildirim popup dışı tıklama
       if (
         notifAnchorRef.current &&
         !notifAnchorRef.current.contains(t) &&
@@ -78,6 +74,8 @@ const Navigation: React.FC<Props> = ({
       ) {
         setNotifOpen(false);
       }
+
+      // Mesaj popup dışı tıklama
       if (
         messageAnchorRef.current &&
         !messageAnchorRef.current.contains(t) &&
@@ -87,6 +85,7 @@ const Navigation: React.FC<Props> = ({
         setMessageMenuOpen(false);
       }
     };
+
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
@@ -241,7 +240,7 @@ const Navigation: React.FC<Props> = ({
               </>
             )}
 
-            {/* Admin (GENEL RAPORLAR KALDIRILDI) */}
+            {/* Admin */}
             {role === "admin" && (
               <>
                 <Btn
@@ -403,6 +402,96 @@ const Navigation: React.FC<Props> = ({
               )}
             </div>
           </div>
+
+          {/* === MESAJ AÇILIR MENÜSÜ (EKSİK OLAN KISIM) === */}
+          {messageMenuOpen && (
+            <div
+              ref={messageMenuRef}
+              className="fixed right-16 top-20 z-[9999] w-[360px] max-w-[92vw] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg animate-fade-in-down"
+            >
+              <div className="px-4 py-3 border-b">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">
+                    Mesajlar
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {messageUnreadCount > 0
+                      ? `${messageUnreadCount} okunmamış`
+                      : "Tümü okundu"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-h-[360px] overflow-auto divide-y">
+                {mockConversations.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-gray-500 text-center">
+                    Mesaj yok
+                  </div>
+                ) : (
+                  mockConversations.map((conv) => {
+                    const lastMsg = [...(conv.messages || [])].pop();
+                    const unread = (conv.messages || []).some(
+                      (m) => m.senderId !== "you" && !m.read
+                    );
+                    const rep =
+                      (conv.userId && repsMap.get(conv.userId)) || null;
+
+                    return (
+                      <button
+                        key={conv.id}
+                        onClick={() => {
+                          // Burada gerekli ise “aktif konuşma” state’inizi güncelleyebilirsiniz.
+                          setCurrentScreen("messages");
+                          setMessageMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                          unread ? "bg-[#002D72]/5 dark:bg-[#F9C800]/10" : ""
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden shrink-0 ring-2 ring-white">
+                            {rep?.avatar ? (
+                              <img
+                                src={rep.avatar}
+                                alt={rep.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full grid place-items-center text-gray-700 font-semibold">
+                                {(rep?.name || conv.title || "K")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                {conv.title || rep?.name || "Konuşma"}
+                              </div>
+                              {unread && (
+                                <span className="ml-auto inline-block w-2 h-2 rounded-full bg-red-500" />
+                              )}
+                            </div>
+                            {lastMsg && (
+                              <div className="text-xs text-gray-600 dark:text-gray-300 truncate">
+                                {lastMsg.senderId === "you" ? "Siz: " : ""}
+                                {lastMsg.text}
+                              </div>
+                            )}
+                            <div className="text-[11px] text-gray-500 mt-0.5">
+                              {conv.updatedAt || ""}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+          {/* === /MESAJ MENÜSÜ === */}
         </div>
       </div>
     </header>
