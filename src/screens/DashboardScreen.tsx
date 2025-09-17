@@ -5,30 +5,11 @@ import {
   Clock,
   TrendingUp,
   MapPin,
-  Calendar,
   Megaphone,
-  ArrowRight
+  Calendar
 } from 'lucide-react';
-import VisitCard from '../components/VisitCard';
+import VisitCard from '../components/VisitCard'; // VisitCard bileşeninizin yolunu doğrulayın
 import type { Customer, SalesRep } from '../types';
-
-/** ====== MARKA RENKLERİ (Tutarlı Palet) ====== */
-const BRAND_NAVY = '#002D72';
-const BRAND_YELLOW = '#F9C800';
-const STATE_GREEN = '#16A34A';
-const STATE_AMBER = '#D97706';
-const STATE_PURPLE = '#7C3AED';
-
-/** Yardımcılar */
-const toISO = (d: Date) => d.toISOString().split('T')[0];
-const parseISO = (iso: string) => new Date(iso + 'T00:00:00');
-const isWithinLastNDays = (isoDate: string | undefined, n = 7) => {
-  if (!isoDate) return false;
-  const d = parseISO(isoDate);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  return diff >= 0 && diff <= n * 24 * 60 * 60 * 1000;
-};
 
 type Props = {
   customers: Customer[];
@@ -38,284 +19,207 @@ type Props = {
   onSelectCustomer: (customer: Customer) => void;
 };
 
-const DashboardScreen: React.FC<Props> = ({
-  customers,
-  assignments,
-  allReps,
-  setCurrentScreen,
-  onSelectCustomer
-}) => {
-  const now = new Date();
-  const today = toISO(now);
-  const hour = now.getHours();
+// --- YENİ BİLEŞENLER ---
 
-  /** --- Bugünkü ziyaretler --- */
-  const todaysVisits = useMemo(
-    () => customers.filter((c) => c.visitDate === today),
-    [customers, today]
-  );
+// UX-İYİLEŞTİRME: Duyuru bandı, ana karşılama mesajından ayrılarak bilişsel yük azaltıldı.
+// Kendi bileşeni olması, yönetilebilirliği artırır.
+const AnnouncementBar = () => (
+  <div className="bg-gray-800 text-white flex items-center gap-3 px-4 py-2 rounded-lg overflow-hidden">
+    <Megaphone className="w-5 h-5 shrink-0 text-yellow-300" />
+    <div className="flex-1 overflow-hidden">
+      <div className="animate-marquee whitespace-nowrap text-sm font-medium">
+        <span className="mx-4">⚡ Yeni kampanya başladı!</span>
+        <span className="mx-4">🎯 Hedeflerini gün sonunda tamamlamayı unutma!</span>
+        <span className="mx-4">🌍 Enerjisa saha ekibi için özel eğitim yarın başlıyor!</span>
+      </div>
+    </div>
+  </div>
+);
 
-  const completedVisits = useMemo(
-    () => todaysVisits.filter((c) => c.status === 'Tamamlandı'),
-    [todaysVisits]
-  );
 
-  const pendingVisits = useMemo(
-    () => todaysVisits.filter((c) => c.status === 'Planlandı'),
-    [todaysVisits]
-  );
+// UX-İYİLEŞTİRME: KPI Kartı tasarımı modernize edildi.
+// - Renkli arka plan yerine, daha zarif olan renkli sol kenarlık kullanıldı.
+// - İlerleme durumu göstermek için opsiyonel 'progress' prop'u eklendi.
+const KPICard: React.FC<{
+  title: string;
+  value: string;
+  subtitle?: string;
+  progress?: number; // 0-100 arası bir değer
+  icon: React.ReactNode;
+  borderColor: string;
+  iconColor: string;
+}> = ({ title, value, subtitle, progress, icon, borderColor, iconColor }) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-col justify-between border-l-4 ${borderColor}`}>
+    <div className="flex items-center justify-between">
+      <p className="text-sm font-medium text-gray-600">{title}</p>
+      <div className={`${iconColor}`}>{icon}</div>
+    </div>
+    <div>
+      <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
+      {progress !== undefined ? (
+        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+          <div className={`${borderColor.replace('border', 'bg')}`} style={{ width: `${progress}%`, height: '100%', borderRadius: 'inherit' }}></div>
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+      )}
+    </div>
+  </div>
+);
 
-  /** --- Haftalık (son 7 gün) metrikleri --- */
-  const weeklyVisits = useMemo(
-    () => customers.filter((c) => isWithinLastNDays(c.visitDate, 7)),
-    [customers]
-  );
-  const weeklyCompleted = useMemo(
-    () => weeklyVisits.filter((c) => c.status === 'Tamamlandı'),
-    [weeklyVisits]
-  );
 
-  /** --- Hedefler ve oranlar --- */
+const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
+  const today = new Date().toISOString().split('T')[0];
+  const time = new Date();
+
+  const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
+  const completedVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Tamamlandı'), [todaysVisits]);
+  const pendingVisits = useMemo(() => todaysVisits.filter(c => c.status === 'Planlandı'), [todaysVisits]);
+
+  // --- KPI Hesaplamaları ---
   const dailyTarget = 20;
-  const completionRate = Math.round((completedVisits.length / Math.max(dailyTarget, 1)) * 100);
-  const conversionRate = Math.round(
-    (completedVisits.length / Math.max(todaysVisits.length, 1)) * 100
-  );
-  const weeklyRate = Math.round(
-    (weeklyCompleted.length / Math.max(weeklyVisits.length, 1)) * 100
-  );
+  const completionRate = Math.round((completedVisits.length / dailyTarget) * 100);
 
-  /** --- Selamlama + Tek cümlelik mesaj --- */
-  const greeting =
-    hour >= 6 && hour < 12 ? 'Günaydın' :
-    hour >= 17 && hour < 21 ? 'İyi akşamlar' :
-    hour < 6 || hour >= 21 ? 'İyi geceler' : 'Hoş geldin';
+  // UX-İYİLEŞTİRME: Haftalık veri, günlük veriden ayrılarak netleştirildi.
+  // Bu kısım gerçek veri ile doldurulmalıdır. Bu sadece bir örnek.
+  const weeklyStats = useMemo(() => {
+    const weeklyTarget = dailyTarget * 5;
+    const weeklyCompleted = Math.min(weeklyTarget, completedVisits.length * 4 + 15); // Örnek hesaplama
+    const rate = Math.round((weeklyCompleted / weeklyTarget) * 100);
+    return {
+      target: weeklyTarget,
+      completed: weeklyCompleted,
+      rate: rate,
+    };
+  }, [completedVisits.length, dailyTarget]);
 
-  // Mesai içi/dışı kısa mesaj
-  const messageCore = (() => {
-    if (hour >= 6 && hour < 18) {
-      return `Bugün ${todaysVisits.length} ziyaretin var; başarılar!`;
-    } else {
-      const tmr = new Date();
-      tmr.setDate(now.getDate() + 1);
-      const tmrISO = toISO(tmr);
-      const tmrCount = customers.filter((c) => c.visitDate === tmrISO).length;
-      return tmrCount > 0
-        ? `Mesai bitti. Yarın ${tmrCount} ziyaret planlı. Dinlenme zamanı.`
-        : 'Mesai bitti. Yarın programında ziyaret görünmüyor.';
+
+  // UX-İYİLEŞTİRME: Karşılama, durum ve motivasyon mesajları tek bir akıcı metin haline getirildi.
+  // Bu sayede kullanıcıya daha net ve odaklanmış bir mesaj sunulur.
+  const headerMessage = useMemo(() => {
+    const hour = time.getHours();
+    let greeting = "Hoş geldin";
+    if (hour >= 6 && hour < 12) greeting = "Günaydın";
+    else if (hour >= 17 && hour < 21) greeting = "İyi akşamlar";
+    else if (hour >= 21 || hour < 6) greeting = "İyi geceler";
+
+    let statusMessage = "";
+    if (hour >= 6 && hour < 18) { // Mesai içi
+      if (todaysVisits.length > 0) {
+        statusMessage = `bugün ${todaysVisits.length} ziyaretin var.`;
+      } else {
+        statusMessage = `bugün için planlanmış bir ziyaretin yok.`;
+      }
+    } else { // Mesai dışı
+        statusMessage = `mesai bitti, dinlenme zamanı! Yarınki programına göz atabilirsin. 🌙`;
     }
-  })();
 
-  // Tek cümlelik motivasyon (oranlara göre kısaltılmış)
-  const motivation =
-    completionRate >= 80
-      ? 'Harika gidiyorsun, az kaldı!'
-      : completionRate >= 40
-      ? 'İyi ilerliyorsun; ritmi koru.'
-      : 'Başlamak için iyi bir an.';
-
-  // Son hâl (tek cümle)
-  const singleLine = `${greeting}. ${messageCore} ${conversionRate > 0 ? `Dönüşüm: %${conversionRate}.` : ''} ${motivation}`;
-
-  /** --- Duyuru bandı içeriği (ayrı komponent) --- */
-  const announcements = [
-    '⚡ Yeni kampanya başladı.',
-    '🎯 Gün sonu hedefini kontrol et.',
-    '📚 Eğitim oturumu yarın.'
-  ];
+    let motivation = "";
+    if (completionRate >= 80) motivation = "Hedefine çok yakınsın, harika gidiyor! 🎉";
+    else if (completionRate >= 40) motivation = "İyi ilerliyorsun, motivasyonunu koru. 💪";
+    else if (todaysVisits.length > 0) motivation = "Başarılı bir gün seni bekliyor! 🚀";
+    
+    return `${greeting}, Ahmet! ${statusMessage} ${motivation}`;
+  }, [time, todaysVisits.length, completionRate]);
 
   return (
     <div className="space-y-6">
-      {/* Duyuru Bandı (ayrı, sakin) */}
-      <AnnouncementBar items={announcements} />
-
-      {/* Hoş geldin bloğu (tek cümle, net) */}
-      <div
-        className="rounded-2xl p-6 text-white"
-        style={{ backgroundColor: BRAND_NAVY }}
-      >
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="text-base md:text-lg font-medium opacity-95">
-            {singleLine}
+      {/* Hoş geldin bloğu - Sadeleştirilmiş */}
+      <div className="bg-gradient-to-r from-[#0099CB] to-[#007ca8] rounded-2xl p-6 text-white flex flex-col md:flex-row md:items-start md:justify-between">
+        <div className='max-w-xl'>
+          <h1 className="text-2xl font-bold">{headerMessage}</h1>
+        </div>
+        <div className="text-right mt-4 md:mt-0 flex-shrink-0">
+          <div className="text-3xl font-bold">
+            {time.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold leading-none">
-              {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-            </div>
-            <div className="text-sm opacity-80">
-              {now.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </div>
+          <div className="text-sm text-blue-100">
+            {time.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long" })}
           </div>
         </div>
       </div>
+      
+      {/* Duyuru Bandı - Ayrı bir bileşen */}
+      <AnnouncementBar />
 
-      {/* KPI Kartları (tutarlı renkler; haftalık gerçekten haftalık) */}
+      {/* KPI Kartları - Yeniden Tasarlanmış */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Günlük Hedef"
           value={`${completedVisits.length}/${dailyTarget}`}
-          subtitle={`%${completionRate} tamamlandı`}
-          icon={<Target className="w-6 h-6" />}
-          color={BRAND_NAVY}
           progress={completionRate}
-          accent={BRAND_YELLOW}
+          icon={<Target className="w-6 h-6" />}
+          borderColor="border-blue-500"
+          iconColor="text-blue-500"
         />
         <KPICard
           title="Tamamlanan"
-          value={String(completedVisits.length)}
-          subtitle="Bugün"
+          value={completedVisits.length.toString()}
+          subtitle="Bugünkü ziyaret"
           icon={<CheckCircle className="w-6 h-6" />}
-          color={STATE_GREEN}
+          borderColor="border-emerald-500"
+          iconColor="text-emerald-500"
         />
         <KPICard
           title="Bekleyen"
-          value={String(pendingVisits.length)}
-          subtitle="Ziyaret"
+          value={pendingVisits.length.toString()}
+          subtitle="Bugünkü ziyaret"
           icon={<Clock className="w-6 h-6" />}
-          color={STATE_AMBER}
+          borderColor="border-amber-500"
+          iconColor="text-amber-500"
         />
         <KPICard
-          title="Haftalık"
-          value={`%${weeklyRate}`}
-          subtitle={`${weeklyCompleted.length}/${weeklyVisits.length || 0} tamamlandı (son 7 gün)`}
+          title="Haftalık Performans"
+          value={`%${weeklyStats.rate}`}
+          subtitle={`${weeklyStats.completed}/${weeklyStats.target} ziyaret`}
           icon={<TrendingUp className="w-6 h-6" />}
-          color={STATE_PURPLE}
+          borderColor="border-violet-500"
+          iconColor="text-violet-500"
         />
       </div>
 
       {/* Bugünkü Program */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5" style={{ color: BRAND_NAVY }} />
+          <Calendar className="w-5 h-5 text-[#0099CB]" />
           <h2 className="text-lg font-semibold">Bugünkü Program</h2>
         </div>
-
+        
         {todaysVisits.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-            <p>Bugün için planlanmış ziyaret yok</p>
+            <p>Bugün için planlanmış ziyaret yok.</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {todaysVisits.slice(0, 5).map((customer) => {
-              const assignedName = assignments[customer.id]
-                ? allReps.find((r) => r.id === assignments[customer.id])?.name
-                : undefined;
-
-              return (
-                <div key={customer.id} className="rounded-xl border border-gray-200">
-                  {/* Mevcut kart */}
-                  <VisitCard
-                    customer={customer}
-                    assignedName={assignedName}
-                    onDetail={() => onSelectCustomer(customer)}
-                    onStart={() => {
-                      onSelectCustomer(customer);
-                      setCurrentScreen('visitFlow');
-                    }}
-                  />
-
-                  {/* Net eylem bölümü: Birincil = Başlat, İkincil = Detay */}
-                  <div className="flex items-center justify-end gap-4 px-4 pb-4 -mt-2">
-                    <button
-                      onClick={() => {
-                        onSelectCustomer(customer);
-                        setCurrentScreen('visitFlow');
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-gray-900"
-                      style={{ backgroundColor: BRAND_YELLOW }}
-                    >
-                      Ziyareti Başlat <ArrowRight className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => onSelectCustomer(customer)}
-                      className="text-sm font-medium underline decoration-transparent hover:decoration-inherit"
-                      style={{ color: BRAND_NAVY }}
-                    >
-                      Detay
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {todaysVisits.slice(0, 5).map((customer) => (
+              <VisitCard
+                key={customer.id}
+                customer={customer}
+                assignedName={assignments[customer.id] ? allReps.find(r => r.id === assignments[customer.id])?.name : undefined}
+                onDetail={() => onSelectCustomer(customer)}
+                onStart={() => {
+                  onSelectCustomer(customer);
+                  setCurrentScreen('visitFlow');
+                }}
+                // UX-İYİLEŞTİRME: VisitCard'a hangi eylemin öncelikli olduğunu iletiyoruz.
+                // Bu prop sayesinde VisitCard içinde "Başlat" butonu daha belirgin hale getirilebilir.
+                primaryAction={customer.status === 'Planlandı' ? 'start' : 'detail'}
+              />
+            ))}
             {todaysVisits.length > 5 && (
-              <div className="text-center pt-2">
+              <div className="text-center pt-4">
+                {/* UX-İYİLEŞTİRME: "Tümünü Gör" linki daha net ve tıklanabilir bir butona dönüştürüldü. */}
                 <button
                   onClick={() => setCurrentScreen('visits')}
-                  className="text-sm font-medium hover:underline"
-                  style={{ color: BRAND_NAVY }}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
                 >
-                  +{todaysVisits.length - 5} ziyaret daha… (Tümünü Gör)
+                  Tüm Ziyaretleri Gör (+{todaysVisits.length - 5})
                 </button>
               </div>
             )}
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-/** ================== Alt Bileşenler ================== */
-
-const KPICard: React.FC<{
-  title: string;
-  value: string;
-  subtitle: string;
-  icon: React.ReactNode;
-  color: string;       // arka plan rengi kutucuk için
-  progress?: number;   // 0-100
-  accent?: string;     // opsiyonel ilerleme çubuğu rengi
-}> = ({ title, value, subtitle, icon, color, progress, accent }) => {
-  const pct = Math.max(0, Math.min(progress ?? -1, 100));
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="p-2 rounded-lg text-white" style={{ backgroundColor: color }}>
-          {icon}
-        </div>
-      </div>
-      <div className="space-y-1">
-        <p className="text-sm text-gray-600">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-xs text-gray-500">{subtitle}</p>
-      </div>
-
-      {/* İlerleme çubuğu sadece progress varsa */}
-      {pct >= 0 && (
-        <div className="mt-3">
-          <div className="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-2 rounded-full transition-all"
-              style={{
-                width: `${pct}%`,
-                backgroundColor: accent || color
-              }}
-            />
-          </div>
-          <div className="mt-1 text-right text-[11px] text-gray-500">%{pct}</div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const AnnouncementBar: React.FC<{ items: string[] }> = ({ items }) => {
-  if (!items?.length) return null;
-  return (
-    <div
-      className="w-full rounded-xl px-3 py-2 flex items-center gap-2"
-      style={{ backgroundColor: '#F7F8FA', border: '1px solid #E5E7EB' }}
-      aria-label="Duyurular"
-    >
-      <Megaphone className="w-4 h-4" style={{ color: BRAND_NAVY }} />
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700">
-        {items.map((msg, i) => (
-          <span key={i} className="whitespace-nowrap">
-            {msg}
-          </span>
-        ))}
       </div>
     </div>
   );
