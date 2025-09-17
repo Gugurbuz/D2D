@@ -1,16 +1,9 @@
-// src/screens/VisitFlowScreen.tsx — improved (complete)
-// Highlights:
-// - Dev-only TEST bypass, currency formatting, phone mask/validate
-// - Tariff selection auto-sync to customer type
-// - Safer camera stream cleanup, skeletons, minor a11y tweaks
-// - Optional track() hooks for analytics
-
 import React, { useReducer, useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   IdCard, Camera, FileText,
   ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
   Loader2, ScanLine, Nfc, Maximize2, MapPin, Home, Building, Factory,
-  Sparkles
+  Sparkles, Info
 } from 'lucide-react';
 import { Customer } from '../RouteMap';
 import { BRAND_COLORS } from '../styles/theme';
@@ -133,20 +126,33 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
     [customer, onCloseToList, onCompleteVisit, state.notes]
   );
 
+  // Non-clickable visual progress indicator
   const StepIndicator = () => (
-    <div className="flex items-center gap-2 mb-4" aria-label="Adımlar">
+    <div className="flex items-center gap-2 mb-6" aria-label="Adım İlerlemesi">
       {[1, 2, 3, 4].map((n) => (
-        <button
-          key={n}
-          type="button"
-          aria-current={state.currentStep === n ? 'step' : undefined}
-          onClick={() => dispatch({ type: 'SET_STEP', payload: n as FlowStep })}
-          className={`h-2 rounded-full transition-colors focus:outline-none focus:ring ${
-            state.currentStep >= n ? 'bg-[' + BRAND_COLORS.navy + ']' : 'bg-gray-200'
-          }`}
-          style={{ width: 56 }}
-          title={`Adım ${n}`}
-        />
+        <div key={n} className="flex items-center">
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+              state.currentStep === n
+                ? 'text-white shadow-lg transform scale-110'
+                : state.currentStep > n
+                ? 'text-white'
+                : 'bg-gray-200 text-gray-500'
+            }`}
+            style={{
+              backgroundColor: state.currentStep >= n ? BRAND_COLORS.navy : undefined,
+            }}
+          >
+            {state.currentStep > n ? <CheckCircle className="w-5 h-5" /> : n}
+          </div>
+          {n < 4 && (
+            <div
+              className={`h-1 w-16 mx-2 rounded-full transition-all duration-500 ${
+                state.currentStep > n ? 'bg-[' + BRAND_COLORS.navy + ']' : 'bg-gray-200'
+              }`}
+            />
+          )}
+        </div>
       ))}
     </div>
   );
@@ -161,11 +167,17 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
       </div>
 
       {currentScreen === 'checkin' && (
-        <CheckInScreen customer={customer} onContinue={() => setCurrentScreen('proposal')} />
+        <CheckInScreen 
+          customer={customer} 
+          onContinue={() => setCurrentScreen('proposal')} 
+        />
       )}
 
       {currentScreen === 'proposal' && (
-        <ProposalScreen customer={customer} onContinue={() => setCurrentScreen('flow')} />
+        <ProposalScreen 
+          customer={customer} 
+          onContinue={() => setCurrentScreen('flow')} 
+        />
       )}
 
       {currentScreen === 'flow' && (
@@ -211,6 +223,7 @@ const CheckInScreen: React.FC<{ customer: Customer; onContinue: () => void }> = 
   const [locationStatus, setLocationStatus] = useState<'idle' | 'getting' | 'success' | 'error'>('idle');
   const [distance, setDistance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3;
@@ -234,6 +247,14 @@ const CheckInScreen: React.FC<{ customer: Customer; onContinue: () => void }> = 
         setDistance(dist);
         setLocationStatus('success');
         track('checkin_location_success', { dist });
+
+        // Auto-advance if location is verified
+        if (dist <= 200) {
+          setAutoAdvancing(true);
+          setTimeout(() => {
+            onContinue();
+          }, 2000);
+        }
       },
       (err) => {
         setError(`Konum alınamadı: ${err.message}`);
@@ -242,33 +263,56 @@ const CheckInScreen: React.FC<{ customer: Customer; onContinue: () => void }> = 
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  }, [customer.lat, customer.lng]);
+  }, [customer.lat, customer.lng, onContinue]);
 
   const renderStatus = () => {
     switch (locationStatus) {
       case 'getting':
         return (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" /> Konum alınıyor...
-          </>
+          <div className="flex items-center gap-2 p-4 bg-blue-50 rounded-lg animate-pulse">
+            <div className="w-4 h-4 bg-blue-300 rounded-full animate-bounce"></div>
+            <div className="w-4 h-4 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-4 h-4 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <span className="ml-2 text-blue-700 font-medium">Konum alınıyor...</span>
+          </div>
         );
       case 'error':
         return (
-          <>
-            <XCircle className="w-4 h-4 text-red-500" /> {error}
-          </>
+          <div className="flex items-center gap-2 p-4 bg-red-50 rounded-lg border border-red-200">
+            <XCircle className="w-5 h-5 text-red-500" />
+            <span className="text-red-700">{error}</span>
+          </div>
         );
       case 'success':
         if (distance === null) return null;
-        const isClose = distance <= 200; // TODO: make configurable
+        const isClose = distance <= 200;
+        
+        if (autoAdvancing && isClose) {
+          return (
+            <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg border border-green-200 animate-pulse">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <span className="text-green-700 font-medium">
+                Konum doğrulandı ({distance.toFixed(0)}m), yönlendiriliyorsunuz...
+              </span>
+              <Loader2 className="w-4 h-4 animate-spin text-green-500" />
+            </div>
+          );
+        }
+
         return isClose ? (
-          <>
-            <CheckCircle className="w-4 h-4 text-green-500" /> Müşteri konumundasınız ({distance.toFixed(0)}m).
-          </>
+          <div className="flex items-center gap-2 p-4 bg-green-50 rounded-lg border border-green-200">
+            <CheckCircle className="w-5 h-5 text-green-500" />
+            <span className="text-green-700 font-medium">
+              Müşteri konumundasınız ({distance.toFixed(0)}m).
+            </span>
+          </div>
         ) : (
-          <>
-            <XCircle className="w-4 h-4 text-yellow-500" /> Müşteri konumundan uzaktasınız (~{(distance / 1000).toFixed(1)} km).
-          </>
+          <div className="flex items-center gap-2 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <XCircle className="w-5 h-5 text-yellow-500" />
+            <span className="text-yellow-700">
+              Müşteri konumundan uzaktasınız (~{(distance / 1000).toFixed(1)} km).
+            </span>
+          </div>
         );
       default:
         return null;
@@ -288,10 +332,10 @@ const CheckInScreen: React.FC<{ customer: Customer; onContinue: () => void }> = 
           <p className="text-sm text-gray-700">
             {customer.address}, {customer.district}
           </p>
-          <div className="mt-2 flex items-center gap-2 text-sm font-medium">{renderStatus()}</div>
+          <div className="mt-3">{renderStatus()}</div>
           {locationStatus === 'error' && (
             <button
-              className="mt-2 text-sm underline"
+              className="mt-2 text-sm underline text-blue-600 hover:text-blue-800"
               onClick={() => {
                 // allow manual confirmation if GPS blocked
                 setLocationStatus('success');
@@ -304,15 +348,17 @@ const CheckInScreen: React.FC<{ customer: Customer; onContinue: () => void }> = 
           )}
         </div>
       </div>
-      <div className="mt-6 text-right">
-        <button
-          onClick={onContinue}
-          className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
-          style={{ backgroundColor: BRAND_COLORS.navy }}
-        >
-          Check-in Yap ve Devam Et <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+      {!autoAdvancing && (
+        <div className="mt-6 text-right">
+          <button
+            onClick={onContinue}
+            className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: BRAND_COLORS.navy }}
+          >
+            Check-in Yap ve Devam Et <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -361,8 +407,8 @@ const LeadGenerationModal: React.FC<{ customer: Customer; onClose: () => void }>
                 {['Güneş Paneli', 'Depolama (Batarya)', 'Şarj İstasyonu (EV)'].map((sol) => (
                   <label
                     key={sol}
-                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer ${
-                      selectedSolutions.includes(sol) ? 'bg-yellow-100 border-yellow-400' : 'bg-white'
+                    className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-all ${
+                      selectedSolutions.includes(sol) ? 'bg-yellow-100 border-yellow-400 transform scale-105' : 'bg-white hover:bg-gray-50'
                     }`}
                   >
                     <input
@@ -393,7 +439,7 @@ const LeadGenerationModal: React.FC<{ customer: Customer; onClose: () => void }>
             <button
               type="submit"
               disabled={!kvkkAccepted || selectedSolutions.length === 0}
-              className="w-full text-gray-900 px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full text-gray-900 px-6 py-3 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               style={{ backgroundColor: BRAND_COLORS.yellow }}
             >
               Talep Oluştur
@@ -423,6 +469,7 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
 
   const [currentUnitPrice, setCurrentUnitPrice] = useState(2.2);
   const [currentConsumption, setCurrentConsumption] = useState(150);
+  const [savingsAnimating, setSavingsAnimating] = useState(false);
 
   const availableTariffs = useMemo(
     () => (customer.customerType ? ALL_TARIFFS.filter((t) => t.type.includes(customer.customerType)) : []),
@@ -445,6 +492,13 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
   const currentMonthlyBill = currentUnitPrice * currentConsumption;
   const enerjisaMonthlyBill = selectedTariff.unitPrice * currentConsumption;
   const annualSavings = (currentMonthlyBill - enerjisaMonthlyBill) * 12;
+
+  // Animate savings when values change
+  useEffect(() => {
+    setSavingsAnimating(true);
+    const timer = setTimeout(() => setSavingsAnimating(false), 300);
+    return () => clearTimeout(timer);
+  }, [currentUnitPrice, currentConsumption, selectedTariff.id]);
 
   const CustomerTypeIcon: Record<NonNullable<Customer['customerType']>, JSX.Element> = {
     Mesken: <Home className="w-6 h-6 text-gray-700" />,
@@ -477,22 +531,41 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium">Birim Fiyat (TL/kWh)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={currentUnitPrice}
-                  onChange={(e) => setCurrentUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full mt-1 p-2 border rounded-lg"
-                />
+                <div className="mt-1">
+                  <input
+                    type="range"
+                    min="1.5"
+                    max="4.0"
+                    step="0.01"
+                    value={currentUnitPrice}
+                    onChange={(e) => setCurrentUnitPrice(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>1.5 TL</span>
+                    <span className="font-semibold">{currentUnitPrice.toFixed(2)} TL</span>
+                    <span>4.0 TL</span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Aylık Tüketim (kWh)</label>
-                <input
-                  type="number"
-                  value={currentConsumption}
-                  onChange={(e) => setCurrentConsumption(parseInt(e.target.value) || 0)}
-                  className="w-full mt-1 p-2 border rounded-lg"
-                />
+                <div className="mt-1">
+                  <input
+                    type="range"
+                    min="50"
+                    max="500"
+                    step="10"
+                    value={currentConsumption}
+                    onChange={(e) => setCurrentConsumption(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>50 kWh</span>
+                    <span className="font-semibold">{currentConsumption} kWh</span>
+                    <span>500 kWh</span>
+                  </div>
+                </div>
               </div>
               <div className="pt-2">
                 <p className="text-sm text-gray-600">Tahmini Aylık Fatura</p>
@@ -508,23 +581,29 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium">Tarife Seçimi</label>
-                <select
-                  value={selectedTariff.id}
-                  onChange={(e) => setSelectedTariff(ALL_TARIFFS.find((t) => t.id === e.target.value)!)}
-                  className="w-full mt-1 p-2 border rounded-lg"
-                  disabled={availableTariffs.length === 0}
-                >
-                  {selectedTariff.id === 'fallback' && (
-                    <option value="fallback" disabled>
-                      {FALLBACK_TARIFF.name}
-                    </option>
-                  )}
-                  {availableTariffs.map((tariff) => (
-                    <option key={tariff.id} value={tariff.id}>
-                      {tariff.name}
-                    </option>
-                  ))}
-                </select>
+                {availableTariffs.length === 0 ? (
+                  <div className="mt-1 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-yellow-700">
+                      <Info className="w-4 h-4" />
+                      <span className="text-sm font-medium">Bu müşteri tipine uygun tarife bulunamadı.</span>
+                    </div>
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Lütfen müşteri tipini kontrol edin veya özel tarife için yöneticinizle iletişime geçin.
+                    </p>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedTariff.id}
+                    onChange={(e) => setSelectedTariff(ALL_TARIFFS.find((t) => t.id === e.target.value)!)}
+                    className="w-full mt-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {availableTariffs.map((tariff) => (
+                      <option key={tariff.id} value={tariff.id}>
+                        {tariff.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {selectedTariff.id === 'yesil_evim' && (
                   <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" /> Solar çözümlerde %10 indirim sağlar.
@@ -545,11 +624,21 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
           </div>
         </div>
 
-        <div className="mt-6 p-4 rounded-lg border text-center" style={{ backgroundColor: '#ECFDF5', borderColor: '#BBF7D0' }}>
+        <div 
+          className={`mt-6 p-4 rounded-lg border text-center transition-all duration-300 ${
+            savingsAnimating ? 'transform scale-105' : ''
+          }`} 
+          style={{ backgroundColor: '#ECFDF5', borderColor: '#BBF7D0' }}
+        >
           <p className="text-lg font-medium" style={{ color: '#065F46' }}>
             Yıllık Tahmini Tasarruf
           </p>
-          <p className="text-4xl font-bold my-2" style={{ color: '#047857' }}>
+          <p 
+            className={`text-4xl font-bold my-2 transition-all duration-300 ${
+              savingsAnimating ? 'transform scale-110' : ''
+            }`} 
+            style={{ color: '#047857' }}
+          >
             {selectedTariff.id !== 'fallback' ? (annualSavings > 0 ? fmtTRY(annualSavings) : 'Tasarruf Yok') : '-'}
           </p>
         </div>
@@ -566,7 +655,7 @@ const ProposalScreen: React.FC<{ customer: Customer; onContinue: () => void }> =
         <div className="mt-8 text-right">
           <button
             onClick={onContinue}
-            className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
+            className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
             style={{ backgroundColor: BRAND_COLORS.navy }}
           >
             Müzakere Sonucuna Git <ChevronRight className="w-4 h-4" />
@@ -585,7 +674,7 @@ const LeadTrigger: React.FC = () => {
   return (
     <button
       onClick={() => LeadModalBus.open.forEach((f) => f())}
-      className="px-4 py-2 rounded-lg text-sm font-semibold"
+      className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
       style={{ backgroundColor: BRAND_COLORS.yellow, color: '#111827' }}
     >
       Evet, Teklif İçin Talep Oluştur
@@ -618,28 +707,28 @@ const VisitStatusSelection: React.FC<{
       <h3 className="text-lg font-semibold text-gray-800 mb-4">Ziyaret Sonucunu Belirtin</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <BasicStatusButton
-          colorClass="hover:bg-green-50 hover:border-green-400"
+          colorClass="hover:bg-green-50 hover:border-green-400 hover:shadow-md"
           icon={<CheckCircle className="w-8 h-8 text-green-500" />}
           title="Sözleşme Başlat"
           desc="Müşteri teklifi kabul etti, sürece başla."
           onClick={() => onSave('InProgress')}
         />
         <BasicStatusButton
-          colorClass="hover:bg-red-50 hover:border-red-400"
+          colorClass="hover:bg-red-50 hover:border-red-400 hover:shadow-md"
           icon={<XCircle className="w-8 h-8 text-red-500" />}
           title="Teklifi Reddetti"
           desc="Müşteri teklifi istemedi."
           onClick={() => onSave('Rejected')}
         />
         <BasicStatusButton
-          colorClass="hover:bg-yellow-50 hover:border-yellow-400"
+          colorClass="hover:bg-yellow-50 hover:border-yellow-400 hover:shadow-md"
           icon={<UserX className="w-8 h-8 text-yellow-500" />}
           title="Ulaşılamadı"
           desc="Müşteri adreste bulunamadı."
           onClick={() => onSave('Unreachable')}
         />
         <BasicStatusButton
-          colorClass="hover:bg-blue-50 hover:border-blue-400"
+          colorClass="hover:bg-blue-50 hover:border-blue-400 hover:shadow-md"
           icon={<Clock className="w-8 h-8 text-blue-500" />}
           title="Ertelendi"
           desc="Müşteri daha sonra görüşmek istedi."
@@ -655,7 +744,7 @@ const VisitStatusSelection: React.FC<{
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Örn: Müşteri mevcut sağlayıcısından memnun olduğunu belirtti."
         />
       </div>
@@ -672,7 +761,7 @@ const BasicStatusButton: React.FC<{
 }> = ({ colorClass, icon, title, desc, onClick }) => (
   <button
     onClick={onClick}
-    className={`p-4 border rounded-lg text-left transition-colors flex items-center gap-4 ${colorClass}`}
+    className={`p-4 border rounded-lg text-left transition-all duration-200 flex items-center gap-4 transform hover:scale-105 ${colorClass}`}
   >
     {icon}
     <div>
@@ -712,7 +801,7 @@ const CustomerInfoStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<
       <div className="mt-6 text-right">
         <button
           onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })}
-          className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2"
+          className="text-white px-6 py-3 rounded-lg inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
           style={{ backgroundColor: BRAND_COLORS.navy }}
         >
           Bilgiler Doğru, Devam Et <ChevronRight className="w-4 h-4" />
@@ -849,22 +938,27 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
       </div>
 
       <fieldset disabled={isBypassChecked}>
-        <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity ${isBypassChecked ? 'opacity-40' : 'opacity-100'}`}>
+        <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity duration-300 ${isBypassChecked ? 'opacity-40' : 'opacity-100'}`}>
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Kimlik Fotoğrafı</p>
             <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+              {!stream && !state.idPhoto && (
+                <div className="text-center p-4">
+                  <Camera className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-400 text-sm">Kamera başlatılıyor...</p>
+                </div>
+              )}
               <video ref={videoRef} className={`w-full h-full object-cover ${!stream ? 'hidden' : ''}`} autoPlay muted playsInline />
               <canvas ref={canvasRef} className="hidden" />
               {stream && <div className="absolute inset-0 border-[3px] border-dashed border-white/70 m-4 rounded-xl pointer-events-none" />}
               {!stream && state.idPhoto && <img src={state.idPhoto} alt="Çekilen Kimlik" className="w-full h-full object-contain" />}
-              {!stream && !state.idPhoto && <div className="text-gray-400 p-4 text-center">Kamera kapalı veya izin bekleniyor.</div>}
             </div>
             {cameraError && <p className="text-red-600 text-sm mt-2">{cameraError}</p>}
             <div className="mt-4">
               {state.ocrStatus === 'idle' && (
                 <button
                   onClick={stream ? handleCaptureAndOcr : startCamera}
-                  className="w-full text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2"
+                  className="w-full text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: BRAND_COLORS.navy }}
                 >
                   <Camera className="w-4 h-4" /> {stream ? 'Fotoğraf Çek ve Doğrula' : 'Kamerayı Başlat'}
@@ -885,7 +979,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
                 <div className="text-center p-2 text-red-600">
                   <p className="font-semibold">Kimlik okunamadı!</p>
                   <p className="text-sm">Lütfen daha aydınlık bir ortamda, yansıma olmadan tekrar deneyin.</p>
-                  <button onClick={() => dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' })} className="mt-2 text-sm bg-gray-200 px-3 py-1 rounded">
+                  <button onClick={() => dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' })} className="mt-2 text-sm bg-gray-200 px-3 py-1 rounded hover:bg-gray-300 transition-colors">
                     Tekrar Dene
                   </button>
                 </div>
@@ -893,13 +987,19 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
             </div>
           </div>
 
-          <div className={`transition-opacity duration-500 ${state.ocrStatus === 'success' ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+          <div className={`transition-all duration-500 ${
+            state.ocrStatus === 'success' 
+              ? 'opacity-100 transform scale-100' 
+              : 'opacity-40 pointer-events-none transform scale-95'
+          }`}>
             <p className="text-sm font-medium text-gray-700 mb-2">Çipli Kimlik (NFC) Onayı</p>
-            <div className="p-4 border rounded-lg h-full flex flex-col justify-center items-center">
+            <div className={`p-4 border rounded-lg h-full flex flex-col justify-center items-center transition-all duration-300 ${
+              state.ocrStatus === 'success' ? 'border-green-300 bg-green-50/30 shadow-sm' : 'border-gray-200'
+            }`}>
               {state.nfcStatus === 'idle' && (
                 <button
                   onClick={handleNfcRead}
-                  className="px-4 py-2 rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: BRAND_COLORS.yellow, color: '#111827' }}
                 >
                   <Nfc className="w-5 h-5" /> NFC ile Oku
@@ -924,17 +1024,27 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
       </fieldset>
 
       <div className="mt-6 flex justify-between">
-        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 rounded-lg bg-white border">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 1 })} className="px-4 py-2 rounded-lg bg-white border hover:bg-gray-50 transition-colors">
           Geri
         </button>
-        <button
-          onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })}
-          disabled={!isVerified}
-          className={`px-6 py-3 rounded-lg text-white ${isVerified ? '' : 'bg-gray-300'}`}
-          style={{ backgroundColor: isVerified ? BRAND_COLORS.navy : undefined }}
-        >
-          Devam Et
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })}
+            disabled={!isVerified}
+            className={`px-6 py-3 rounded-lg text-white transition-all ${
+              isVerified ? 'hover:opacity-90' : 'bg-gray-300 cursor-not-allowed'
+            }`}
+            style={{ backgroundColor: isVerified ? BRAND_COLORS.navy : undefined }}
+            title={!isVerified ? 'Devam etmek için kimlik doğrulama ve NFC onayı gerekli' : ''}
+          >
+            Devam Et
+          </button>
+          {!isVerified && (
+            <div className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              Devam etmek için imza ve SMS onayı gerekli
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -958,6 +1068,16 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
 
   const canContinue = state.contractAccepted && state.smsSent && !!signatureDataUrl && otpValid;
 
+  const getTooltipMessage = () => {
+    const missing = [];
+    if (!state.contractAccepted) missing.push('sözleşme onayı');
+    if (!signatureDataUrl) missing.push('dijital imza');
+    if (!state.smsSent) missing.push('SMS onayı');
+    else if (!otpValid) missing.push('geçerli SMS kodu');
+    
+    return missing.length > 0 ? `Devam etmek için ${missing.join(', ')} gerekli` : '';
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 animate-fade-in">
       <div className="flex items-center gap-3 mb-4">
@@ -971,7 +1091,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
           <button
             type="button"
             onClick={() => setContractOpen(true)}
-            className="w-full h-64 border rounded-lg bg-white overflow-hidden relative text-left"
+            className="w-full h-64 border rounded-lg bg-white overflow-hidden relative text-left hover:shadow-md transition-shadow"
             aria-label="Sözleşmeyi görüntüle"
           >
             <ContractMockPage customer={customer} signatureDataUrl={signatureDataUrl} scale="preview" />
@@ -985,11 +1105,12 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
             </div>
           </button>
 
-          <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer">
+          <label className="mt-4 flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors">
             <input
               type="checkbox"
               checked={state.contractAccepted}
               onChange={(e) => dispatch({ type: 'SET_CONTRACT_ACCEPTED', payload: e.target.checked })}
+              className="h-4 w-4 rounded"
             />
             Sözleşme koşullarını okudum ve onaylıyorum.
           </label>
@@ -1002,10 +1123,10 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
               <div className="flex items-center gap-3">
                 <img src={signatureDataUrl} alt="İmza" className="h-[120px] w-auto bg-white rounded border" />
                 <div className="flex flex-col gap-2">
-                  <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg border bg-white text-sm">
+                  <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg border bg-white text-sm hover:bg-gray-50 transition-colors">
                     İmzayı Düzenle
                   </button>
-                  <button onClick={() => setSignatureDataUrl(null)} className="px-3 py-2 rounded-lg border bg-white text-sm">
+                  <button onClick={() => setSignatureDataUrl(null)} className="px-3 py-2 rounded-lg border bg-white text-sm hover:bg-gray-50 transition-colors">
                     Temizle
                   </button>
                 </div>
@@ -1013,7 +1134,7 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
             ) : (
               <div className="flex items-center justify-between gap-3">
                 <div className="text-sm text-gray-500">Henüz imza yok.</div>
-                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg text-white text-sm" style={{ backgroundColor: BRAND_COLORS.navy }}>
+                <button onClick={() => setSigOpen(true)} className="px-3 py-2 rounded-lg text-white text-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: BRAND_COLORS.navy }}>
                   İmza Al
                 </button>
               </div>
@@ -1026,10 +1147,15 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
               <input
                 value={flowSmsPhone}
                 onChange={(e) => setFlowSmsPhone(e.target.value)}
-                className="flex-1 p-2 border rounded-lg"
+                className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="05XX XXX XX XX"
               />
-              <button onClick={smsSend} disabled={!phoneIsValid(flowSmsPhone)} className="px-4 py-2 rounded-lg text-gray-900 disabled:bg-gray-300" style={{ backgroundColor: BRAND_COLORS.yellow }}>
+              <button 
+                onClick={smsSend} 
+                disabled={!phoneIsValid(flowSmsPhone)} 
+                className="px-4 py-2 rounded-lg text-gray-900 disabled:bg-gray-300 hover:opacity-90 transition-opacity" 
+                style={{ backgroundColor: BRAND_COLORS.yellow }}
+              >
                 SMS Gönder
               </button>
             </div>
@@ -1039,27 +1165,44 @@ const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; c
                   <ShieldCheck className="w-4 h-4" /> Onay SMS'i gönderildi.
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <input value={otp} onChange={(e) => setOtp(e.target.value)} maxLength={6} className="p-2 border rounded w-32" placeholder="Onay Kodu" />
-                  <span className={`text-sm ${otpValid ? 'text-green-700' : 'text-gray-500'}`}>{otpValid ? 'Kod doğrulandı' : '0000 demo'}</span>
+                  <input 
+                    value={otp} 
+                    onChange={(e) => setOtp(e.target.value)} 
+                    maxLength={6} 
+                    className="p-2 border rounded w-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                    placeholder="Onay Kodu" 
+                  />
+                  <span className={`text-sm transition-colors ${otpValid ? 'text-green-700' : 'text-gray-500'}`}>
+                    {otpValid ? 'Kod doğrulandı' : '0000 demo'}
+                  </span>
                 </div>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </fieldset>
 
       <div className="mt-6 flex justify-between">
-        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 rounded-lg bg-white border">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 2 })} className="px-4 py-2 rounded-lg bg-white border hover:bg-gray-50 transition-colors">
           Geri
         </button>
-        <button
-          onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })}
-          disabled={!canContinue}
-          className={`px-6 py-3 rounded-lg text-white ${canContinue ? '' : 'bg-gray-300'}`}
-          style={{ backgroundColor: canContinue ? BRAND_COLORS.navy : undefined }}
-        >
-          Sözleşmeyi Onayla ve Bitir
-        </button>
+        <div className="relative group">
+          <button
+            onClick={() => dispatch({ type: 'SET_STEP', payload: 4 })}
+            disabled={!canContinue}
+            className={`px-6 py-3 rounded-lg text-white transition-all ${
+              canContinue ? 'hover:opacity-90' : 'bg-gray-300 cursor-not-allowed'
+            }`}
+            style={{ backgroundColor: canContinue ? BRAND_COLORS.navy : undefined }}
+          >
+            Sözleşmeyi Onayla ve Bitir
+          </button>
+          {!canContinue && (
+            <div className="absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              {getTooltipMessage()}
+            </div>
+          )}
+        </div>
       </div>
 
       {sigOpen && (
@@ -1089,10 +1232,10 @@ const CompletionStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<Ac
         Müşteri {customer.name} için elektrik satış sözleşmesi başarıyla oluşturulmuştur.
       </p>
       <div className="mt-6 flex justify-center gap-4">
-        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 rounded-lg bg-white border">
+        <button onClick={() => dispatch({ type: 'SET_STEP', payload: 3 })} className="px-4 py-2 rounded-lg bg-white border hover:bg-gray-50 transition-colors">
           Geri
         </button>
-        <button onClick={onComplete} className="px-8 py-3 rounded-lg bg-green-600 text-white font-semibold">
+        <button onClick={onComplete} className="px-8 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors">
           Ziyareti Kaydet
         </button>
       </div>
@@ -1205,13 +1348,13 @@ const SignaturePadModal: React.FC<{ onClose: () => void; onSave: (dataUrl: strin
       <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
         <div className="font-semibold text-gray-900">İmza</div>
         <div className="flex gap-2">
-          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm">
+          <button onClick={handleClear} className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-gray-50 transition-colors">
             Temizle
           </button>
-          <button onClick={handleSave} className="px-3 py-1.5 rounded text-white text-sm" style={{ backgroundColor: BRAND_COLORS.navy }}>
+          <button onClick={handleSave} className="px-3 py-1.5 rounded text-white text-sm hover:opacity-90 transition-opacity" style={{ backgroundColor: BRAND_COLORS.navy }}>
             Kaydet
           </button>
-          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">
+          <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-gray-50 transition-colors">
             Kapat
           </button>
         </div>
@@ -1294,7 +1437,7 @@ const ContractModal: React.FC<{ customer: Customer; signatureDataUrl: string | n
     <div role="dialog" aria-modal className="fixed inset-0 z-[10040] flex flex-col bg-black/50">
       <div className="flex items-center justify-between bg-white px-4 py-3 border-b">
         <div className="font-semibold text-gray-900">Sözleşme — Önizleme</div>
-        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm">Kapat</button>
+        <button onClick={onClose} className="px-3 py-1.5 rounded border bg-white text-sm hover:bg-gray-50 transition-colors">Kapat</button>
       </div>
       <div className="flex-1 bg-gray-100 overflow-auto">
         <div className="mx-auto my-4 bg-white shadow border" style={{ width: 820, minHeight: 1160 }}>
