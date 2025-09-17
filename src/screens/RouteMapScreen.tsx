@@ -72,13 +72,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [mapStyle, setMapStyle] = useState<StyleKey>(((import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Google Maps") as StyleKey);
 
   const markerRefs = useRef<Record<string, L.Marker>>({});
-  // YENİ: Liste elemanlarının referanslarını tutmak için
   const listItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const mapRef = useRef<L.Map | null>(null);
 
   const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
 
-  // GÜNCELLENDİ: highlightCustomer fonksiyonu artık listeyi de kaydırıyor
   const highlightCustomer = (c: Customer) => {
     setSelectedId(c.id);
     const m = markerRefs.current[c.id];
@@ -86,7 +84,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
     if (mapRef.current) {
       mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
     }
-    // YENİ: İlgili liste elemanına scroll yap
     listItemRefs.current[c.id]?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
@@ -96,10 +93,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   async function handleOptimize() {
     try {
       setLoading(true);
-      // ... (Mevcut rota optimizasyon mantığı - dokunulmadı)
+      // ... (Mevcut rota optimizasyon mantığı)
     } catch (e) {
       console.error(e);
-      // GÜNCELLENDİ: Kullanıcıya hata bildirimi göster
       toast.error("Rota oluşturulamadı. Lütfen bağlantınızı kontrol edin.");
     } finally {
       setLoading(false);
@@ -115,11 +111,11 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
   return (
     <div className="relative w-full h-full">
-      {/* YENİ: Toast bildirimlerinin gösterileceği alan */}
       <Toaster position="top-center" />
 
-      {/* Harita */}
+      {/* Harita ve Panelleri içeren ana sarmalayıcı */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
+        
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/80 py-1 px-2 rounded-lg shadow-lg flex items-center gap-2">
           {/* ... Kontrol paneli butonları ... */}
         </div>
@@ -132,11 +128,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
             <Popup><b>{rep.name}</b></Popup>
           </Marker>
         
-        {/* YENİ: MarkerClusterGroup ile sarmalanan müşteri pin'leri */}
         <MarkerClusterGroup>
           {orderedCustomers.map((c, i) => (
             <Marker key={c.id} position={[c.lat, c.lng]} icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })} ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }} eventHandlers={{ click: () => highlightCustomer(c) }} >
-              {/* GÜNCELLENDİ: Sadeleştirilmiş Pop-up */}
               <Popup>
                 <div className="text-center p-1">
                     <b className="text-md block mb-2">{i + 1}. {c.name}</b>
@@ -159,7 +153,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
 
         {/* Sağ panel */}
         <div className={`absolute top-4 right-0 bottom-4 z-[999] transition-transform duration-300 ${ panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]" } flex`} >
-          {/* ... panel içeriği */}
+          {/* ... panel içeriği ... */}
           <div className="overflow-auto pr-1">
               {orderedCustomers.map((c, i) => {
                 const selected = selectedId === c.id;
@@ -167,7 +161,6 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 return (
                   <div
                       key={c.id}
-                      // YENİ: Her liste elemanına kendi ID'si ile bir ref atıyoruz
                       ref={(el) => (listItemRefs.current[c.id] = el)}
                     className={`flex items-center gap-2 p-2 rounded cursor-pointer ${selected ? "bg-[#0099CB]/10" : "hover:bg-gray-50"}`}
                     onClick={() => highlightCustomer(c)}
@@ -177,10 +170,9 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
                 );
               })}
             </div>
-          </div>
         </div>
         
-        {/* GÜNCELLENDİ: Tam ekran modern yüklenme göstergesi */}
+        {/* DÜZELTİLDİ: Yüklenme ekranı artık harita sarmalayıcısının içinde */}
         {loading && (
           <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-[2000] backdrop-blur-sm">
             <Loader2 className="w-10 h-10 text-[#0099CB] animate-spin" />
