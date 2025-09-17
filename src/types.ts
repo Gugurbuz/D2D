@@ -17,6 +17,7 @@ export type Screen =
   | 'invoiceOcr'
 | 'systemManagement'
   | 'systemReports';
+| 'outOfRegionWizard'
 
 export interface Customer {
   id: string;
