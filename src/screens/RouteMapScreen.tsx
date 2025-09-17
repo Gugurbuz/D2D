@@ -28,24 +28,69 @@ const TILE_STYLES = {
 } as const;
 type StyleKey = keyof typeof TILE_STYLES;
 
-// Tipler ve diğer tanımlamalar...
+// Tipler
 interface Customer { id: string; name: string; address: string; district: string; phone: string; lat: number; lng: number; plannedTime: string; }
 interface SalesRep { id: string; name: string; lat: number; lng: number; }
 interface Props { customers: Customer[]; salesRep: SalesRep; }
-const defaultSalesRep: SalesRep = { id: "rep1", name: "Satış Temsilcisi", lat: 39.9334, lng: 32.8597 };
-const anadoluCustomers: Customer[] = [ /* ... Müşteri verileri ... */ ];
 
-// Icon'lar...
-const repIcon = L.divIcon({ /* ... icon tanımı ... */ });
-function numberIcon(n: number, opts: { highlight?: boolean; starred?: boolean } = {}) { /* ... icon tanımı ... */ }
+// Varsayılan Veri
+const defaultSalesRep: SalesRep = { id: "rep1", name: "Satış Temsilcisi", lat: 39.9334, lng: 32.8597 };
+const anadoluCustomers: Customer[] = [
+  { id: "1", name: "Ahmet Yılmaz", address: "Kızılay Mahallesi, Atatürk Bulvarı No:15", district: "Çankaya", phone: "+90 532 123 4567", lat: 39.9208, lng: 32.8541, plannedTime: "09:00" },
+  { id: "2", name: "Fatma Demir", address: "Bahçelievler Mahallesi, 7. Cadde No:23", district: "Çankaya", phone: "+90 533 987 6543", lat: 39.9100, lng: 32.8400, plannedTime: "10:30" }
+];
+
+// İkonlar
+const repIcon = L.divIcon({
+  className: "rep-marker",
+  html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;background:#FF6B00;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏢</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32],
+});
+
+function numberIcon(n: number, opts: { highlight?: boolean; starred?: boolean } = {}) {
+  const bg = opts.starred ? "#F5B301" : opts.highlight ? "#FF6B00" : "#0099CB";
+  return L.divIcon({
+    className: "number-marker",
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;background:${bg};border-radius:50%;border:2px solid #fff;">${n}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -28],
+  });
+}
 
 /* ==== OSRM yardımcıları ==== */
-async function osrmTrip(coords: string) { /* ... OSRM fonksiyonu ... */ }
-async function osrmRoute(from: LatLng, to: LatLng) { /* ... OSRM fonksiyonu ... */ }
+async function osrmTrip(coords: string) {
+  const url = `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&destination=any&roundtrip=false&overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM trip error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.trips?.[0]) throw new Error("Trip not found");
+  return data;
+}
+
+async function osrmRoute(from: LatLng, to: LatLng) {
+  const coords = `${from[1]},${from[0]};${to[1]},${to[0]}`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`OSRM route error: ${res.status}`);
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) throw new Error("Route not found");
+  return data;
+}
 
 /* ==== FitBounds ==== */
-const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => { /* ... Fitbounds bileşeni ... */ };
-
+const FitBounds: React.FC<{ rep: SalesRep; customers: Customer[] }> = ({ rep, customers }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (customers.length === 0) return;
+    const points: LatLng[] = [[rep.lat, rep.lng], ...customers.map(c => [c.lat, c.lng])];
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [50, 50] });
+  }, [rep, customers, map]);
+  return null;
+};
 
 /* ==== Ana Bileşen ==== */
 const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
@@ -57,10 +102,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
   const [routeKm, setRouteKm] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
-  // HATA ALINAN SATIR: Bu satırın eksik olmadığından emin olun
   const [starredId, setStarredId] = useState<string | null>(null);
-
   const [panelOpen, setPanelOpen] = useState(true);
   const [mapStyle, setMapStyle] = useState<StyleKey>(((import.meta.env.VITE_DEFAULT_MAP_STYLE as StyleKey) || "Google Maps") as StyleKey);
 
@@ -75,17 +117,126 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       iconSize: L.point(33, 33, true),
     });
   };
-  
-  // ... (Diğer tüm fonksiyonlar highlightCustomer, handleOptimize vb. burada yer alacak) ...
-  
-  return (
-    <div className="relative w-full h-full">
-      {/* ... (Bileşenin geri kalan JSX kodu) ... */}
-    </div>
-  );
+
+  const toTelHref = (phone: string) => `tel:${phone.replace(/(?!^\+)[^\d]/g, "")}`;
+
+  const highlightCustomer = (c: Customer) => {
+    setSelectedId(c.id);
+    const m = markerRefs.current[c.id];
+    if (m) m.openPopup();
+    if (mapRef.current) {
+      mapRef.current.setView([c.lat, c.lng], 14, { animate: true });
+    }
+    listItemRefs.current[c.id]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+    });
+  };
+
+  async function handleOptimize() {
+    try {
+      setLoading(true);
+      if (!starredId) {
+        const coords = [[rep.lng, rep.lat], ...baseCustomers.map(c => [c.lng, c.lat])].map(([lng, lat]) => `${lng},${lat}`).join(";");
+        const data = await osrmTrip(coords);
+        const sortedCustomers = data.waypoints.map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index })).sort((a:any, b:any) => a.order - b.order).slice(1).map((x: any) => baseCustomers[x.idx - 1]);
+        setOrderedCustomers(sortedCustomers);
+        setRouteCoords(data.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]));
+        setRouteKm(data.trips[0].distance / 1000);
+      } else {
+        const star = baseCustomers.find(c => c.id === starredId)!;
+        const others = baseCustomers.filter(c => c.id !== starredId);
+        const dataRoute = await osrmRoute([rep.lat, rep.lng], [star.lat, star.lng]);
+        const route1Coords = dataRoute.routes[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        const route1Km = dataRoute.routes[0].distance / 1000;
+        const coords2 = [[star.lng, star.lat], ...others.map(c => [c.lng, c.lat])].map(([lng, lat]) => `${lng},${lat}`).join(";");
+        const dataTrip2 = await osrmTrip(coords2);
+        const ordered2 = dataTrip2.waypoints.map((wp: any, idx: number) => ({ idx, order: wp.waypoint_index })).sort((a:any, b:any) => a.order - b.order).slice(1).map((x: any) => others[x.idx - 1]);
+        setOrderedCustomers([star, ...ordered2]);
+        const restCoords = dataTrip2.trips[0].geometry.coordinates.map(([lng, lat]: [number, number]) => [lat, lng]);
+        setRouteCoords([...route1Coords, ...restCoords]);
+        setRouteKm(route1Km + dataTrip2.trips[0].distance / 1000);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Rota oluşturulamadı. Lütfen bağlantınızı kontrol edin.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    handleOptimize();
+  }, [starredId]);
+
+  const tile = TILE_STYLES[mapStyle];
+
+  return (
+    <div className="relative w-full h-full">
+      <Toaster position="top-center" />
+      <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/80 py-1 px-2 rounded-lg shadow-lg flex items-center gap-2">
+           {/* Kontrol Paneli Butonları */}
+        </div>
+        <MapContainer center={[rep.lat, rep.lng]} zoom={13} style={{ height: "100%", width: "100%" }} whenCreated={(m) => (mapRef.current = m)} >
+          <TileLayer url={tile.url} attribution={tile.attribution} subdomains={tile.subdomains as any} />
+          <FitBounds rep={rep} customers={orderedCustomers} />
+          <Marker position={[rep.lat, rep.lng]} icon={repIcon}>
+            <Popup><b>{rep.name}</b></Popup>
+          </Marker>
+          <MarkerClusterGroup iconCreateFunction={createClusterCustomIcon}>
+            {orderedCustomers.map((c, i) => (
+              <Marker key={c.id} position={[c.lat, c.lng]} icon={numberIcon(i + 1, { highlight: selectedId === c.id, starred: starredId === c.id })} ref={(ref: any) => { if (ref) markerRefs.current[c.id] = ref; }} eventHandlers={{ click: () => highlightCustomer(c) }} >
+                <Popup>
+                  <div className="text-center p-1">
+                      <b className="text-md block mb-2">{i + 1}. {c.name}</b>
+                      <button onClick={() => highlightCustomer(c)} className="w-full px-3 py-1.5 text-sm rounded-md bg-[#0099CB] text-white font-semibold hover:bg-[#007ca8]">
+                          Detayları Gör
+                      </button>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MarkerClusterGroup>
+          {routeCoords.length > 0 && (
+            <Polyline positions={routeCoords} pathOptions={{ color: "#0099CB", weight: 6 }} />
+          )}
+        </MapContainer>
+        <div className={`absolute top-4 right-0 bottom-4 z-[999] transition-transform duration-300 ${ panelOpen ? "translate-x-0" : "translate-x-[calc(100%-1.5rem)]" } flex`} >
+          {/* Sağ Panel */}
+        </div>
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-[2000] backdrop-blur-sm">
+            <Loader2 className="w-10 h-10 text-[#0099CB] animate-spin" />
+            <div className="mt-4 rounded bg-white shadow px-4 py-2 text-md font-semibold text-gray-700">
+              En uygun rota hesaplanıyor...
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 /* ==== Fullscreen butonu ==== */
-const FullscreenBtn: React.FC = () => { /* ... Fullscreen butonu ... */ };
+const FullscreenBtn: React.FC = () => {
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const h = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", h);
+    return () => document.removeEventListener("fullscreenchange", h);
+  }, []);
+  return (
+    <button onClick={async () => {
+        const el = document.querySelector(".leaflet-container")?.parentElement;
+        if (!el) return;
+        if (!document.fullscreenElement) await el.requestFullscreen();
+        else await document.exitFullscreen();
+      }}
+      className="px-2 py-1 text-xs rounded-lg border bg-white hover:bg-gray-50 inline-flex items-center gap-1">
+      {isFs ? (<><Minimize2 className="w-3 h-3" /> Kapat</>) : (<><Maximize2 className="w-3 h-3" /> Tam Ekran</>)}
+    </button>
+  );
+};
 
 export default RouteMap;
