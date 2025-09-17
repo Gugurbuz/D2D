@@ -124,6 +124,10 @@ const initialData: InvoiceData = {
   charges: { energyLow: { unitPrice: "" } },
 };
 
+const ENERJISA_LOGO_URL =
+  "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5ivsG-_oXoQdlhlIlBOGUx-IdggvvOUvT8w&s";
+
+
 async function generateInvoiceSummary(rawText: string) {
   const response = await fetch(
     "https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary",
