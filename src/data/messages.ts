@@ -1,9 +1,6 @@
 // src/data/messages.ts
-// Enerjisa saha satış senaryoları için güncellenmiş mock mesajlar
+// Enerjisa saha SATIŞ senaryoları (OCR ve dağıtım operasyonu ifadeleri YOK)
 
-import { teamReps } from './team';
-
-/** Tekil mesaj */
 export type Message = {
   id: string;
   senderId: string;   // 'you' veya rep id (rep-1, rep-2, ...)
@@ -13,29 +10,26 @@ export type Message = {
   read: boolean;
 };
 
-/** Konuşma (UI uyumluluğu için ekstra alanlar eklendi) */
 export type Conversation = {
-  id: string;                 // UI'da key olarak kullanılıyor
-  title?: string;             // Menü başlığı
-  userId?: string;            // Karşı taraf rep id (Navigation menüsünde avatar için)
-  participantA: string;       // genelde 'you'
-  participantB: string;       // rep id
-  updatedAt?: string;         // son mesaj zamanı
+  id: string;
+  title?: string;
+  userId?: string;    // karşı taraf rep id (avatar vs. için)
+  participantA: string; // genelde 'you'
+  participantB: string; // rep id
+  updatedAt?: string;   // son mesaj zamanı
   messages: Message[];
 };
 
-/** Yardımcı: son mesajın zamanını updatedAt olarak yaz */
 function withUpdatedAt(conv: Omit<Conversation, 'updatedAt'>): Conversation {
   const last = conv.messages[conv.messages.length - 1];
   return { ...conv, updatedAt: last ? last.timestamp : undefined };
 }
 
-/** Saha operasyonlarına uygun senaryolar */
 export const mockConversations: Conversation[] = [
-  // Serkan (rep-1) — BZV, OCR ve e-imza akışı
+  // Serkan (rep-1) — Ziyaret planı, tasarruf mesajı, e-imza
   withUpdatedAt({
     id: 'conv-1',
-    title: 'Serkan • Maltepe BZV & Teklif',
+    title: 'Serkan • Ziyaret & E-İmza',
     userId: 'rep-1',
     participantA: 'you',
     participantB: 'rep-1',
@@ -45,7 +39,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-1',
         recipientId: 'you',
         text:
-          'Günaydın 🙌 Maltepe BZV için rota hazır. Yıldızlı müşteri: ABC Gıda. İlk durak olarak işaretledim.',
+          'Günaydın 🙌 Maltepe ziyaret planım hazır. Yıldızlı müşteri: ABC Gıda — ilk durak olarak ayarladım.',
         timestamp: '2025-09-01T08:35:12Z',
         read: true,
       },
@@ -54,7 +48,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-1',
         text:
-          'Süper. Faturayı OCR’dan geçir, birim enerjiye bakıp tasarruf mesajını hazırla lütfen.',
+          'Harika. Fatura verisine göre birim enerji + yıllık tüketimden net tasarrufu çıkar; satışçı dilinde kısa özet hazırla.',
         timestamp: '2025-09-01T08:37:20Z',
         read: true,
       },
@@ -63,7 +57,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-1',
         recipientId: 'you',
         text:
-          'OCR tamam: Rakip Gediz E.P.S.A. – birim enerji 3.516 TL/kWh, yıllık tüketim 1.022 kWh. Biz varsayılan 2.000 TL/kWh ile ~1.548 TL/yıl tasarruf çıkıyor. Sunum dilini satışçı üslubuna çevirdim.',
+          'Hesap tamam ✅ Rakip birim enerji 3.516 TL/kWh, yıllık ~1.022 kWh. Bizimle ~1.548 TL/yıl tasarruf mesajı çıktı. Bireysel hitaplı 2 cümlelik metin hazır.',
         timestamp: '2025-09-01T09:05:12Z',
         read: true,
       },
@@ -72,7 +66,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-1',
         text:
-          'Harika 👌 Görüşmede “faturada gördüğümüz net tasarruf” vurgusunu öne çıkar. Kabul gelirse e-imza linki gönder.',
+          'Süper. Onay gelirse e-imza linkini SMS + e-posta gönder; CRM’de “Kabul” aşamasına çek.',
         timestamp: '2025-09-01T09:07:45Z',
         read: true,
       },
@@ -81,17 +75,17 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-1',
         recipientId: 'you',
         text:
-          'Müşteri onay verdi ✅ E-imza linkini SMS ve e-posta ile ilettim. İmzalanınca haber vereceğim.',
+          'Onay aldım 🎯 E-imza linkini paylaştım, CRM aşamasını güncelledim. İmza düştüğünde haber vereceğim.',
         timestamp: '2025-09-01T09:18:22Z',
         read: false,
       },
     ],
   }),
 
-  // Zelal (rep-2) — SKTT kontrolü, kurumsal hitap ve planlı bakım bilgilendirmesi
+  // Zelal (rep-2) — SKTT kapsamında kurumsal hitap, rakip teklife karşı pozisyon
   withUpdatedAt({
     id: 'conv-2',
-    title: 'Zelal • SKTT & Planlı Bakım',
+    title: 'Zelal • SKTT Kurumsal & Karşı Teklif',
     userId: 'rep-2',
     participantA: 'you',
     participantB: 'rep-2',
@@ -101,7 +95,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-2',
         recipientId: 'you',
         text:
-          'Üsküdar’daki yeni ticarethane adayı sisteme eklendi. Yıllık ~18.4 MWh görünüyor; SKTT kapsamında.',
+          'Üsküdar’daki yeni ticari aday sisteme düştü. Yıllık ~18.4 MWh → SKTT kapsamında. “Sayın Yetkili” ile başlayan kurumsal tasarruf metnini oluşturdum.',
         timestamp: '2025-08-30T14:20:03Z',
         read: true,
       },
@@ -110,7 +104,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-2',
         text:
-          'Onayladım. Kurumsal hitap metnini kullan: “Sayın Yetkili” ile başlayıp tasarruf ve sözleşme adımlarını özetle.',
+          'Mükemmel. Rakip fiyat varsa “toplam sahip olma maliyeti” vurgusuyla karşılaştırma görselini ekle; e-imza akışını da not düş.',
         timestamp: '2025-08-30T14:25:11Z',
         read: true,
       },
@@ -119,17 +113,17 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-2',
         recipientId: 'you',
         text:
-          'Not: Bölgedeki planlı bakım perşembe 10:00–13:00. Ziyareti 14:30’a aldım; müşteriyi önceden bilgilendirdim.',
+          'Rakip teklifi geldi. Biz %6 avantajlıyız. Sunuma net tasarruf, sözleşme süresi ve çıkış koşullarını ekledim. Yarın CFO ile görüşmede kullanacağım.',
         timestamp: '2025-09-02T07:10:00Z',
         read: false,
       },
     ],
   }),
 
-  // Şöhret (rep-3) — kesme/bağlama, borç kapama ve açma talebi
+  // Şöhret (rep-3) — lead, itiraz karşılama, kapanış
   withUpdatedAt({
     id: 'conv-3',
-    title: 'Şöhret • Kesme/Bağlama & Açma Talebi',
+    title: 'Şöhret • Lead → İtiraz → Kapanış',
     userId: 'rep-3',
     participantA: 'you',
     participantB: 'rep-3',
@@ -139,7 +133,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-3',
         text:
-          'Kadıköy’de kesme ihbarnamesi olan abone borcu kapatmış. Açma talebini açma-kapama ekibine ilettik mi?',
+          'Kadıköy’deki yeni lead’i gördüm. İlk görüşmede en yüksek etki: “son faturanızdaki net tasarrufu” net bir dille söyle. Objeksiyon: “uzun sözleşme” gelebilir.',
         timestamp: '2025-09-01T11:30:00Z',
         read: true,
       },
@@ -148,7 +142,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-3',
         recipientId: 'you',
         text:
-          'Evet, iş emri oluşturuldu. OSOS sayaçta anlık değer geliyor; sahaya bilgi geçildi. Tahmini 2 saat içinde aktif.',
+          'Anlaşıldı. 12 ay + yenileme opsiyonlu sundum, “esnek çıkış” alternatifini de ekledim. Müşteri olumlu.',
         timestamp: '2025-09-01T11:32:15Z',
         read: true,
       },
@@ -157,17 +151,17 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-3',
         recipientId: 'you',
         text:
-          'Ayrıca yarınki SKTT sunum taslağını mailledim; fiyat karşılaştırma slaydına göz atabilir misin?',
+          'Kapanış metni: “Şirketinizin yıllık ~X TL tasarruf potansiyelini birlikte onaylayalım; e-imza linkini hemen paylaşayım.” Geri dönüş bekliyorum.',
         timestamp: '2025-09-01T15:00:00Z',
         read: false,
       },
     ],
   }),
 
-  // Mert (rep-4) — sanayi müşterisi, yerinde keşif & bağlantı gücü
+  // Mert (rep-4) — sanayi müşterisi, çok lokasyon konsolidasyon, toplantı
   withUpdatedAt({
     id: 'conv-4',
-    title: 'Mert • Sanayi Keşif & Bağlantı Gücü',
+    title: 'Mert • Sanayi Konsolidasyon & Toplantı',
     userId: 'rep-4',
     participantA: 'you',
     participantB: 'rep-4',
@@ -177,7 +171,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-4',
         recipientId: 'you',
         text:
-          'Tuzla OSB’de yeni sanayi müşterisi: bağlantı gücü artışı talep ediyor. Keşif için perşembe 11:00 uygun mu?',
+          'Tuzla OSB’de sanayi müşterisi: çok lokasyonlu yapı. Konsolide teklif ve tek sözleşme tercih ediyorlar.',
         timestamp: '2025-09-02T08:12:10Z',
         read: true,
       },
@@ -186,7 +180,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-4',
         text:
-          'Uygun. Keşifte kompanzasyon durumu ve pik saat tüketimini not al. Teklifte reaktif ceza riskini de anlat.',
+          'Süper. “Çok lokasyon = tek temas + tek fatura” faydasını öne çıkar. Örnek tasarruf hesabını tabloya koy.',
         timestamp: '2025-09-02T08:18:44Z',
         read: true,
       },
@@ -195,17 +189,17 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-4',
         recipientId: 'you',
         text:
-          'Anlaşıldı. Keşif sonrası OCR + tasarruf metniyle e-imza sürecini başlatırım.',
+          'Perşembe 11:00 toplantısı onaylandı. Sunum slaytını güncelledim; kapanış cümlesine e-imza çağrısı ekledim.',
         timestamp: '2025-09-02T08:20:30Z',
         read: false,
       },
     ],
   }),
 
-  // Bonus: Portföy koruma & rakip karşılaştırma
+  // Portföy koruma — rakip teklif karşılaştırması, yenileme
   withUpdatedAt({
     id: 'conv-5',
-    title: 'Serkan • Portföy Koruma',
+    title: 'Serkan • Portföy Koruma & Yenileme',
     userId: 'rep-1',
     participantA: 'you',
     participantB: 'rep-1',
@@ -215,7 +209,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'you',
         recipientId: 'rep-1',
         text:
-          'XYZ Kuruyemiş rakipten fiyat aldı. Mevcut fatura verisiyle karşılaştırma kartını hazırlayıp bugün paylaşabilir misin?',
+          'XYZ Kuruyemiş rakipten fiyat aldı. Mevcut fatura ve kullanım profiliyle karşılaştırma kartını bugün çıkarabilir misin?',
         timestamp: '2025-09-02T09:05:00Z',
         read: true,
       },
@@ -224,7 +218,7 @@ export const mockConversations: Conversation[] = [
         senderId: 'rep-1',
         recipientId: 'you',
         text:
-          'Hazırladım. Birim enerji ve dağıtım kalemlerini ayrıştırdım, toplamda %8 avantajdayız. Müşteriye “yenilemede ek avantaj” söylemiyle gideceğim.',
+          'Kart hazır. Toplam maliyette %8 avantaj gösteriyoruz. Yenileme teklifine “erken onay bonusu” notunu ekledim.',
         timestamp: '2025-09-02T09:26:40Z',
         read: false,
       },
