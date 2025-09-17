@@ -3,10 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-
 import L, { LatLng } from 'leaflet';
 import { Star, StarOff, Navigation, Route as RouteIcon, Minimize2, Maximize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
-import { useNavigate } from "react-router-dom";
 
-export default function InvoiceOcrPage({ onContinue }: { onContinue?: (p: FromStep1Payload)=>void }) {
-  const navigate = useNavigate();
 
 /* =======================
    TILE STYLES (Switchable)
