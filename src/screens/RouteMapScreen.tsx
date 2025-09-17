@@ -16,6 +16,24 @@ const BRAND_NAVY = '#002D72';
 const REP_LOGO_URL =
   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT5ivsG-_oXoQdlhlIlBOGUx-IdggvvOUvT8w&s';
 
+const EnerjisaSwivelLogo: React.FC<{ size?: number }> = ({ size = 56 }) => (
+  <img
+    src={REP_LOGO_URL}
+    alt="Enerjisa"
+    width={size}
+    height={size}
+    className="rounded-full"
+    style={{
+      animation: "swivel 1.8s ease-in-out infinite",
+      boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
+      border: `3px solid ${BRAND_YELLOW}`,
+      background: "#fff",
+      objectFit: "cover",
+    }}
+  />
+);
+
+
 /* ============ PULSE CSS ============ */
 if (typeof document !== 'undefined' && !document.getElementById('pulse-style')) {
   const style = document.createElement('style');
@@ -37,6 +55,20 @@ if (typeof document !== 'undefined' && !document.getElementById('pulse-style')) 
   `;
   document.head.appendChild(style);
 }
+// ... mevcut pulse-style bloğunun HEMEN ALTINA ekle:
+if (typeof document !== 'undefined' && !document.getElementById('swivel-style')) {
+  const style = document.createElement('style');
+  style.id = 'swivel-style';
+  style.innerHTML = `
+    @keyframes swivel {
+      0%   { transform: rotateY(0deg); }
+      50%  { transform: rotateY(180deg) scale(1.05); }
+      100% { transform: rotateY(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 
 /* =======================
    TILE STYLES (Switchable)
