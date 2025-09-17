@@ -26,6 +26,7 @@ import {
   Banknote,
   Info,
   AlertTriangle,
+  ArrowRightCircle,
 } from "lucide-react";
 
 /* ------------ process polyfill (tarayıcı) ------------- */
@@ -210,7 +211,21 @@ const SectionCard: React.FC<{ title: React.ReactNode; children?: React.ReactNode
   </div>
 );
 
-export default function InvoiceOcrPage() {
+/* ====== YENİ: Adım 2’ye aktarılacak payload tipi ====== */
+type FromStep1Payload = {
+  customerName?: string;
+  address?: string;
+  tariff?: string;
+  annual?: string;
+};
+
+/* ====== Bileşen ====== */
+export default function InvoiceOcrPage({
+  /** İstersen parent buradan yakalayıp kendi router’ına yönlendirebilir. */
+  onContinue,
+}: {
+  onContinue?: (fromStep1: FromStep1Payload) => void;
+}) {
   const [summary, setSummary] = useState<string | null>(null);
   const [data, setData] = useState<InvoiceData>(initialData);
   const [allDetails, setAllDetails] = useState<AllDetails | null>(null);
@@ -402,6 +417,7 @@ export default function InvoiceOcrPage() {
     handleRemoveImage();
     setImagePreviewUrl(URL.createObjectURL(file));
 
+    const apiKey = import.meta.env.VITE_GOOGLE_CLOUD_API_KEY;
     if (!apiKey) {
       setError("Google Cloud API anahtarı eksik. Lütfen ortam değişkenlerini kontrol edin.");
       return;
@@ -603,6 +619,34 @@ export default function InvoiceOcrPage() {
     (t) => (t?.label ?? t?.rate ?? t?.amount) && true
   );
 
+  /* ====== YENİ: Adım 2’ye taşıyacağımız özet ====== */
+  function buildFromStep1(): FromStep1Payload {
+    return {
+      customerName: data.customer?.name,
+      address: data.customer?.address,
+      tariff: data.tariff,
+      annual: data.annualConsumption,
+    };
+  }
+
+  /* ====== YENİ: Devam Et (Adım 2) ====== */
+  function goNextStep() {
+    const payload = buildFromStep1();
+
+    // Önce prop ile parent’a teslim et
+    if (onContinue) {
+      onContinue(payload);
+      return;
+    }
+
+    // Fallback: localStorage + route
+    try {
+      localStorage.setItem("outOfRegion_fromStep1", JSON.stringify(payload));
+    } catch {}
+    // Route belirtemiyorsan burada projenin rotasına göre değiştir
+    window.location.href = "/out-of-region-wizard";
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#f6f7fb]">
       <StatusOverlay status={statusOverlay} />
@@ -611,7 +655,7 @@ export default function InvoiceOcrPage() {
         <div className="px-4 py-3 flex items-center gap-3">
           <Zap size={24} className="text-yellow-500" />
           <h1 className="text-xl font-semibold tracking-wide text-gray-800">
-            Bölge Dışı Ziyaret
+            Bölge Dışı Ziyaret — Adım 1: Fatura / Yükleme
           </h1>
         </div>
       </header>
@@ -873,15 +917,18 @@ export default function InvoiceOcrPage() {
         </div>
       </main>
 
+      {/* ====== YENİ: Adım 2’ye geçiş butonu ====== */}
       <footer className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm border-t border-gray-200">
-        <div className="p-3 flex justify-end">
+        <div className="p-3 flex flex-col sm:flex-row gap-2 justify-end">
           <button
+            type="button"
             disabled={!hasAnyAIData || isLoading}
-            onClick={() => alert("Kaydedildi!")}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-semibold shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
+            onClick={goNextStep}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
+            title={!hasAnyAIData ? "Önce fatura yükle/okut" : "POD Doğrulamaya geç"}
           >
-            <Save className="w-5 h-5" />
-            Kaydet ve Devam Et
+            <ArrowRightCircle className="w-5 h-5" />
+            Devam Et (Adım 2)
           </button>
         </div>
       </footer>
