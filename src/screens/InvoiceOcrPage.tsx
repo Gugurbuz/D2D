@@ -30,6 +30,9 @@ import {
   ArrowRightCircle,
 } from "lucide-react";
 
+export default function InvoiceOcrPage(/* ...props */) {
+  const navigate = useNavigate(); 
+
 /* ------------ process polyfill (tarayıcı) ------------- */
 if (typeof window !== "undefined" && (window as any).process === undefined) {
   (window as any).process = { env: {} };
