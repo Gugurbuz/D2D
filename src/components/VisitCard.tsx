@@ -1,7 +1,7 @@
 import React from "react";
 import { Eye, Play, MapPin, UserCheck } from "lucide-react"; // StickyNote kaldırıldı
 import type { Customer } from "../types";
-import { Chip } from "./Chip";
+import Chip from "./Chip";
 
 const getStatusTone = (status: Customer["status"]) =>
   status === "Tamamlandı" ? "green" : status === "Yolda" ? "blue" : "yellow";

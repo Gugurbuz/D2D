@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useCallback, useEffect } from "react";
 // ... diğer importlar
-import { Chip } from "../components/Chip"; // Geliştirilmiş Chip bileşenimiz
+import Chip from "../components/Chip"; // Geliştirilmiş Chip bileşenimiz
 import { statusStyles } from "../styles/theme"; // Merkezi tema stillerimiz
 import { SlidersHorizontal, X } from "lucide-react";
 
