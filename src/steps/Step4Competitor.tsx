@@ -2,88 +2,110 @@
 import React, { useState } from "react";
 
 export type Step4Data = {
-  supplier: string;
-  avgBillTRY?: number;
-  rivalRate?: string;       // % veya birim fiyat metni
-  commitment?: "Var" | "Yok" | "Bilinmiyor";
-  collateral?: "Var" | "Yok" | "Bilinmiyor";
-  contractEnd?: string;     // YYYY-MM-DD
+  rivalCompany?: string;
+  avgBill?: string;
+  contractEnd?: string; // yyyy-mm-dd
+  rivalRate?: string;
+  commitment?: "Var" | "Yok" | "";
+  deposit?: "Var" | "Yok" | "";
 };
 
-const SUPPLIERS = ["CK", "Aydem", "ENERJİSA", "Limak", "Diğer"];
-
 export default function Step4Competitor({
-  initial,
   onBack,
-  onNext
+  onNext,
 }: {
-  initial?: Partial<Step4Data>;
   onBack: () => void;
   onNext: (d: Step4Data) => void;
 }) {
-  const [f, setF] = useState<Step4Data>({
-    supplier: initial?.supplier ?? "",
-    avgBillTRY: initial?.avgBillTRY,
-    rivalRate: initial?.rivalRate ?? "",
-    commitment: initial?.commitment ?? "Bilinmiyor",
-    collateral: initial?.collateral ?? "Bilinmiyor",
-    contractEnd: initial?.contractEnd ?? ""
-  });
-  const canNext = !!f.supplier;
+  const [form, setForm] = useState<Step4Data>({ commitment: "", deposit: "" });
+
+  function set<K extends keyof Step4Data>(k: K, v: Step4Data[K]) {
+    setForm((p) => ({ ...p, [k]: v }));
+  }
+
+  const canNext = !!form.rivalCompany;
 
   return (
-    <div className="p-4 space-y-4">
-      <h3 className="text-lg font-semibold">Mevcut Tedarikçi Bilgileri</h3>
+    <div className="bg-white rounded-2xl border shadow-sm p-4">
+      <h2 className="text-lg font-semibold mb-4">Adım 4 — Rakip Bilgileri</h2>
 
-      <div className="grid md:grid-cols-2 gap-3">
+      <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium">Rakip Şirket</label>
-          <select value={f.supplier} onChange={e=>setF({...f, supplier:e.target.value})}
-                  className="mt-1 w-full border rounded-lg px-3 py-2">
-            <option value="">-</option>
-            {SUPPLIERS.map(s=> <option key={s} value={s}>{s}</option>)}
-          </select>
+          <input
+            className="w-full border rounded-lg px-3 py-2"
+            value={form.rivalCompany || ""}
+            onChange={(e) => set("rivalCompany", e.target.value)}
+          />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Aylık Ortalama Fatura (₺)</label>
-          <input type="number" value={f.avgBillTRY ?? ""} onChange={e=>setF({...f, avgBillTRY:Number(e.target.value)})}
-                 className="mt-1 w-full border rounded-lg px-3 py-2"/>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-sm font-medium">Aylık Ortalama Fatura (TL)</label>
+            <input
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.avgBill || ""}
+              onChange={(e) => set("avgBill", e.target.value)}
+              placeholder="Örn: 4500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Sözleşme Bitiş Tarihi</label>
+            <input
+              type="date"
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.contractEnd || ""}
+              onChange={(e) => set("contractEnd", e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Rakip Fiyat/Oran</label>
+            <input
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.rivalRate || ""}
+              onChange={(e) => set("rivalRate", e.target.value)}
+              placeholder="Örn: 2.18 TL/kWh"
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Rakip Fiyat/Oran</label>
-          <input value={f.rivalRate} onChange={e=>setF({...f, rivalRate:e.target.value})}
-                 placeholder="%12 indirim / 3,20 TL/kWh" className="mt-1 w-full border rounded-lg px-3 py-2"/>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Taahhüt Durumu</label>
-          <select value={f.commitment} onChange={e=>setF({...f, commitment:e.target.value as any})}
-                  className="mt-1 w-full border rounded-lg px-3 py-2">
-            <option>Var</option><option>Yok</option><option>Bilinmiyor</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Teminat Durumu</label>
-          <select value={f.collateral} onChange={e=>setF({...f, collateral:e.target.value as any})}
-                  className="mt-1 w-full border rounded-lg px-3 py-2">
-            <option>Var</option><option>Yok</option><option>Bilinmiyor</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium">Sözleşme Bitiş Tarihi</label>
-          <input type="date" value={f.contractEnd} onChange={e=>setF({...f, contractEnd:e.target.value})}
-                 className="mt-1 w-full border rounded-lg px-3 py-2"/>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium">Taahhüt Durumu</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.commitment || ""}
+              onChange={(e) => set("commitment", e.target.value as any)}
+            >
+              <option value="">-</option>
+              <option value="Var">Var</option>
+              <option value="Yok">Yok</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Teminat Durumu</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.deposit || ""}
+              onChange={(e) => set("deposit", e.target.value as any)}
+            >
+              <option value="">-</option>
+              <option value="Var">Var</option>
+              <option value="Yok">Yok</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="px-4 py-2 rounded-lg border">Geri</button>
-        <button onClick={()=>onNext(f)} disabled={!canNext}
-                className="px-4 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-300">
+      <div className="flex justify-between mt-4">
+        <button onClick={onBack} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+          Geri
+        </button>
+        <button
+          disabled={!canNext}
+          onClick={() => onNext(form)}
+          className="px-5 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-400"
+        >
           İleri
         </button>
       </div>
