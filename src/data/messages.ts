@@ -225,3 +225,6 @@ export const mockConversations: Conversation[] = [
     ],
   }),
 ];
+
+// Hem named hem default export veriyoruz:
+export default mockConversations;
