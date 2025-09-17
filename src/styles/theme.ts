@@ -32,3 +32,16 @@ export function getShade(color?: string): Shade {
   if (!color) return palette.gray;
   return palette[color] || palette.gray;
 }
+
+// Status ve filter etiketleri için renk eşlemeleri
+export const statusStyles = {
+  'Planlandı': 'Planlandı',
+  'Devam': 'Devam', 
+  'Yolda': 'Devam',
+  'Tamamlandı': 'Tamamlandı',
+  'İptal': 'İptal',
+  'Tümü': 'gray',
+  'Bugün': 'navy',
+  'Yarın': 'amber',
+  'Bu Hafta': 'purple'
+};
