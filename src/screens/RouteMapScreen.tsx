@@ -636,7 +636,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
           style={{ border: `2px solid ${BRAND_YELLOW}`, background: "#fff" }}
         />
       </div>
-      <p className="text-[11px] text-gray-500">Noktalar optimize ediliyor, lütfen bekleyin.</p>
+      <p className="text-[11px] text-gray-500">Konumlar optimize ediliyor, lütfen bekleyin.</p>
     </div>
   </div>
 )}
