@@ -1,134 +1,125 @@
 // src/steps/Step3Customer.tsx
 import React, { useState } from "react";
-import { ShieldCheck, Phone, Check, Loader2 } from "lucide-react";
 
-export type CustomerType = "Kurumsal" | "Bireysel";
-
-export type Step3Data =
-  | { type: "Kurumsal"; authorized: { name: string; surname: string; phone: string; email: string } }
-  | { type: "Bireysel"; consents: { kvkk: boolean; marketing: boolean }; phone: string; smsVerified: boolean };
+export type Step3Data = {
+  customerType: "Kurumsal" | "Bireysel";
+  // Kurumsal için:
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  // Bireysel için:
+  kvkkOk?: boolean;
+  marketingOk?: boolean;
+  smsCode?: string;
+};
 
 export default function Step3Customer({
   customerType,
   onBack,
-  onNext
+  onNext,
 }: {
-  customerType: CustomerType;
+  customerType: Step3Data["customerType"];
   onBack: () => void;
-  onNext: (data: Step3Data) => void;
+  onNext: (d: Step3Data) => void;
 }) {
-  return (
-    <div className="p-4 space-y-4">
-      {customerType === "Kurumsal" ? <Corporate onBack={onBack} onNext={onNext}/> : <Individual onBack={onBack} onNext={onNext}/>}
-    </div>
-  );
-}
+  const [form, setForm] = useState<Step3Data>({ customerType });
 
-function Corporate({ onBack, onNext }:{
-  onBack: ()=>void; onNext:(d: Step3Data)=>void
-}) {
-  const [f, setF] = useState({ name:"", surname:"", phone:"", email:"" });
-  const canNext = f.name && f.surname && /^\+?\d{10,14}$/.test(f.phone);
-
-  return (
-    <>
-      <h3 className="text-lg font-semibold">Yetkili Kişi Bilgileri</h3>
-      <div className="grid md:grid-cols-2 gap-3">
-        <Input label="Ad"   value={f.name}    onChange={v=>setF({...f,name:v})}/>
-        <Input label="Soyad" value={f.surname} onChange={v=>setF({...f,surname:v})}/>
-        <Input label="Telefon (+90...)" value={f.phone} onChange={v=>setF({...f,phone:v})}/>
-        <Input label="E-posta" value={f.email} onChange={v=>setF({...f,email:v})}/>
-      </div>
-      <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="px-4 py-2 rounded-lg border">Geri</button>
-        <button
-          disabled={!canNext}
-          onClick={()=>onNext({type:"Kurumsal", authorized:f})}
-          className="px-4 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-300">
-          İleri
-        </button>
-      </div>
-    </>
-  );
-}
-
-function Individual({ onBack, onNext }:{
-  onBack: ()=>void; onNext:(d: Step3Data)=>void
-}) {
-  const [phone, setPhone] = useState("");
-  const [consents, setConsents] = useState({ kvkk:false, marketing:false });
-  const [codeSent, setCodeSent] = useState(false);
-  const [code, setCode] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
-
-  async function sendSms(to: string) {
-    // TODO: SMS sağlayıcı entegrasyonu
-    await new Promise(r=>setTimeout(r,500));
-    setCodeSent(true);
+  function set<K extends keyof Step3Data>(k: K, v: Step3Data[K]) {
+    setForm((p) => ({ ...p, [k]: v }));
   }
-  async function verifySms() {
-    setVerifying(true);
-    await new Promise(r=>setTimeout(r,500));
-    setVerified(code === "1234"); // DEMO
-    setVerifying(false);
+
+  const isCorporate = customerType === "Kurumsal";
+  const canNext =
+    isCorporate
+      ? !!form.contactName && !!form.contactPhone
+      : !!form.kvkkOk && !!form.smsCode;
+
+  function sendSms() {
+    // TODO: gerçek SMS servisi
+    alert("Doğrulama kodu gönderildi (demo: 123456)");
   }
-  const canNext = consents.kvkk && verified;
 
   return (
-    <>
-      <h3 className="text-lg font-semibold">İzinler ve Doğrulama</h3>
-      <div className="space-y-3">
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={consents.kvkk} onChange={e=>setConsents({...consents, kvkk:e.target.checked})}/>
-          <ShieldCheck className="w-4 h-4"/> KVKK Aydınlatma ve Açık Rıza
-        </label>
-        <label className="inline-flex items-center gap-2">
-          <input type="checkbox" checked={consents.marketing} onChange={e=>setConsents({...consents, marketing:e.target.checked})}/>
-          Pazarlama ileti izinleri
-        </label>
+    <div className="bg-white rounded-2xl border shadow-sm p-4">
+      <h2 className="text-lg font-semibold mb-4">Adım 3 — Müşteri Detayları</h2>
 
-        <div className="grid md:grid-cols-[2fr_1fr] gap-2 items-end">
-          <Input label="Telefon (+90...)" value={phone} onChange={setPhone}/>
-          <button
-            disabled={!/^\+?\d{10,14}$/.test(phone) || codeSent}
-            onClick={()=>sendSms(phone)}
-            className="px-4 py-2 rounded-lg border inline-flex items-center gap-2">
-            <Phone className="w-4 h-4"/> Kod Gönder
-          </button>
+      {isCorporate ? (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium">Yetkili Ad Soyad</label>
+            <input
+              className="w-full border rounded-lg px-3 py-2"
+              value={form.contactName || ""}
+              onChange={(e) => set("contactName", e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium">Telefon</label>
+              <input
+                className="w-full border rounded-lg px-3 py-2"
+                value={form.contactPhone || ""}
+                onChange={(e) => set("contactPhone", e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">E-posta</label>
+              <input
+                className="w-full border rounded-lg px-3 py-2"
+                value={form.contactEmail || ""}
+                onChange={(e) => set("contactEmail", e.target.value)}
+              />
+            </div>
+          </div>
         </div>
+      ) : (
+        <div className="space-y-3">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!form.kvkkOk}
+              onChange={(e) => set("kvkkOk", e.target.checked)}
+            />
+            <span>KVKK metnini okudum, onaylıyorum.</span>
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={!!form.marketingOk}
+              onChange={(e) => set("marketingOk", e.target.checked)}
+            />
+            <span>Pazarlama ileti izni veriyorum. (opsiyonel)</span>
+          </label>
 
-        {codeSent && (
-          <div className="grid md:grid-cols-[2fr_1fr] gap-2 items-end">
-            <Input label="SMS Kodu" value={code} onChange={setCode}/>
-            <button onClick={verifySms} className="px-4 py-2 rounded-lg bg-blue-600 text-white inline-flex items-center gap-2">
-              {verifying ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4"/>}
-              Doğrula
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <label className="block text-sm font-medium">SMS Doğrulama Kodu</label>
+              <input
+                className="w-full border rounded-lg px-3 py-2"
+                value={form.smsCode || ""}
+                onChange={(e) => set("smsCode", e.target.value)}
+                placeholder="Örn: 123456"
+              />
+            </div>
+            <button onClick={sendSms} className="px-3 py-2 rounded-lg border">
+              Kod Gönder
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {verified && <div className="text-sm text-emerald-700">Telefon doğrulandı.</div>}
-      </div>
-
-      <div className="flex gap-2 pt-2">
-        <button onClick={onBack} className="px-4 py-2 rounded-lg border">Geri</button>
+      <div className="flex justify-between mt-4">
+        <button onClick={onBack} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+          Geri
+        </button>
         <button
           disabled={!canNext}
-          onClick={()=>onNext({type:"Bireysel", consents, phone, smsVerified:true})}
-          className="px-4 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-300">
+          onClick={() => onNext(form)}
+          className="px-5 py-2 rounded-lg bg-emerald-600 text-white disabled:bg-gray-400"
+        >
           İleri
         </button>
       </div>
-    </>
-  );
-}
-
-function Input({label, value, onChange}:{label:string; value:string; onChange:(v:string)=>void}) {
-  return (
-    <div>
-      <label className="block text-sm font-medium">{label}</label>
-      <input value={value} onChange={e=>onChange(e.target.value)} className="mt-1 w-full border rounded-lg px-3 py-2"/>
     </div>
   );
 }
