@@ -114,6 +114,9 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
   const [state, dispatch] = useReducer(visitReducer, initialState);
   const [currentScreen, setCurrentScreen] = useState<'checkin' | 'proposal' | 'flow'>('checkin');
 
+  // === YENİ: Global Test Modu (Kamera + OCR bypass) ===
+  const [testBypass, setTestBypass] = useState<boolean>(false);
+
   const handleSaveVisitResult = useCallback(
     (status: VisitStatus) => {
       dispatch({ type: 'SET_VISIT_STATUS', payload: status });
@@ -161,10 +164,27 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
     <div className="p-6 max-w-4xl mx-auto bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold text-gray-900">Ziyaret: {customer.name}</h1>
-        <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium">
-          ← Listeye Dön
-        </button>
+
+        {/* === YENİ: Test Modu Anahtarı (canlıda da görünür) === */}
+        <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border shadow-sm">
+          <input
+            type="checkbox"
+            checked={testBypass}
+            onChange={(e) => {
+              const on = e.target.checked;
+              setTestBypass(on);
+              track('test_bypass_toggled', { on });
+            }}
+          />
+          <span className="text-sm font-medium">
+            Test Modu: <span className="font-semibold">Kamera & OCR’yi Atla</span>
+          </span>
+        </label>
       </div>
+
+      <button onClick={onCloseToList} className="text-gray-600 hover:text-gray-900 font-medium mb-4">
+        ← Listeye Dön
+      </button>
 
       {currentScreen === 'checkin' && (
         <CheckInScreen 
@@ -197,7 +217,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
                 <CustomerInfoStep customer={customer} dispatch={dispatch} />
               )}
               {state.currentStep === 2 && (
-                <IdVerificationStep state={state} dispatch={dispatch} />
+                <IdVerificationStep state={state} dispatch={dispatch} testBypass={testBypass} />
               )}
               {state.currentStep === 3 && (
                 <ContractStep state={state} dispatch={dispatch} customer={customer} />
@@ -813,14 +833,34 @@ const CustomerInfoStep: React.FC<{ customer: Customer; dispatch: React.Dispatch<
 
 /*************************** Step 2: ID Verification ***************************/
 
-const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Action> }> = ({ state, dispatch }) => {
-  const [isBypassChecked, setIsBypassChecked] = useState(false);
+type IdStepProps = { state: State; dispatch: React.Dispatch<Action>; testBypass: boolean };
+
+const IdVerificationStep: React.FC<IdStepProps> = ({ state, dispatch, testBypass }) => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
+  // === Test bypass davranışı: kutu işaretlenince anında başarılı say ===
+  useEffect(() => {
+    if (testBypass) {
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+      dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
+      // varsa kamerayı kapat
+      if (stream) {
+        stream.getTracks().forEach((t) => t.stop());
+        setStream(null);
+      }
+    } else {
+      // kullanıcı test modunu kapatırsa adımı yeniden bekler hale getir
+      if (state.ocrStatus === 'success') dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' });
+      if (state.nfcStatus === 'success') dispatch({ type: 'SET_NFC_STATUS', payload: 'idle' });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [testBypass]);
+
   const startCamera = async () => {
+    if (testBypass) return; // test modunda kamera açmaya gerek yok
     if (stream) stopCamera();
     setCameraError(null);
     try {
@@ -865,6 +905,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
   }, [state.currentStep, stream]);
 
   const handleCaptureAndOcr = () => {
+    if (testBypass) return; // testte gerek yok
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
@@ -878,38 +919,20 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 
     // NOTE: replace with real OCR provider; dev-only mock below
     setTimeout(() => {
-      if (isDev) {
-        dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
-        track('ocr_mock_success');
-      } else {
-        dispatch({ type: 'SET_OCR_STATUS', payload: 'error' });
-      }
-    }, 1200);
+      // prod’da da mock yerine gerçek servis bağlayın; şimdilik demo:
+      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
+      track('ocr_mock_success');
+    }, 800);
   };
 
   const handleNfcRead = () => {
+    if (testBypass) return; // testte gerek yok
     dispatch({ type: 'SET_NFC_STATUS', payload: 'scanning' });
     // dev-only mock NFC
     setTimeout(() => {
-      if (isDev) {
-        dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
-        track('nfc_mock_success');
-      } else {
-        dispatch({ type: 'SET_NFC_STATUS', payload: 'error' });
-      }
-    }, 900);
-  };
-
-  const handleBypassToggle = (isChecked: boolean) => {
-    setIsBypassChecked(isChecked);
-    if (isChecked) {
-      dispatch({ type: 'SET_OCR_STATUS', payload: 'success' });
       dispatch({ type: 'SET_NFC_STATUS', payload: 'success' });
-      stopCamera();
-    } else {
-      dispatch({ type: 'SET_OCR_STATUS', payload: 'idle' });
-      dispatch({ type: 'SET_NFC_STATUS', payload: 'idle' });
-    }
+      track('nfc_mock_success');
+    }, 700);
   };
 
   const isVerified = state.ocrStatus === 'success' && state.nfcStatus === 'success';
@@ -921,24 +944,15 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
           <ScanLine className="w-5 h-5" style={{ color: BRAND_COLORS.navy }} />
           <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
         </div>
-        {isDev && (
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
-            <input
-              type="checkbox"
-              id="bypass-verification"
-              checked={isBypassChecked}
-              onChange={(e) => handleBypassToggle(e.target.checked)}
-              className="h-4 w-4 rounded"
-            />
-            <label htmlFor="bypass-verification" className="text-sm font-medium text-yellow-800">
-              [TEST] Doğrulamayı Atla
-            </label>
-          </div>
-        )}
+
+        {/* Test kutusu hakkında bilgi etiketi */}
+        <span className={`text-xs px-2 py-1 rounded ${testBypass ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
+          {testBypass ? 'TEST: Kamera & OCR atlanıyor' : 'Normal Mod'}
+        </span>
       </div>
 
-      <fieldset disabled={isBypassChecked}>
-        <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity duration-300 ${isBypassChecked ? 'opacity-40' : 'opacity-100'}`}>
+      <fieldset disabled={testBypass}>
+        <div className={`grid md:grid-cols-2 gap-6 items-start transition-opacity duration-300 ${testBypass ? 'opacity-40' : 'opacity-100'}`}>
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Kimlik Fotoğrafı</p>
             <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
@@ -1039,11 +1053,6 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
           >
             Devam Et
           </button>
-          {!isVerified && (
-            <div className="absolute -top-8 right-0 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              Devam etmek için imza ve SMS onayı gerekli
-            </div>
-          )}
         </div>
       </div>
     </div>
