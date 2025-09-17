@@ -22,6 +22,7 @@ import SystemManagementScreen from './screens/SystemManagementScreen';
 import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
 import SystemReportsScreen from './screens/SystemReportsScreen';
+import OutOfRegionVisitWizard from "./screens/OutOfRegionVisitWizard";
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
