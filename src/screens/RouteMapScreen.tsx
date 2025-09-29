@@ -71,8 +71,8 @@ if (typeof document !== 'undefined' && !document.getElementById('swivel-style'))
 
 
 /* =======================
-    TILE STYLES (Switchable)
-    ====================== */
+   TILE STYLES (Switchable)
+   ====================== */
 const TILE_STYLES = {
   'Google Maps': {
     url: `https://mts{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${import.meta.env.VITE_GOOGLE_CLOUD_API_KEY}`,
@@ -420,7 +420,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
       {/* HARİTA KARTI */}
       <div className="relative h-[560px] w-full rounded-2xl overflow-hidden shadow-xl">
         {/* ÜST KONTROL PANELİ */}
-        <div className="absolute top-2 left-2 right-2 md:left-1/2 md:-translate-x-1/2 md:right-auto z-[1000] bg-white/85 backdrop-blur-sm p-2 rounded-xl shadow-lg flex items-center justify-center flex-wrap gap-2">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/85 backdrop-blur py-1.5 px-2.5 rounded-lg shadow-lg flex items-center gap-2">
           {/* Harita stili */}
           <select
             value={mapStyle}
@@ -567,7 +567,7 @@ const RouteMap: React.FC<Props> = ({ customers, salesRep }) => {
               <span className="rotate-90 text-[10px] font-bold tracking-wider">ZİYARET</span>
             )}
           </button>
-          <div className="bg-white/95 rounded-l-xl shadow px-4 py-3 flex flex-col gap-3 w-[calc(100vw-3rem)] max-w-xs sm:w-auto sm:min-w-[260px] h-full">
+          <div className="bg-white/95 rounded-l-xl shadow px-4 py-3 flex flex-col gap-3 min-w-[260px] h-full">
             <div className="flex items-center gap-2">
               <RouteIcon className="w-5 h-5 text-[#0099CB]" />
               <span className="font-semibold text-gray-700">Ziyaret Sırası</span>
