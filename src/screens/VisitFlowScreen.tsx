@@ -520,7 +520,6 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
 
 const CheckInScreen: React.FC<{ machine: ReturnType<typeof useStateMachine> }> = ({ machine }) => {
   const { customer } = machine.context;
-  const [manualOverride, setManualOverride] = useState(false);
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3;
@@ -578,32 +577,16 @@ const CheckInScreen: React.FC<{ machine: ReturnType<typeof useStateMachine> }> =
 
       if (locationDistance !== null) {
         const isClose = locationDistance <= 200;
-        return (
-          <div className="space-y-2">
-            <div className={`flex items-center gap-2 p-3 rounded-lg border ${
-              isClose || manualOverride 
-                ? 'text-green-600 bg-green-50 border-green-200' 
-                : 'text-orange-600 bg-orange-50 border-orange-200'
-            }`}>
-              {isClose || manualOverride ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
-              {isClose 
-                ? `Konum doğrulandı (${locationDistance.toFixed(0)}m), yönlendiriliyorsunuz...`
-                : manualOverride
-                ? `Manuel onay ile devam edildi (~${(locationDistance / 1000).toFixed(1)} km)`
-                : `Müşteri konumundan uzaktasınız (~${(locationDistance / 1000).toFixed(1)} km).`
-              }
-            </div>
-            {!isClose && !manualOverride && (
-              <button
-                onClick={() => {
-                  setManualOverride(true);
-                  track('checkin_manual_override', { distance: locationDistance });
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 underline transition-colors"
-              >
-                {isDev ? 'Test modunda manuel onay ile devam et' : 'Manuel onay ile devam et'}
-              </button>
-            )}
+        return isClose ? (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="w-4 h-4" />
+            Müşteri konumundasınız ({locationDistance.toFixed(0)}m).
+            <div className="ml-2 text-sm text-gray-600">Yönlendiriliyorsunuz...</div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-yellow-600">
+            <XCircle className="w-4 h-4" />
+            Müşteri konumundan uzaktasınız (~{(locationDistance / 1000).toFixed(1)} km).
           </div>
         );
       }
@@ -658,7 +641,7 @@ const CheckInScreen: React.FC<{ machine: ReturnType<typeof useStateMachine> }> =
       </div>
 
       {machine.is(['LOCATION_VERIFYING', 'LOCATION_VERIFIED']) && 
-       (guards.isLocationClose(machine.context) || manualOverride) && (
+       guards.isLocationClose(machine.context) && (
         <div className="mt-6 text-right">
           <button
             onClick={() => machine.send({ type: 'LOCATION_CONFIRMED' })}
