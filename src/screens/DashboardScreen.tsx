@@ -1,5 +1,8 @@
 import React from 'react';
-import DashboardHeader from '../features/dimport { Target, CircleCheck as CheckCircle, Clock, TrendingUp, MapPin, Calendar, Megaphone, Sparkles, Award } from 'lucide-react'res/dashboard/components/VisitProgram';
+import DashboardHeader from '../features/dashboard/components/DashboardHeader';
+import { Target, CircleCheck as CheckCircle, Clock, TrendingUp, MapPin, Calendar, Megaphone, Sparkles, Award } from 'lucide-react';
+import VisitProgram from '../features/dashboard/components/VisitProgram';
+import KPISection from '../features/dashboard/components/KPISection';
 import { useDashboardData } from '../features/dashboard/hooks/useDashboardData';
 import type { Customer } from '../features/customers/types';
 import { useMemo } from 'react';
