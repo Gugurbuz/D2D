@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { Target, CircleCheck as CheckCircle, Clock, TrendingUp } from 'lucide-react';
 import KPICard from '../../../components/KPICard';
 
 type Props = {
