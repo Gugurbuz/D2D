@@ -1,8 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Home, Route, List, BarChart3, UserCheck, Users, MapPin, Bell, BellDot,
-  MessageSquare, MapPinPlus, Settings, Shield
-} from 'lucide-react';
+import { Hop as Home, Route, List, ChartBar as BarChart3, UserCheck, Users, MapPin, Bell, BellDot, MessageSquare, MapPinPlus, Settings, Shield } from 'lucide-react';
 import { Role, Screen } from '../../../shared/types';
 import { BRAND_COLORS } from '../../../styles/theme';
 import { useNotifications } from './hooks/useNotifications';

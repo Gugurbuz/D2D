@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signIn, isSupabaseConfigured } from '../lib/supabase';
-import { Loader2 } from 'lucide-react';
+import { Loader as Loader2 } from 'lucide-react';
 
 type Props = {
   onLogin: (email?: string, password?: string, isDemoMode?: boolean) => void;
