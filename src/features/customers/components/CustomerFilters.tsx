@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, SortAsc, SortDesc } from 'lucide-react';
+import { Search, Import as SortAsc, Dessert as SortDesc } from 'lucide-react';
 import { CustomerFilters, CustomerSort } from '../types';
 
 interface CustomerFiltersProps {
