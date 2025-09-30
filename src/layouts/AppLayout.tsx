@@ -1,8 +1,8 @@
 // src/layouts/AppLayout.tsx
 
 import React from "react";
-import NavigationBar from "../features/navigation/components/NavigationBar";
-import { Role, Screen } from "../shared/types";
+import Navigation from "../components/Navigation";
+import { Role, Screen } from "../types";
 
 type Props = {
   agentName: string;
@@ -23,7 +23,7 @@ export default function AppLayout({
 }: Props) {
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      <NavigationBar
+      <Navigation
         agentName={agentName}
         role={role}
         currentScreen={currentScreen}

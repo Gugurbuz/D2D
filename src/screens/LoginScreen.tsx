@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { signIn, isSupabaseConfigured } from '../lib/supabase';
-import { Loader as Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 type Props = {
-  onLogin: (email?: string, password?: string, isDemoMode?: boolean) => void;
+  onLogin: (isDemoMode?: boolean) => void;
 };
 
 const LoginScreen: React.FC<Props> = ({ onLogin }) => {
@@ -14,15 +14,35 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const handleQuickLogin = async () => {
+    setEmail('test@enerjisa.com');
+    setPassword('test123');
     setLoading(true);
     setError(null);
     setSuccess(null);
 
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
+
     try {
-      await onLogin('test@enerjisa.com', 'test123');
+      const { error } = await signIn('test@enerjisa.com', 'test123');
+      clearTimeout(timeoutId);
+
+      if (error) {
+        setError(`Giriş hatası: ${error.message}`);
+        return;
+      }
+
       setSuccess('Giriş başarılı!');
+      setTimeout(() => onLogin(), 500);
     } catch (err: any) {
-      setError(err.message || 'Giriş başarısız');
+      clearTimeout(timeoutId);
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+      if (!isSupabaseConfigured) {
+        setTimeout(() => onLogin(), 1000);
+      }
+      onLogin();
     } finally {
       setLoading(false);
     }
@@ -30,15 +50,39 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isSupabaseConfigured) {
+      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
 
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
+
     try {
-      await onLogin(email, password);
+      const { error } = await signIn(email, password);
+      clearTimeout(timeoutId);
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
+
       setSuccess('Giriş başarılı!');
+      setTimeout(() => onLogin(), 1000);
     } catch (err: any) {
-      setError(err.message || 'Giriş başarısız');
+      clearTimeout(timeoutId);
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
     } finally {
       setLoading(false);
     }
@@ -119,7 +163,7 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
 
             <button
               type="button"
-              onClick={() => onLogin(undefined, undefined, true)}
+              onClick={() => onLogin(true)}
               className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
             >
               Demo Modunda Devam Et
