@@ -1,48 +1,7 @@
-export type Role = 'sales_rep' | 'manager' | 'admin' | 'operations_manager';
-
-
-export type Screen = 
-  | 'dashboard' 
-  | 'route'
-  | 'visits' 
-  | 'visitDetail'
-  | 'visitFlow'
-  | 'customers' 
-  | 'messages' 
-  | 'profile' 
-  | 'reports'
-  | 'team'
-  | 'assignments'
-  | 'assignmentMap'
-  | 'invoiceOcr'
-| 'systemManagement'
-  | 'systemReports';
-| 'outOfRegionWizard'
-
-export interface Customer {
-  id: string;
-  name: string;
-  address: string;
-  district: string;
-  phone: string;
-  email?: string;
-  customerNumber?: string;
-  installationNumber?: string;
-  meterNumber?: string;
-  lat: number;
-  lng: number;
-  customerType: 'Mesken' | 'Ticarethane' | 'Sanayi';
-  tariff: string;
-  consumption: string;
-  offerHistory: string[];
-  status: 'Planlandı' | 'Yolda' | 'Tamamlandı' | 'İptal';
-  priority: 'Yüksek' | 'Orta' | 'Düşük';
-  plannedTime: string;
-  estimatedDuration: string;
-  distance: string;
-  visitDate: string;
-  isFreeConsumer: boolean;
-}
+// Re-export shared types for backwards compatibility
+export * from './shared/types';
+export * from './features/customers/types';
+export * from './features/auth/types';
 
 export interface SalesRep {
   id: string;
