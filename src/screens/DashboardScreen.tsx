@@ -15,18 +15,7 @@ type Props = {
 };
 
 const DashboardScreen: React.FC<Props> = ({ customers, assignments, allReps, setCurrentScreen, onSelectCustomer }) => {
-  const today = new Date().toISOString().split('T')[0];
-  const time = new Date();
-
-  // --- Zaman ve Tarih Mantığı ---
-  const hour = time.getHours();
-  const day = time.getDay(); // 0: Pazar, 6: Cumartesi
-  const isWeekend = day === 0 || day === 6;
-  const isWorkingHours = hour >= 9 && hour < 18;
-
-  const todaysVisits = useMemo(() => customers.filter(c => c.visitDate === today), [customers, today]);
-  
-  const dashboardData = useDashboardData();
+  const dashboardData = useDashboardData(customers);
 
   return (
     <div>
