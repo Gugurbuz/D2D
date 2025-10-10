@@ -1,4 +1,4 @@
-import { create } from 'zustand/react';
+import { create } from 'zustand';
 import type { Database } from '../lib/database.types';
 
 type VisitStatus = Database['public']['Enums']['visit_status'];
