@@ -183,5 +183,35 @@ export const visitService = {
     };
 
     return { data: stats, error: null };
-  }
+  },
+
+  // Upsert visit draft (auto-save)
+  async upsertVisitDraft(visit: VisitInsert & { id?: string; last_step?: string }) {
+    const { id, last_step, ...visitData } = visit;
+
+    if (id) {
+      const { data, error } = await supabase
+        .from('visits')
+        .update({
+          ...visitData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      return { data, error };
+    } else {
+      const { data, error } = await supabase
+        .from('visits')
+        .insert({
+          ...visitData,
+          status: 'in_progress',
+        })
+        .select()
+        .maybeSingle();
+
+      return { data, error };
+    }
+  },
 };

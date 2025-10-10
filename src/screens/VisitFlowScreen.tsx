@@ -39,7 +39,7 @@ const ALL_TARIFFS: Tariff[] = [
   { id: 'sanayi_eko', name: 'Sanayi Avantaj', unitPrice: 3.10, type: ['Sanayi'] },
 ];
 
-type VisitStatus = 'Pending' | 'InProgress' | 'Completed' | 'Rejected' | 'Unreachable' | 'Postponed';
+import type { VisitStatus } from '../types';
 type FlowStep = 1 | 2 | 3 | 4;
 
 type VerificationStatus = 'idle' | 'scanning' | 'success' | 'error';
@@ -67,7 +67,7 @@ type Action =
   | { type: 'RESET' };
 
 const initialState: State = {
-  visitStatus: 'Pending',
+  visitStatus: 'planned' as VisitStatus,
   currentStep: 1,
   idPhoto: null,
   ocrStatus: 'idle',
@@ -118,7 +118,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
     (status: VisitStatus) => {
       dispatch({ type: 'SET_VISIT_STATUS', payload: status });
       track('visit_status_set', { status });
-      if (status !== 'InProgress') {
+      if (status !== 'in_progress') {
         onCompleteVisit(customer, status, state.notes);
         onCloseToList();
       }
@@ -182,7 +182,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
 
       {currentScreen === 'flow' && (
         <>
-          {state.visitStatus === 'Pending' && (
+          {state.visitStatus === 'planned' && (
             <VisitStatusSelection
               onSave={handleSaveVisitResult}
               notes={state.notes}
@@ -190,7 +190,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
             />
           )}
 
-          {state.visitStatus === 'InProgress' && (
+          {state.visitStatus === 'in_progress' && (
             <>
               <StepIndicator />
               {state.currentStep === 1 && (
@@ -206,7 +206,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
                 <CompletionStep
                   customer={customer}
                   dispatch={dispatch}
-                  onComplete={() => handleSaveVisitResult('Completed')}
+                  onComplete={() => handleSaveVisitResult('completed')}
                 />
               )}
             </>
@@ -711,28 +711,28 @@ const VisitStatusSelection: React.FC<{
           icon={<CheckCircle className="w-8 h-8 text-green-500" />}
           title="Sözleşme Başlat"
           desc="Müşteri teklifi kabul etti, sürece başla."
-          onClick={() => onSave('InProgress')}
+          onClick={() => onSave('in_progress')}
         />
         <BasicStatusButton
           colorClass="hover:bg-red-50 hover:border-red-400 hover:shadow-md"
           icon={<XCircle className="w-8 h-8 text-red-500" />}
           title="Teklifi Reddetti"
           desc="Müşteri teklifi istemedi."
-          onClick={() => onSave('Rejected')}
+          onClick={() => onSave('rejected')}
         />
         <BasicStatusButton
           colorClass="hover:bg-yellow-50 hover:border-yellow-400 hover:shadow-md"
           icon={<UserX className="w-8 h-8 text-yellow-500" />}
           title="Ulaşılamadı"
           desc="Müşteri adreste bulunamadı."
-          onClick={() => onSave('Unreachable')}
+          onClick={() => onSave('no_answer')}
         />
         <BasicStatusButton
           colorClass="hover:bg-blue-50 hover:border-blue-400 hover:shadow-md"
           icon={<Clock className="w-8 h-8 text-blue-500" />}
           title="Ertelendi"
           desc="Müşteri daha sonra görüşmek istedi."
-          onClick={() => onSave('Postponed')}
+          onClick={() => onSave('cancelled')}
         />
       </div>
       <div className="mt-6">
