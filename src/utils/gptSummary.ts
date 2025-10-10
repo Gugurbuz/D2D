@@ -1,14 +1,11 @@
-export async function generateInvoiceSummary(rawText: string) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// src/utils/gptSummary.ts
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/gpt-summary`, {
+export async function generateInvoiceSummary(rawText: string) {
+  // Fonksiyon artık yapılandırılmış veri değil, ham metin gönderiyor.
+  const response = await fetch("https://ehqotgebdywdmwxbwbjl.supabase.co/functions/v1/gpt-summary", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${supabaseAnonKey}`,
-    },
-    body: JSON.stringify({ rawText }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rawText }), // Sadece ham metni gönderiyoruz
   });
 
   const result = await response.json();
@@ -17,6 +14,7 @@ export async function generateInvoiceSummary(rawText: string) {
     throw new Error(result.error || "Yapay zeka işleme sırasında bir hata oluştu.");
   }
 
+  // Backend'den gelen { invoiceData, summary } objesinin tamamını döndürüyoruz.
   return result;
 }
 
