@@ -1,36 +1,79 @@
 import React from 'react';
 
-interface RoleSelectScreenProps {
+type Props = {
   onSelect: (role: string) => void;
-}
+};
 
-const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({ onSelect }) => {
-  const roles = [
-    { id: 'rep-1', title: 'Satış Temsilcisi', description: 'Sahada ziyaret yapan temsilci' },
-    { id: 'manager-1', title: 'Yönetici', description: 'Takım yöneticisi' },
-    { id: 'admin-1', title: 'Admin', description: 'Sistem yöneticisi' },
-    { id: 'operations-1', title: 'Operasyon Yöneticisi', description: 'Operasyonları yöneten' },
-  ];
+const RoleSelectScreen: React.FC<Props> = ({ onSelect }) => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl">
+      <div className="text-center mb-2">
+        <img
+          src="https://www.enerjisa.com.tr/assets/sprite/enerjisa.webp"
+          alt="Enerjisa Logo"
+          className="h-12 mx-auto mb-4 object-contain"
+        />
+        <h1 className="text-2xl font-bold text-gray-800">Uygulama Rolünüzü Seçin</h1>
+        <p className="text-gray-500 mt-1">
+          Görüntüleyeceğiniz ekranlar rolünüze göre şekillenecektir.
+        </p>
+      </div>
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6 text-center">Rol Seçin</h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {roles.map((role) => (
-            <button
-              key={role.id}
-              onClick={() => onSelect(role.id)}
-              className="p-6 border-2 border-gray-200 rounded-lg hover:border-[#0099CB] hover:bg-blue-50 transition-all text-left"
-            >
-              <h3 className="font-semibold text-lg mb-1">{role.title}</h3>
-              <p className="text-sm text-gray-600">{role.description}</p>
-            </button>
-          ))}
-        </div>
+      <div className="grid md:grid-cols-2 gap-6 mt-8">
+        {/* Satış Uzmanı */}
+        <button
+          onClick={() => onSelect('rep-1')}
+          className="group rounded-xl border p-6 text-left transition-all duration-200 ease-in-out hover:border-[#0099CB] hover:shadow-lg hover:-translate-y-1"
+        >
+          <div className="text-lg font-semibold text-gray-800 group-hover:text-[#0099CB]">
+            Satış Uzmanı
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Kendi ziyaretlerinizi görüntüleyin ve yeni müşteri kayıtları oluşturun.
+          </div>
+        </button>
+
+        {/* Saha Yöneticisi */}
+        <button
+          onClick={() => onSelect('manager-1')}
+          className="group rounded-xl border p-6 text-left transition-all duration-200 ease-in-out hover:border-[#F9C800] hover:shadow-lg hover:-translate-y-1"
+        >
+          <div className="text-lg font-semibold text-gray-800 group-hover:text-[#D4A900]">
+            Saha Yöneticisi
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Tüm ekibin rotalarını ve performansını anlık olarak izleyin.
+          </div>
+        </button>
+
+        {/* Admin */}
+        <button
+          onClick={() => onSelect('admin-1')}
+          className="group rounded-xl border p-6 text-left transition-all duration-200 ease-in-out hover:border-red-500 hover:shadow-lg hover:-translate-y-1"
+        >
+          <div className="text-lg font-semibold text-gray-800 group-hover:text-red-600">
+            Admin
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Kullanıcı yönetimi ve sistem ayarlarını gerçekleştirin.
+          </div>
+        </button>
+
+        {/* Operasyon Yöneticisi */}
+        <button
+          onClick={() => onSelect('operations-1')}
+          className="group rounded-xl border p-6 text-left transition-all duration-200 ease-in-out hover:border-green-500 hover:shadow-lg hover:-translate-y-1"
+        >
+          <div className="text-lg font-semibold text-gray-800 group-hover:text-green-600">
+            Operasyon Yöneticisi
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Tarife yönetimi ve saha operasyonlarını planlayın.
+          </div>
+        </button>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default RoleSelectScreen;

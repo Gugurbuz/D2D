@@ -1,44 +1,39 @@
-import React, { ReactNode } from 'react';
+// src/layouts/AppLayout.tsx
 
-interface AppLayoutProps {
-  children: ReactNode;
+import React from "react";
+import Navigation from "../components/Navigation";
+import { Role, Screen } from "../types";
+
+type Props = {
   agentName: string;
-  role: string;
-  currentScreen: string;
-  setCurrentScreen: (screen: any) => void;
-}
-
-const AppLayout: React.FC<AppLayoutProps> = ({ children, agentName, role, currentScreen, setCurrentScreen }) => {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">D2D Satış Uygulaması</h1>
-          <div className="text-sm text-gray-600">
-            {agentName} ({role})
-          </div>
-        </div>
-      </header>
-      <nav className="bg-white border-b border-gray-200 px-6 py-2">
-        <div className="flex gap-4 overflow-x-auto">
-          {['dashboard', 'route', 'visits', 'assignments', 'reports', 'messages', 'profile'].map((screen) => (
-            <button
-              key={screen}
-              onClick={() => setCurrentScreen(screen)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                currentScreen === screen
-                  ? 'bg-[#0099CB] text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {screen.charAt(0).toUpperCase() + screen.slice(1)}
-            </button>
-          ))}
-        </div>
-      </nav>
-      <main className="p-6">{children}</main>
-    </div>
-  );
+  role: Role;
+  currentScreen: Screen;
+  setCurrentScreen: (s: Screen) => void;
+  agentAvatarUrl?: string;
+  children: React.ReactNode;
 };
 
-export default AppLayout;
+export default function AppLayout({
+  agentName,
+  role,
+  currentScreen,
+  setCurrentScreen,
+  agentAvatarUrl,
+  children,
+}: Props) {
+  return (
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
+      <Navigation
+        agentName={agentName}
+        role={role}
+        currentScreen={currentScreen}
+        setCurrentScreen={setCurrentScreen}
+        agentAvatarUrl={agentAvatarUrl}
+      />
+      
+      <main className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
+        {children}
+      </main>
+    </div>
+  );
+}

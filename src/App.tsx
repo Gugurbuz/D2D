@@ -2,29 +2,27 @@ import React, { useState, useEffect } from 'react';
 import LoginScreen from './screens/LoginScreen';
 import AppLayout from './layouts/AppLayout';
 import DashboardScreen from './screens/DashboardScreen';
+import RouteMapScreen from './screens/RouteMapScreen';
+import VisitListScreen from './screens/VisitListScreen';
+import VisitDetailScreen from './screens/VisitDetailScreen';
+import VisitFlowScreen from './screens/VisitFlowScreen';
+import ReportsScreen from './screens/ReportsScreen';
+import AssignmentScreen from './screens/AssignmentScreen';
+import AssignmentMapScreen from './screens/AssignmentMapScreen';
+import TeamMapScreen from './screens/TeamMapScreen';
+import MessagesScreen from './screens/MessagesScreen';
+import ProfileScreens from './screens/ProfileScreens';
+import InvoiceOcrPage from './screens/InvoiceOcrPage';
 import RoleSelectScreen from './screens/RoleSelectScreen';
-import {
-  RouteMapScreen,
-  VisitListScreen,
-  VisitDetailScreen,
-  VisitFlowScreen,
-  ReportsScreen,
-  AssignmentScreen,
-  AssignmentMapScreen,
-  TeamMapScreen,
-  MessagesScreen,
-  ProfileScreens,
-  InvoiceOcrPage,
-  UserManagementScreen,
-  SystemManagementScreen,
-  TariffsScreen,
-  FieldOpsMapScreen,
-  SystemReportsScreen,
-  OutOfRegionVisitWizard
-} from './screens/stub-screens';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
-import IdVerificationScreen from './screens/IdVerificationScreen';
+
+import UserManagementScreen from './screens/UserManagementScreen';
+import SystemManagementScreen from './screens/SystemManagementScreen';
+import TariffsScreen from './screens/TariffsScreen';
+import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
+import SystemReportsScreen from './screens/SystemReportsScreen';
+import OutOfRegionVisitWizard from './screens/OutOfRegionVisitWizard';
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
@@ -35,8 +33,6 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
-  const [showIdVerification, setShowIdVerification] = useState(false);
-  const ID_VERIFICATION_BYPASS_ALWAYS_ENABLED = true;
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
@@ -57,18 +53,8 @@ function App() {
       setShowRoleSelect(true);
     } else {
       setIsDemoMode(false);
-      setShowIdVerification(true);
+      setIsLoggedIn(true);
     }
-  };
-
-  const handleIdVerified = () => {
-    setShowIdVerification(false);
-    setIsLoggedIn(true);
-  };
-
-  const handleIdSkip = () => {
-    setShowIdVerification(false);
-    setIsLoggedIn(true);
   };
 
   const handleRoleSelect = (selectedRole: string) => {
@@ -134,15 +120,6 @@ function App() {
   }, [isLoggedIn, isDemoMode]);
 
   if (!isLoggedIn) {
-    if (showIdVerification) {
-      return (
-        <IdVerificationScreen
-          onVerified={handleIdVerified}
-          onSkip={handleIdSkip}
-          bypassEnabled={ID_VERIFICATION_BYPASS_ALWAYS_ENABLED}
-        />
-      );
-    }
     if (showRoleSelect) {
       return <RoleSelectScreen onSelect={handleRoleSelect} />;
     }
@@ -284,14 +261,6 @@ function App() {
         return <TariffsScreen />;
       case 'fieldOpsMap':
         return <FieldOpsMapScreen />;
-      case 'idVerification':
-        return (
-          <IdVerificationScreen
-            onVerified={() => setCurrentScreen('dashboard')}
-            onSkip={() => setCurrentScreen('dashboard')}
-            bypassEnabled={ID_VERIFICATION_BYPASS_ALWAYS_ENABLED}
-          />
-        );
 
       default:
         return (

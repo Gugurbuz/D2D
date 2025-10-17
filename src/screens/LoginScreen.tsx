@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { signIn, isSupabaseConfigured } from '../lib/supabase';
 import { Loader2 } from 'lucide-react';
 
 type Props = {
@@ -9,22 +10,97 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleQuickLogin = async () => {
+    setEmail('test@enerjisa.com');
+    setPassword('test123');
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+      setError('Giriş işlemi zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
+
+    try {
+      const { error } = await signIn('test@enerjisa.com', 'test123');
+      clearTimeout(timeoutId);
+
+      if (error) {
+        setError(`Giriş hatası: ${error.message}`);
+        return;
+      }
+
+      setSuccess('Giriş başarılı!');
+      setTimeout(() => onLogin(), 500);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+      if (!isSupabaseConfigured) {
+        setTimeout(() => onLogin(), 1000);
+      }
+      onLogin();
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isSupabaseConfigured) {
+      setError('Supabase bağlantısı kurulmamış. Lütfen önce "Connect to Supabase" butonuna tıklayın.');
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+    setError(null);
+    setSuccess(null);
+
+    const timeoutId = setTimeout(() => {
       setLoading(false);
-      onLogin(false);
-    }, 500);
+      setError('İşlem zaman aşımına uğradı. Supabase bağlantısını kontrol edin.');
+    }, 10000);
+
+    try {
+      const { error } = await signIn(email, password);
+      clearTimeout(timeoutId);
+
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          setError('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+        } else {
+          setError(error.message);
+        }
+        return;
+      }
+
+      setSuccess('Giriş başarılı!');
+      setTimeout(() => onLogin(), 1000);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      setError(`Beklenmeyen hata: ${err.message || 'Bilinmeyen hata'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
+          <div className="w-360 h-240 mx-auto mb-4 flex items-center justify-center">
+            <img
+              src="https://ehqotgebdywdmwxbwbjl.supabase.co/storage/v1/object/sign/Logo/animatedlogo3.gif?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82YTJkNThmMC1kMzNhLTRiY2MtODMxMy03ZjE2NmIwN2NjMDUiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJMb2dvL2FuaW1hdGVkbG9nbzMuZ2lmIiwiaWF0IjoxNzU3MjY2NDMzLCJleHAiOjE3ODg4MDI0MzN9.J6IxjFdcZwL38INubr8hwsMYpzZM3il9GllxYQF_BFk"
+              alt="Enerjisa Logo"
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">D2D Satış Uygulaması</h1>
-          <p className="text-gray-600">Hoş geldiniz</p>
+          <p className="text-gray-600"> </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -49,25 +125,55 @@ const LoginScreen: React.FC<Props> = ({ onLogin }) => {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0099CB] focus:border-transparent"
               placeholder="Şifrenizi girin"
               required
+              minLength={6}
             />
           </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          {success && (
+            <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+              <p className="text-sm text-green-600">{success}</p>
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors disabled:opacity-50"
+            className="w-full bg-[#0099CB] text-white py-3 px-4 rounded-lg font-medium hover:bg-[#0088B8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading && <Loader2 className="w-4 h-4 animate-spin inline mr-2" />}
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
             {loading ? 'İşleniyor...' : 'Giriş Yap'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => onLogin(true)}
-            className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
-          >
-            Demo Modunda Devam Et
-          </button>
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handleQuickLogin}
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 mb-3"
+            >
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Hızlı Test Girişi
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onLogin(true)}
+              className="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+            >
+              Demo Modunda Devam Et
+            </button>
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              <strong>Test Bilgileri:</strong><br />
+              E-posta: test@enerjisa.com<br />
+              Şifre: test123
+            </p>
+          </div>
         </form>
       </div>
     </div>
