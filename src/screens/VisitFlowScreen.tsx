@@ -921,18 +921,20 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
           <ScanLine className="w-5 h-5" style={{ color: BRAND_COLORS.navy }} />
           <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
         </div>
-        <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
-          <input
-            type="checkbox"
-            id="bypass-verification"
-            checked={isBypassChecked}
-            onChange={(e) => handleBypassToggle(e.target.checked)}
-            className="h-4 w-4 rounded"
-          />
-          <label htmlFor="bypass-verification" className="text-sm font-medium text-yellow-800 cursor-pointer">
-            [TEST] Doğrulamayı Atla
-          </label>
-        </div>
+        {isDev && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
+            <input
+              type="checkbox"
+              id="bypass-verification"
+              checked={isBypassChecked}
+              onChange={(e) => handleBypassToggle(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <label htmlFor="bypass-verification" className="text-sm font-medium text-yellow-800">
+              [TEST] Doğrulamayı Atla
+            </label>
+          </div>
+        )}
       </div>
 
       <fieldset disabled={isBypassChecked}>
@@ -1053,6 +1055,8 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
   const [flowSmsPhone, setFlowSmsPhone] = useState(() => customer?.phone ?? '');
   const [otp, setOtp] = useState('');
+  const [sigOpen, setSigOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const smsSend = () => {
