@@ -23,6 +23,7 @@ import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
 import SystemReportsScreen from './screens/SystemReportsScreen';
 import OutOfRegionVisitWizard from './screens/OutOfRegionVisitWizard';
+import IdVerificationScreen from './screens/IdVerificationScreen';
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
@@ -33,6 +34,8 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
+  const [showIdVerification, setShowIdVerification] = useState(false);
+  const [idVerificationBypass] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
@@ -53,8 +56,18 @@ function App() {
       setShowRoleSelect(true);
     } else {
       setIsDemoMode(false);
-      setIsLoggedIn(true);
+      setShowIdVerification(true);
     }
+  };
+
+  const handleIdVerified = () => {
+    setShowIdVerification(false);
+    setIsLoggedIn(true);
+  };
+
+  const handleIdSkip = () => {
+    setShowIdVerification(false);
+    setIsLoggedIn(true);
   };
 
   const handleRoleSelect = (selectedRole: string) => {
@@ -120,6 +133,15 @@ function App() {
   }, [isLoggedIn, isDemoMode]);
 
   if (!isLoggedIn) {
+    if (showIdVerification) {
+      return (
+        <IdVerificationScreen
+          onVerified={handleIdVerified}
+          onSkip={handleIdSkip}
+          bypassEnabled={idVerificationBypass}
+        />
+      );
+    }
     if (showRoleSelect) {
       return <RoleSelectScreen onSelect={handleRoleSelect} />;
     }
@@ -261,6 +283,14 @@ function App() {
         return <TariffsScreen />;
       case 'fieldOpsMap':
         return <FieldOpsMapScreen />;
+      case 'idVerification':
+        return (
+          <IdVerificationScreen
+            onVerified={() => setCurrentScreen('dashboard')}
+            onSkip={() => setCurrentScreen('dashboard')}
+            bypassEnabled={idVerificationBypass}
+          />
+        );
 
       default:
         return (

@@ -1,23 +1,27 @@
 export type Role = 'sales_rep' | 'manager' | 'admin' | 'operations_manager';
 
 
-export type Screen = 
-  | 'dashboard' 
+export type Screen =
+  | 'dashboard'
   | 'route'
-  | 'visits' 
+  | 'visits'
   | 'visitDetail'
   | 'visitFlow'
-  | 'customers' 
-  | 'messages' 
-  | 'profile' 
+  | 'customers'
+  | 'messages'
+  | 'profile'
   | 'reports'
   | 'team'
   | 'assignments'
   | 'assignmentMap'
   | 'invoiceOcr'
-| 'systemManagement'
-  | 'systemReports';
-| 'outOfRegionWizard'
+  | 'systemManagement'
+  | 'systemReports'
+  | 'outOfRegionWizard'
+  | 'idVerification'
+  | 'userManagement'
+  | 'tariffs'
+  | 'fieldOpsMap';
 
 export interface Customer {
   id: string;
