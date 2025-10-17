@@ -2,7 +2,6 @@ import React, { useReducer, useState, useRef, useEffect, useMemo, useCallback } 
 import {
   IdCard, Camera, FileText,
   ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
-import EnhancedContractStep from '../components/EnhancedContractStep';
   Loader2, ScanLine, Nfc, Maximize2, MapPin, Home, Building, Factory,
   Sparkles, Info
 } from 'lucide-react';
@@ -109,8 +108,6 @@ type Props = {
   onCompleteVisit: (updated: Customer, status: VisitStatus, notes: string) => void;
 };
 
-  const [sigOpen, setSigOpen] = useState(false);
-  const [contractOpen, setContractOpen] = useState(false);
 /*************************** Root ***************************/
 
 const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteVisit }) => {
@@ -203,45 +200,7 @@ const VisitFlowScreen: React.FC<Props> = ({ customer, onCloseToList, onCompleteV
                 <IdVerificationStep state={state} dispatch={dispatch} />
               )}
               {state.currentStep === 3 && (
-                <>
-                  <EnhancedContractStep
-                    customer={customer}
-                    visitId={customer.id}
-                    salesRepId="demo-rep-123"
-                    contractAccepted={state.contractAccepted}
-                    smsSent={state.smsSent}
-                    signatureDataUrl={state.idPhoto}
-                    onContractAcceptChange={(accepted) =>
-                      dispatch({ type: 'SET_CONTRACT_ACCEPTED', payload: accepted })
-                    }
-                    onSmsSentChange={(sent) =>
-                      dispatch({ type: 'SET_SMS_SENT', payload: sent })
-                    }
-                    onSignatureChange={(dataUrl) =>
-                      dispatch({ type: 'SET_ID_PHOTO', payload: dataUrl })
-                    }
-                    onBack={() => dispatch({ type: 'SET_STEP', payload: 2 })}
-                    onContinue={() => dispatch({ type: 'SET_STEP', payload: 4 })}
-                    onOpenSignaturePad={() => setSigOpen(true)}
-                    onOpenContractModal={() => setContractOpen(true)}
-                  />
-                  {sigOpen && (
-                    <SignaturePadModal
-                      onClose={() => setSigOpen(false)}
-                      onSave={(dataUrl) => {
-                        dispatch({ type: 'SET_ID_PHOTO', payload: dataUrl });
-                        setSigOpen(false);
-                      }}
-                    />
-                  )}
-                  {contractOpen && (
-                    <ContractModal
-                      customer={customer}
-                      signatureDataUrl={state.idPhoto}
-                      onClose={() => setContractOpen(false)}
-                    />
-                  )}
-                </>
+                <ContractStep state={state} dispatch={dispatch} customer={customer} />
               )}
               {state.currentStep === 4 && (
                 <CompletionStep
