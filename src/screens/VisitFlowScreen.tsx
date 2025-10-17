@@ -1053,8 +1053,6 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
 const ContractStep: React.FC<{ state: State; dispatch: React.Dispatch<Action>; customer: Customer }> = ({ state, dispatch, customer }) => {
   const [flowSmsPhone, setFlowSmsPhone] = useState(() => customer?.phone ?? '');
   const [otp, setOtp] = useState('');
-  const [sigOpen, setSigOpen] = useState(false);
-  const [contractOpen, setContractOpen] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
 
   const smsSend = () => {
