@@ -35,7 +35,7 @@ function App() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [showRoleSelect, setShowRoleSelect] = useState(false);
   const [showIdVerification, setShowIdVerification] = useState(false);
-  const [idVerificationBypass] = useState(true);
+  const ID_VERIFICATION_BYPASS_ALWAYS_ENABLED = true;
   const [currentScreen, setCurrentScreen] = useState<Screen>('dashboard');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
@@ -138,7 +138,7 @@ function App() {
         <IdVerificationScreen
           onVerified={handleIdVerified}
           onSkip={handleIdSkip}
-          bypassEnabled={idVerificationBypass}
+          bypassEnabled={ID_VERIFICATION_BYPASS_ALWAYS_ENABLED}
         />
       );
     }
@@ -288,7 +288,7 @@ function App() {
           <IdVerificationScreen
             onVerified={() => setCurrentScreen('dashboard')}
             onSkip={() => setCurrentScreen('dashboard')}
-            bypassEnabled={idVerificationBypass}
+            bypassEnabled={ID_VERIFICATION_BYPASS_ALWAYS_ENABLED}
           />
         );
 
