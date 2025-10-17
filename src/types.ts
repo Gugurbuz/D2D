@@ -1,23 +1,28 @@
+import type { Database } from './lib/database.types';
+
+export type VisitStatus = Database['public']['Enums']['visit_status'];
+
 export type Role = 'sales_rep' | 'manager' | 'admin' | 'operations_manager';
 
 
-export type Screen = 
-  | 'dashboard' 
+export type Screen =
+  | 'dashboard'
   | 'route'
-  | 'visits' 
+  | 'visits'
   | 'visitDetail'
   | 'visitFlow'
-  | 'customers' 
-  | 'messages' 
-  | 'profile' 
+  | 'customers'
+  | 'messages'
+  | 'profile'
   | 'reports'
   | 'team'
   | 'assignments'
   | 'assignmentMap'
   | 'invoiceOcr'
-| 'systemManagement'
-  | 'systemReports';
-| 'outOfRegionWizard'
+  | 'systemManagement'
+  | 'systemReports'
+  | 'outOfRegionWizard'
+  | 'taskFlowTest'
 
 export interface Customer {
   id: string;
@@ -68,7 +73,7 @@ export interface Visit {
   planned_time?: string;
   actual_start_time?: string;
   actual_end_time?: string;
-  status: 'planned' | 'in_progress' | 'completed' | 'cancelled' | 'no_answer' | 'rejected';
+  status: VisitStatus;
   priority: 'low' | 'medium' | 'high';
   result?: string;
   notes?: string;

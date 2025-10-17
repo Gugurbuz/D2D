@@ -23,6 +23,7 @@ import TariffsScreen from './screens/TariffsScreen';
 import FieldOpsMapScreen from './screens/FieldOpsMapScreen';
 import SystemReportsScreen from './screens/SystemReportsScreen';
 import OutOfRegionVisitWizard from './screens/OutOfRegionVisitWizard';
+import TaskFlowTestScreen from './screens/TaskFlowTestScreen';
 
 import { mockCustomers } from './data/mockCustomers';
 import { mockReps } from './data/reps';
@@ -37,6 +38,17 @@ function App() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [agentName, setAgentName] = useState('Ahmet Yılmaz');
   const [role, setRole] = useState<Role>('sales_rep');
+
+  // Check URL for direct screen access (for testing)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const screenParam = params.get('screen');
+    if (screenParam === 'taskFlowTest') {
+      setIsLoggedIn(true);
+      setIsDemoMode(true);
+      setCurrentScreen('taskFlowTest');
+    }
+  }, []);
 
   // Data state
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -261,6 +273,8 @@ function App() {
         return <TariffsScreen />;
       case 'fieldOpsMap':
         return <FieldOpsMapScreen />;
+      case 'taskFlowTest':
+        return <TaskFlowTestScreen onBack={() => setCurrentScreen('dashboard')} />;
 
       default:
         return (
