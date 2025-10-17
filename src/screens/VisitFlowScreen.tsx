@@ -1,5 +1,10 @@
 import React, { useReducer, useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { IdCard, Camera, FileText, ChevronRight, ShieldCheck, CircleCheck as CheckCircle, Circle as XCircle, UserX, Clock, Loader as Loader2, ScanLine, Nfc, Maximize2, MapPin, Hop as Home, Building, Factory, Sparkles, Info } from 'lucide-react';
+import {
+  IdCard, Camera, FileText,
+  ChevronRight, ShieldCheck, CheckCircle, XCircle, UserX, Clock,
+  Loader2, ScanLine, Nfc, Maximize2, MapPin, Home, Building, Factory,
+  Sparkles, Info
+} from 'lucide-react';
 import { Customer } from '../RouteMap';
 import { BRAND_COLORS } from '../styles/theme';
 
