@@ -921,7 +921,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
           <ScanLine className="w-5 h-5" style={{ color: BRAND_COLORS.navy }} />
           <h3 className="text-lg font-semibold">2. Kimlik Doğrulama</h3>
         </div>
-        {isDev && (
+      
           <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 border border-yellow-300">
             <input
               type="checkbox"
@@ -934,7 +934,7 @@ const IdVerificationStep: React.FC<{ state: State; dispatch: React.Dispatch<Acti
               [TEST] Doğrulamayı Atla
             </label>
           </div>
-        )}
+        
       </div>
 
       <fieldset disabled={isBypassChecked}>
